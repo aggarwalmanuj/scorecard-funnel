@@ -1,0 +1,182 @@
+import Link from "next/link"
+import { ArrowLeft } from "lucide-react"
+import type { Metadata } from "next"
+
+export const metadata: Metadata = {
+  title: "Terms of Service | AIMerge",
+  description: "AIMerge terms of service — the rules and guidelines governing use of our platform.",
+}
+
+export default function TermsOfServicePage() {
+  return (
+    <div className="min-h-screen bg-background">
+      <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8 py-16 sm:py-24">
+        <Link
+          href="/"
+          className="inline-flex items-center gap-2 text-sm font-bold text-primary hover:underline mb-10"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Back to Home
+        </Link>
+
+        <h1 className="text-4xl sm:text-5xl font-black tracking-tighter text-foreground mb-2">
+          Terms of Service
+        </h1>
+        <p className="text-muted-foreground text-sm mb-12">
+          Last updated: April 10, 2026
+        </p>
+
+        <div className="prose prose-neutral dark:prose-invert max-w-none space-y-8 text-muted-foreground leading-relaxed">
+          <section>
+            <h2 className="text-xl font-black text-foreground mb-3">1. Acceptance of Terms</h2>
+            <p>
+              By accessing or using the AIMerge platform and The Inner Light Experience (&quot;Service&quot;), operated by TetraNoodle Technologies (&quot;Company,&quot; &quot;we,&quot; &quot;us,&quot; or &quot;our&quot;), you agree to be bound by these Terms of Service (&quot;Terms&quot;). If you do not agree to these Terms, do not use the Service.
+            </p>
+          </section>
+
+          <section>
+            <h2 className="text-xl font-black text-foreground mb-3">2. Description of Service</h2>
+            <p>
+              AIMerge provides an AI-powered self-reflection experience called The Inner Light Experience. The Service asks users a series of questions and uses artificial intelligence to generate personalized reflections based on their answers. The Service is designed for personal insight and self-reflection purposes only.
+            </p>
+          </section>
+
+          <section>
+            <h2 className="text-xl font-black text-foreground mb-3">3. Eligibility</h2>
+            <p>
+              You must be at least 18 years of age to use this Service. By using the Service, you represent and warrant that you are at least 18 years old and have the legal capacity to enter into these Terms. If you are using the Service on behalf of an organization, you represent that you have authority to bind that organization to these Terms.
+            </p>
+          </section>
+
+          <section>
+            <h2 className="text-xl font-black text-foreground mb-3">4. User Accounts and Data</h2>
+            <p>To use the Service, you provide your first name and email address. You agree to:</p>
+            <ul className="list-disc pl-6 space-y-1 mt-2">
+              <li>Provide accurate and complete information</li>
+              <li>Not impersonate another person or entity</li>
+              <li>Not use the Service for any unlawful purpose</li>
+              <li>Not attempt to gain unauthorized access to any part of the Service</li>
+            </ul>
+          </section>
+
+          <section>
+            <h2 className="text-xl font-black text-foreground mb-3">5. Acceptable Use</h2>
+            <p>You agree not to use the Service to:</p>
+            <ul className="list-disc pl-6 space-y-1 mt-2">
+              <li>Submit false, misleading, or fraudulent information</li>
+              <li>Harass, abuse, or harm others</li>
+              <li>Interfere with or disrupt the Service or its infrastructure</li>
+              <li>Attempt to reverse engineer, decompile, or extract source code from the Service</li>
+              <li>Use automated systems (bots, scrapers) to access the Service without prior written consent</li>
+              <li>Violate any applicable local, state, national, or international law</li>
+            </ul>
+          </section>
+
+          <section>
+            <h2 className="text-xl font-black text-foreground mb-3">6. AI-Generated Content</h2>
+            <p>The Service generates content using artificial intelligence. You acknowledge and agree that:</p>
+            <ul className="list-disc pl-6 space-y-1 mt-2">
+              <li><strong className="text-foreground">Not professional advice:</strong> AI-generated reflections are for personal insight only. They do not constitute medical, psychological, legal, financial, or any other form of professional advice.</li>
+              <li><strong className="text-foreground">No guarantees:</strong> We do not guarantee the accuracy, completeness, or usefulness of any AI-generated content.</li>
+              <li><strong className="text-foreground">Personal responsibility:</strong> You are solely responsible for any decisions or actions you take based on the content generated by the Service.</li>
+              <li><strong className="text-foreground">Variability:</strong> AI outputs may vary and are not deterministic. The same inputs may produce different outputs at different times.</li>
+            </ul>
+          </section>
+
+          <section>
+            <h2 className="text-xl font-black text-foreground mb-3">7. Intellectual Property</h2>
+            <p>
+              All content, features, and functionality of the Service — including but not limited to text, graphics, logos, icons, software, and the underlying technology — are owned by or licensed to the Company and are protected by copyright, trademark, and other intellectual property laws.
+            </p>
+            <p className="mt-3">
+              You retain ownership of the responses you submit. By using the Service, you grant us a limited, non-exclusive license to process your responses for the sole purpose of generating your personalized reflections.
+            </p>
+          </section>
+
+          <section>
+            <h2 className="text-xl font-black text-foreground mb-3">8. Privacy</h2>
+            <p>
+              Your use of the Service is also governed by our <Link href="/privacy" className="text-primary font-bold hover:underline">Privacy Policy</Link>, which is incorporated into these Terms by reference. Please review the Privacy Policy to understand our practices regarding your personal data.
+            </p>
+          </section>
+
+          <section>
+            <h2 className="text-xl font-black text-foreground mb-3">9. Disclaimers</h2>
+            <p>
+              THE SERVICE IS PROVIDED &quot;AS IS&quot; AND &quot;AS AVAILABLE&quot; WITHOUT WARRANTIES OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT.
+            </p>
+            <p className="mt-3">
+              We do not warrant that the Service will be uninterrupted, error-free, or free of harmful components. We do not warrant that the AI-generated content will meet your expectations or requirements.
+            </p>
+          </section>
+
+          <section>
+            <h2 className="text-xl font-black text-foreground mb-3">10. Limitation of Liability</h2>
+            <p>
+              TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, IN NO EVENT SHALL THE COMPANY, ITS DIRECTORS, EMPLOYEES, PARTNERS, AGENTS, OR AFFILIATES BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES, INCLUDING WITHOUT LIMITATION LOSS OF PROFITS, DATA, USE, GOODWILL, OR OTHER INTANGIBLE LOSSES, RESULTING FROM:
+            </p>
+            <ul className="list-disc pl-6 space-y-1 mt-2">
+              <li>Your access to or use of (or inability to access or use) the Service</li>
+              <li>Any content obtained from the Service, including AI-generated reflections</li>
+              <li>Unauthorized access, use, or alteration of your data</li>
+              <li>Any other matter relating to the Service</li>
+            </ul>
+          </section>
+
+          <section>
+            <h2 className="text-xl font-black text-foreground mb-3">11. Indemnification</h2>
+            <p>
+              You agree to defend, indemnify, and hold harmless the Company and its officers, directors, employees, and agents from and against any claims, liabilities, damages, losses, and expenses (including reasonable attorneys&apos; fees) arising out of or related to your use of the Service, your violation of these Terms, or your violation of any rights of a third party.
+            </p>
+          </section>
+
+          <section>
+            <h2 className="text-xl font-black text-foreground mb-3">12. Termination</h2>
+            <p>
+              We reserve the right to suspend or terminate your access to the Service at any time, without notice, for any reason, including but not limited to a violation of these Terms. Upon termination, your right to use the Service will cease immediately. Provisions that by their nature should survive termination shall survive.
+            </p>
+          </section>
+
+          <section>
+            <h2 className="text-xl font-black text-foreground mb-3">13. Modifications to Terms</h2>
+            <p>
+              We reserve the right to modify these Terms at any time. Changes will be effective immediately upon posting. Your continued use of the Service after modifications constitutes acceptance of the revised Terms. We encourage you to review these Terms periodically.
+            </p>
+          </section>
+
+          <section>
+            <h2 className="text-xl font-black text-foreground mb-3">14. Governing Law</h2>
+            <p>
+              These Terms shall be governed by and construed in accordance with the laws of the jurisdiction in which the Company is incorporated, without regard to its conflict of law provisions. Any disputes arising from these Terms or the Service shall be resolved in the courts of that jurisdiction.
+            </p>
+          </section>
+
+          <section>
+            <h2 className="text-xl font-black text-foreground mb-3">15. Severability</h2>
+            <p>
+              If any provision of these Terms is found to be unenforceable or invalid, that provision will be limited or eliminated to the minimum extent necessary, and the remaining provisions will remain in full force and effect.
+            </p>
+          </section>
+
+          <section>
+            <h2 className="text-xl font-black text-foreground mb-3">16. Entire Agreement</h2>
+            <p>
+              These Terms, together with the Privacy Policy, constitute the entire agreement between you and the Company regarding your use of the Service and supersede all prior agreements, understandings, and communications.
+            </p>
+          </section>
+
+          <section>
+            <h2 className="text-xl font-black text-foreground mb-3">17. Contact Us</h2>
+            <p>
+              If you have questions about these Terms of Service, please contact us at:
+            </p>
+            <p className="mt-2 font-bold text-foreground">
+              AIMerge — a TetraNoodle Technologies product<br />
+              Email: sales@tetranoodle.com
+            </p>
+          </section>
+        </div>
+      </div>
+    </div>
+  )
+}

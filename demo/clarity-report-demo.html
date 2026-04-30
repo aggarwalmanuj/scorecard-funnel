@@ -1,0 +1,458 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Clarity Readiness Report — Demo</title>
+<style>
+  /* ---------- Print setup ---------- */
+  @page { size: A4; margin: 0; }
+  @media print {
+    html, body { background: #ffffff !important; }
+    .toolbar { display: none !important; }
+    .page { box-shadow: none !important; margin: 0 !important; page-break-after: always; }
+    .page:last-child { page-break-after: auto; }
+  }
+
+  /* ---------- Base ---------- */
+  :root {
+    --ink:        #11071f;
+    --ink-soft:   #4b3f63;
+    --muted:      #8a82a0;
+    --line:       #e9e4f3;
+    --bg:         #ffffff;
+    --surface:    #faf8ff;
+    --brand:      #8b7cf6;
+    --brand-dark: #6b5ee0;
+    --brand-soft: #efeaff;
+    --green:      #10b981;
+    --amber:      #f59e0b;
+    --coral:      #ef4444;
+    --lilac:      #c6a4f6;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: #ece7f7;
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+                 "Helvetica Neue", Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    font-feature-settings: "ss01", "cv11";
+  }
+  .toolbar {
+    position: sticky; top: 0; z-index: 50;
+    background: #fff; border-bottom: 1px solid var(--line);
+    padding: 10px 20px; display: flex; align-items: center; justify-content: space-between;
+    font-size: 13px;
+  }
+  .toolbar b { color: var(--ink); }
+  .toolbar button {
+    background: var(--brand); color: #fff; border: 0; padding: 8px 14px;
+    border-radius: 8px; font-weight: 700; cursor: pointer; font-size: 13px;
+  }
+  .toolbar button:hover { background: var(--brand-dark); }
+
+  /* ---------- Page (A4 in screen units, ~ 794x1123 at 96dpi) ---------- */
+  .page {
+    width: 210mm; min-height: 297mm;
+    margin: 24px auto;
+    padding: 22mm 20mm 20mm;
+    background: var(--bg);
+    box-shadow: 0 12px 40px rgba(20,12,40,.12);
+    position: relative;
+    overflow: hidden;
+  }
+  .page::before {
+    content: ""; position: absolute; top: 0; left: 0; right: 0; height: 4px;
+    background: linear-gradient(90deg, var(--brand), var(--lilac), var(--brand));
+  }
+
+  /* ---------- Typography ---------- */
+  .eyebrow {
+    font-size: 10.5px; font-weight: 800; letter-spacing: .18em;
+    text-transform: uppercase; color: var(--brand);
+  }
+  h1 { font-size: 30px; line-height: 1.1; margin: 6px 0 2px; letter-spacing: -.02em; font-weight: 800; }
+  h2 { font-size: 16px; margin: 0 0 10px; letter-spacing: -.01em; font-weight: 800; color: var(--ink); }
+  h3 { font-size: 12.5px; margin: 0 0 6px; letter-spacing: .02em; font-weight: 700; color: var(--ink-soft); }
+  p  { font-size: 12px; line-height: 1.65; color: var(--ink-soft); margin: 0 0 10px; }
+  small { color: var(--muted); font-size: 10.5px; }
+  .num  { font-variant-numeric: tabular-nums; }
+  .divider { height: 1px; background: var(--line); margin: 18px 0; }
+
+  /* ---------- Header ---------- */
+  .head {
+    display: flex; align-items: flex-start; justify-content: space-between;
+    margin-bottom: 16px;
+  }
+  .head .meta { font-size: 10.5px; color: var(--muted); text-align: right; line-height: 1.5; }
+  .head .meta b { color: var(--ink); font-weight: 700; }
+  .logo {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-weight: 800; letter-spacing: -.01em; color: var(--ink); font-size: 13px;
+  }
+  .logo .dot {
+    width: 12px; height: 12px; border-radius: 4px;
+    background: linear-gradient(135deg, var(--brand), var(--brand-dark));
+  }
+
+  /* ---------- Hero score ---------- */
+  .hero {
+    display: grid; grid-template-columns: 220px 1fr; gap: 28px;
+    padding: 22px 24px;
+    background: linear-gradient(160deg, var(--brand-soft) 0%, #ffffff 100%);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    margin: 6px 0 18px;
+  }
+  .donut-wrap { display: flex; align-items: center; justify-content: center; }
+  .donut { width: 200px; height: 200px; }
+  .donut .ring-bg { fill: none; stroke: #ece6fb; stroke-width: 16; }
+  .donut .ring-fg { fill: none; stroke: url(#ringGrad); stroke-width: 16; stroke-linecap: round; transform: rotate(-90deg); transform-origin: 50% 50%; }
+  .donut .score    { fill: var(--ink); font-size: 56px; font-weight: 800; letter-spacing: -.04em; }
+  .donut .of       { fill: var(--muted); font-size: 14px; font-weight: 600; }
+
+  .hero-info { display: flex; flex-direction: column; justify-content: center; }
+  .band-pill {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 5px 11px; border-radius: 999px;
+    font-size: 10.5px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase;
+    background: rgba(139,124,246,.12); color: var(--brand-dark);
+    border: 1px solid rgba(139,124,246,.3);
+    align-self: flex-start;
+  }
+  .band-pill .led { width: 7px; height: 7px; border-radius: 50%; background: var(--brand); }
+  .hero-title { font-size: 22px; font-weight: 800; margin: 10px 0 6px; letter-spacing: -.015em; }
+  .hero-sub   { font-size: 12.5px; color: var(--ink-soft); line-height: 1.6; margin: 0; }
+
+  /* ---------- Subscore bars ---------- */
+  .sub-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 22px; }
+  .sub {
+    border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px;
+    background: #fff;
+  }
+  .sub-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 4px; }
+  .sub-label { font-size: 12.5px; font-weight: 700; color: var(--ink); }
+  .sub-pillar { font-size: 9.5px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+  .sub-value { font-size: 18px; font-weight: 800; }
+  .sub-bar { height: 6px; background: #f2eefb; border-radius: 999px; overflow: hidden; margin-top: 4px; }
+  .sub-bar > div { height: 100%; border-radius: 999px; }
+  .sub-reason { font-size: 11px; color: var(--ink-soft); line-height: 1.55; margin: 8px 0 0; }
+
+  .c-purple { color: var(--brand); } .b-purple { background: linear-gradient(90deg, var(--brand), var(--lilac)); }
+  .c-green  { color: var(--green);  } .b-green  { background: linear-gradient(90deg, #059669, var(--green)); }
+  .c-amber  { color: var(--amber);  } .b-amber  { background: linear-gradient(90deg, #d97706, var(--amber)); }
+  .c-coral  { color: var(--coral);  } .b-coral  { background: linear-gradient(90deg, #dc2626, var(--coral)); }
+
+  /* ---------- Peer benchmark ---------- */
+  .bench {
+    border: 1px solid var(--line); border-radius: 14px; padding: 18px 20px;
+    background: var(--surface);
+    margin: 14px 0 6px;
+  }
+  .bench-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+  .bench-bar { position: relative; height: 14px; background: #ece6fb; border-radius: 999px; overflow: visible; }
+  .bench-bar .fill {
+    position: absolute; top: 0; bottom: 0; left: 0; border-radius: 999px;
+    background: linear-gradient(90deg, var(--brand), var(--lilac));
+  }
+  .bench-bar .marker {
+    position: absolute; top: -6px; bottom: -6px; width: 2px; background: #2c2240; border-radius: 2px;
+  }
+  .bench-bar .marker-label {
+    position: absolute; top: 18px; transform: translateX(-50%);
+    font-size: 9.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-soft); font-weight: 700;
+  }
+  .bench-bar .you-label {
+    position: absolute; bottom: 18px; transform: translateX(-50%);
+    font-size: 9.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--brand-dark); font-weight: 800;
+  }
+
+  /* ---------- Beats / takeaways list ---------- */
+  .beats { display: grid; gap: 10px; margin-top: 10px; }
+  .beat {
+    display: grid; grid-template-columns: 28px 1fr; gap: 12px;
+    padding: 12px 14px; border: 1px solid var(--line); border-radius: 10px; background: #fff;
+  }
+  .beat .n {
+    width: 26px; height: 26px; border-radius: 8px;
+    background: linear-gradient(135deg, var(--brand), var(--brand-dark));
+    color: #fff; font-weight: 800; font-size: 12px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .beat h4 { margin: 0 0 2px; font-size: 12.5px; color: var(--ink); }
+  .beat p  { margin: 0; font-size: 11.5px; line-height: 1.55; color: var(--ink-soft); }
+
+  /* ---------- Summary prose ---------- */
+  .prose p { font-size: 12.5px; line-height: 1.75; color: var(--ink-soft); }
+  .prose p::first-letter { color: var(--brand-dark); font-weight: 800; }
+
+  /* ---------- Footer ---------- */
+  .foot {
+    position: absolute; left: 20mm; right: 20mm; bottom: 12mm;
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 9.5px; color: var(--muted); letter-spacing: .04em;
+    border-top: 1px solid var(--line); padding-top: 8px;
+  }
+</style>
+</head>
+<body>
+
+<div class="toolbar">
+  <span><b>Demo preview</b> — open <code>Ctrl/Cmd + P</code> → <b>Save as PDF</b> to see what the downloaded report would look like.</span>
+  <button onclick="window.print()">Print / Save as PDF</button>
+</div>
+
+<!-- ============== PAGE 1 — COVER + SCORE ============== -->
+<section class="page">
+  <header class="head">
+    <span class="logo"><span class="dot"></span> Clarity Readiness Report</span>
+    <div class="meta">
+      <b>Tanmaya</b><br/>
+      27 April 2026 · Honest Decision Challenge<br/>
+      Report ID · CR-20260427-T9F
+    </div>
+  </header>
+
+  <div class="eyebrow">Your Journey, Reflected</div>
+  <h1>Tanmaya, here is what surfaced.</h1>
+  <p style="max-width: 70ch; margin-top:6px;">
+    Across five honest beats, a clear pattern emerged about how you make decisions
+    under pressure — and where small adjustments would compound the fastest.
+  </p>
+
+  <!-- Hero score card -->
+  <div class="hero">
+    <div class="donut-wrap">
+      <svg class="donut" viewBox="0 0 120 120" aria-label="Overall clarity score 72 of 100">
+        <defs>
+          <linearGradient id="ringGrad" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%"  stop-color="#8b7cf6"/>
+            <stop offset="100%" stop-color="#6b5ee0"/>
+          </linearGradient>
+        </defs>
+        <circle class="ring-bg" cx="60" cy="60" r="48"/>
+        <!-- circumference 2*pi*48 ≈ 301.59. 72% => dasharray 217.14 84.45 -->
+        <circle class="ring-fg" cx="60" cy="60" r="48" stroke-dasharray="217.14 84.45"/>
+        <text class="score" x="60" y="66" text-anchor="middle">72</text>
+        <text class="of"    x="60" y="86" text-anchor="middle">/ 100</text>
+      </svg>
+    </div>
+    <div class="hero-info">
+      <span class="band-pill"><span class="led"></span> Good — Clear Direction</span>
+      <div class="hero-title">You are mostly aligned, with one specific friction.</div>
+      <p class="hero-sub">
+        Your direction and identity reads strong. The drag is concentrated in
+        decision-readiness — you know what you want, but you are still
+        rehearsing the move instead of making it.
+      </p>
+    </div>
+  </div>
+
+  <h2>The four pillars</h2>
+  <div class="sub-grid">
+    <div class="sub">
+      <div class="sub-head">
+        <div>
+          <div class="sub-label">Direction Clarity</div>
+          <div class="sub-pillar">Pillar I · vision</div>
+        </div>
+        <div class="sub-value c-purple">81</div>
+      </div>
+      <div class="sub-bar"><div class="b-purple" style="width:81%"></div></div>
+      <p class="sub-reason">Strong sense of where you want to be in 12 months. Wording was specific, not aspirational.</p>
+    </div>
+
+    <div class="sub">
+      <div class="sub-head">
+        <div>
+          <div class="sub-label">Identity Alignment</div>
+          <div class="sub-pillar">Pillar II · self</div>
+        </div>
+        <div class="sub-value c-green">88</div>
+      </div>
+      <div class="sub-bar"><div class="b-green" style="width:88%"></div></div>
+      <p class="sub-reason">Your stated values track tightly with how you described real recent choices.</p>
+    </div>
+
+    <div class="sub">
+      <div class="sub-head">
+        <div>
+          <div class="sub-label">Decision Readiness</div>
+          <div class="sub-pillar">Pillar III · action</div>
+        </div>
+        <div class="sub-value c-amber">52</div>
+      </div>
+      <div class="sub-bar"><div class="b-amber" style="width:52%"></div></div>
+      <p class="sub-reason">Hesitation pattern around irreversibility. You delay the call, not the analysis.</p>
+    </div>
+
+    <div class="sub">
+      <div class="sub-head">
+        <div>
+          <div class="sub-label">Energy Alignment</div>
+          <div class="sub-pillar">Pillar IV · capacity</div>
+        </div>
+        <div class="sub-value c-purple">67</div>
+      </div>
+      <div class="sub-bar"><div class="b-purple" style="width:67%"></div></div>
+      <p class="sub-reason">Mid-range. Your week is structured around obligations, not the work that compounds.</p>
+    </div>
+  </div>
+
+  <div class="foot">
+    <span>Clarity Readiness Report · Page 1 of 3</span>
+    <span>Confidential · prepared for Tanmaya</span>
+  </div>
+</section>
+
+<!-- ============== PAGE 2 — BENCHMARK + AI SUMMARY ============== -->
+<section class="page">
+  <header class="head">
+    <span class="logo"><span class="dot"></span> Clarity Readiness Report</span>
+    <div class="meta"><b>Tanmaya</b> · 27 April 2026</div>
+  </header>
+
+  <div class="eyebrow">Where you stand</div>
+  <h1 style="font-size:22px;">Peer benchmark</h1>
+
+  <div class="bench">
+    <div class="bench-head">
+      <div>
+        <h3 style="margin:0;">Overall Clarity Readiness</h3>
+        <small>Peer set: leaders carrying unresolved clarity gaps (n ≈ 1,420)</small>
+      </div>
+      <div style="font-size:22px; font-weight:800;">
+        <span class="c-purple">72</span><small> · you</small>
+        &nbsp;·&nbsp;
+        <span style="color:var(--ink-soft)">58</span><small> · avg</small>
+      </div>
+    </div>
+
+    <div class="bench-bar">
+      <div class="fill" style="width:72%"></div>
+      <div class="marker" style="left:58%"></div>
+      <div class="marker-label" style="left:58%">avg 58</div>
+      <div class="you-label"   style="left:72%">you 72</div>
+    </div>
+
+    <p style="margin-top:34px;">
+      You score <b>+14 points</b> above the peer mean — a meaningful gap, but
+      concentrated in the upper two pillars. Decision readiness is the lever
+      that, if moved 15 points, would lift your overall score into the
+      <b>High</b> band.
+    </p>
+  </div>
+
+  <div class="divider"></div>
+
+  <div class="eyebrow">Synthesis</div>
+  <h2 style="font-size:18px; margin-top:6px;">What surfaced across your five answers</h2>
+
+  <div class="prose">
+    <p>
+      The thread running through everything you wrote is that you already
+      know the answer. The five beats did not produce new information —
+      they made the existing signal louder. That is unusual and worth
+      naming.
+    </p>
+    <p>
+      What is also true is that your hesitation is selective. You move
+      quickly on reversible calls and stall hard on irreversible ones,
+      especially when the cost is paid by you alone. The pattern is not
+      indecision — it is a quiet contract you have made with yourself
+      to never be wrong in public.
+    </p>
+    <p>
+      The interesting reframe is this: the decision you are sitting on
+      is not high-stakes because it is irreversible. It is high-stakes
+      because making it would force you to update your self-image —
+      and that is the actual cost you have been pricing in.
+    </p>
+  </div>
+
+  <div class="foot">
+    <span>Clarity Readiness Report · Page 2 of 3</span>
+    <span>Confidential · prepared for Tanmaya</span>
+  </div>
+</section>
+
+<!-- ============== PAGE 3 — BEATS + NEXT ============== -->
+<section class="page">
+  <header class="head">
+    <span class="logo"><span class="dot"></span> Clarity Readiness Report</span>
+    <div class="meta"><b>Tanmaya</b> · 27 April 2026</div>
+  </header>
+
+  <div class="eyebrow">The five beats</div>
+  <h1 style="font-size:22px;">In your own words</h1>
+
+  <div class="beats">
+    <div class="beat">
+      <div class="n">1</div>
+      <div>
+        <h4>The current you</h4>
+        <p>"I am building the muscle to bet on myself, but I still flinch at the size of the bet."</p>
+      </div>
+    </div>
+    <div class="beat">
+      <div class="n">2</div>
+      <div>
+        <h4>The honest cost</h4>
+        <p>"Staying where I am costs me energy I keep telling myself is just temporary."</p>
+      </div>
+    </div>
+    <div class="beat">
+      <div class="n">3</div>
+      <div>
+        <h4>The decision you've been circling</h4>
+        <p>"The work I want is not the work I'm being paid for. I keep treating that gap as a phase."</p>
+      </div>
+    </div>
+    <div class="beat">
+      <div class="n">4</div>
+      <div>
+        <h4>What you actually need</h4>
+        <p>"A reason convincing enough that I stop relitigating it every Sunday night."</p>
+      </div>
+    </div>
+    <div class="beat">
+      <div class="n">5</div>
+      <div>
+        <h4>The version of you on the other side</h4>
+        <p>"Less interested in being seen as careful. More interested in being correct quickly."</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <div class="eyebrow">Next</div>
+  <h2 style="font-size:18px; margin-top:6px;">Three small moves</h2>
+  <div class="sub-grid">
+    <div class="sub">
+      <div class="sub-head"><div class="sub-label">Pick the smallest reversible version</div><div class="sub-value c-purple">01</div></div>
+      <p class="sub-reason">Find the 10% of the decision you can make this week that costs almost nothing if wrong, then take it.</p>
+    </div>
+    <div class="sub">
+      <div class="sub-head"><div class="sub-label">Set a deadline, not a milestone</div><div class="sub-value c-purple">02</div></div>
+      <p class="sub-reason">Deadlines force a yes/no. Milestones give you somewhere to keep rehearsing.</p>
+    </div>
+    <div class="sub">
+      <div class="sub-head"><div class="sub-label">Tell one person who will follow up</div><div class="sub-value c-purple">03</div></div>
+      <p class="sub-reason">Not for accountability. For the part of you that needs the decision to feel real outside your own head.</p>
+    </div>
+    <div class="sub">
+      <div class="sub-head"><div class="sub-label">Re-take the challenge in 30 days</div><div class="sub-value c-purple">04</div></div>
+      <p class="sub-reason">Decision readiness is the score that moves fastest. Re-measuring forces honesty.</p>
+    </div>
+  </div>
+
+  <div class="foot">
+    <span>Clarity Readiness Report · Page 3 of 3</span>
+    <span>Confidential · prepared for Tanmaya</span>
+  </div>
+</section>
+
+</body>
+</html>
