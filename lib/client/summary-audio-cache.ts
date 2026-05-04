@@ -1,0 +1,139 @@
+/**
+ * Persistent cache for the journey-summary TTS audio.
+ *
+ * Two layers:
+ *  • In-memory promise — survives navigation between /processing and /summary
+ *    so the second consumer awaits the first fetch instead of duplicating it.
+ *  • IndexedDB — survives a full page refresh. The bytes are keyed by the
+ *    summary text so a different run (different summary) is treated as a
+ *    cache miss; ElevenLabs is only called once per unique summary.
+ *
+ * Why IndexedDB over localStorage: a 100–500 KB mp3 base64-encodes to
+ * 130–700 KB, which can blow the ~5 MB localStorage quota when combined
+ * with the rest of the challenge state. IDB has a multi-GB budget and
+ * stores ArrayBuffers natively (no encoding overhead).
+ */
+
+const DB_NAME = "scorecard-funnel"
+const DB_VERSION = 1
+const STORE = "summaryAudio"
+
+let cachedText: string | null = null
+let audioPromise: Promise<ArrayBuffer | null> | null = null
+
+function isBrowser(): boolean {
+  return typeof window !== "undefined" && typeof indexedDB !== "undefined"
+}
+
+function openDb(): Promise<IDBDatabase> {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(DB_NAME, DB_VERSION)
+    req.onupgradeneeded = () => {
+      const db = req.result
+      if (!db.objectStoreNames.contains(STORE)) db.createObjectStore(STORE)
+    }
+    req.onsuccess = () => resolve(req.result)
+    req.onerror = () => reject(req.error)
+  })
+}
+
+async function idbGet(key: string): Promise<ArrayBuffer | null> {
+  if (!isBrowser()) return null
+  try {
+    const db = await openDb()
+    return await new Promise<ArrayBuffer | null>((resolve) => {
+      const tx = db.transaction(STORE, "readonly")
+      const req = tx.objectStore(STORE).get(key)
+      req.onsuccess = () => {
+        const v = req.result
+        resolve(v instanceof ArrayBuffer ? v : null)
+      }
+      req.onerror = () => resolve(null)
+    })
+  } catch {
+    return null
+  }
+}
+
+async function idbSet(key: string, value: ArrayBuffer): Promise<void> {
+  if (!isBrowser()) return
+  try {
+    const db = await openDb()
+    await new Promise<void>((resolve) => {
+      const tx = db.transaction(STORE, "readwrite")
+      // Keep only the latest entry — clear before put so old summaries
+      // don't accumulate across many runs.
+      tx.objectStore(STORE).clear()
+      tx.objectStore(STORE).put(value, key)
+      tx.oncomplete = () => resolve()
+      tx.onerror = () => resolve()
+      tx.onabort = () => resolve()
+    })
+  } catch {
+    /* ignore */
+  }
+}
+
+async function idbClear(): Promise<void> {
+  if (!isBrowser()) return
+  try {
+    const db = await openDb()
+    await new Promise<void>((resolve) => {
+      const tx = db.transaction(STORE, "readwrite")
+      tx.objectStore(STORE).clear()
+      tx.oncomplete = () => resolve()
+      tx.onerror = () => resolve()
+      tx.onabort = () => resolve()
+    })
+  } catch {
+    /* ignore */
+  }
+}
+
+async function fetchTts(text: string): Promise<ArrayBuffer | null> {
+  if (!text.trim()) return null
+  try {
+    const res = await fetch("/api/tts", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ beatContent: text }),
+    })
+    if (!res.ok) return null
+    const buf = await res.arrayBuffer()
+    return buf.byteLength > 0 ? buf : null
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Kick off TTS generation for the given text — or short-circuit to a
+ * persisted IDB entry if the same text was already TTS'd in a previous
+ * session. Idempotent for the same text within a single session (returns
+ * the same promise).
+ */
+export function preloadSummaryAudio(text: string): Promise<ArrayBuffer | null> {
+  if (cachedText === text && audioPromise) return audioPromise
+  cachedText = text
+  audioPromise = (async () => {
+    const persisted = await idbGet(text)
+    if (persisted) return persisted
+    const fresh = await fetchTts(text)
+    if (fresh) await idbSet(text, fresh)
+    return fresh
+  })()
+  return audioPromise
+}
+
+/** Returns the in-flight / resolved promise for the current text, else null. */
+export function getCachedSummaryAudio(text: string): Promise<ArrayBuffer | null> | null {
+  if (cachedText === text && audioPromise) return audioPromise
+  return null
+}
+
+/** Drop both layers — used by `reset()` of the challenge state. */
+export function clearSummaryAudio(): void {
+  cachedText = null
+  audioPromise = null
+  void idbClear()
+}

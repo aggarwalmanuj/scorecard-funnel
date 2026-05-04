@@ -7,6 +7,7 @@ import { Check } from "lucide-react"
 import { useChallenge, type ChallengeState, type Audience } from "@/context/challenge-context"
 import { streamBeatFromApi, isAbortErrorLike } from "@/lib/stream-beat-client"
 import { submitToGoogleSheet } from "@/lib/submit-to-google-sheet"
+import { preloadSummaryAudio } from "@/lib/client/summary-audio-cache"
 import { ChallengeNavHome } from "@/components/challenge/challenge-nav-home"
 import {
   ChallengeMenuButton,
@@ -300,6 +301,27 @@ export function ProcessingScreen({ audience }: { audience: Audience }) {
   useEffect(() => {
     if (!isHydrated) return
 
+    // If a previous run already produced every output, skip all generation.
+    // The user has likely refreshed /processing after finishing the funnel —
+    // regenerating would burn LLM/ElevenLabs spend AND yield slightly
+    // different content (LLMs are non-deterministic). The audio preload is
+    // still triggered so the IDB-cached bytes (or a one-time TTS call if
+    // they were ever cleared) are warmed before navigation forwards.
+    const fullyCached =
+      state.beats.beat1.trim().length >= BEAT_READY_MIN_CHARS &&
+      state.beats.beat2.trim().length >= BEAT_READY_MIN_CHARS &&
+      state.beats.beat3.trim().length >= BEAT_READY_MIN_CHARS &&
+      state.beats.beat4.trim().length >= BEAT_READY_MIN_CHARS &&
+      state.beats.beat5.trim().length >= BEAT_READY_MIN_CHARS &&
+      !!state.clarityScore &&
+      !!state.reportData &&
+      state.summaryText.trim().length > 0
+
+    if (fullyCached) {
+      void preloadSummaryAudio(state.summaryText)
+      return
+    }
+
     let active = true
     abortRef.current = new AbortController()
     const signal = abortRef.current.signal
@@ -472,7 +494,12 @@ export function ProcessingScreen({ audience }: { audience: Audience }) {
         firstName: state.firstName,
         beats: finalBeats,
       }).then((text) => {
-        if (text) setSummaryText(text)
+        if (text) {
+          setSummaryText(text)
+          // Pre-fetch the TTS audio so the summary screen's "Listen"
+          // button plays instantly without a network round-trip.
+          void preloadSummaryAudio(text)
+        }
       })
     })()
 

@@ -1062,10 +1062,19 @@ function ReportStyles() {
         grid-template-columns: 220px 1fr;
         gap: 28px;
         padding: 22px 24px;
-        background: linear-gradient(160deg, var(--brand-soft) 0%, #ffffff 100%);
-        border: 1px solid var(--line);
+        background: linear-gradient(
+          160deg,
+          rgba(255, 255, 255, 0.55) 0%,
+          rgba(239, 234, 255, 0.35) 100%
+        );
+        backdrop-filter: blur(18px) saturate(180%);
+        -webkit-backdrop-filter: blur(18px) saturate(180%);
+        border: 1px solid rgba(255, 255, 255, 0.65);
         border-radius: 16px;
         margin: 6px 0 16px;
+        box-shadow:
+          0 8px 32px rgba(139, 124, 246, 0.12),
+          inset 0 1px 0 rgba(255, 255, 255, 0.7);
       }
       .report-root .donut-wrap {
         display: flex;

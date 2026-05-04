@@ -6,6 +6,10 @@ import { ArrowRight, Sparkles, Volume2, Square, Loader2, Download } from "lucide
 import { useChallenge, type Audience } from "@/context/challenge-context"
 import { isAbortErrorLike } from "@/lib/stream-beat-client"
 import {
+  getCachedSummaryAudio,
+  preloadSummaryAudio,
+} from "@/lib/client/summary-audio-cache"
+import {
   scoreClarity,
   buildClarityScoreFromSubscores,
   type ClarityScore,
@@ -145,7 +149,7 @@ async function streamSummary(
 
 export function JourneySummaryScreen({ audience }: { audience: Audience }) {
   const router = useRouter()
-  const { state, setClarityScore } = useChallenge()
+  const { state, setClarityScore, isHydrated } = useChallenge()
 
   const [summaryText, setSummaryText] = useState("")
   const [isStreaming, setIsStreaming] = useState(false)
@@ -153,6 +157,9 @@ export function JourneySummaryScreen({ audience }: { audience: Audience }) {
   const [hasFailed, setHasFailed] = useState(false)
   const [isVisible, setIsVisible] = useState(false)
   const [ctaVisible, setCtaVisible] = useState(false)
+  // Gates the scorecard details + the footer CTA. TODO: replace with a real
+  // entitlement check once payment is wired up.
+  const [unlocked, setUnlocked] = useState(false)
 
   // Audio playback — mirrors beat-reveal-screen pattern
   const [isPlaying, setIsPlaying] = useState(false)
@@ -172,21 +179,17 @@ export function JourneySummaryScreen({ audience }: { audience: Audience }) {
     }
   }, [])
 
-  // Fetch TTS bytes (cached) for the current summary text.
+  // Fetch TTS bytes for the current summary text. Reads from the in-memory
+  // cache populated by the /processing screen first — when that pre-fetch
+  // landed in time, playback starts with zero network latency. Falls back to
+  // a live fetch otherwise.
   const fetchAudioBytes = async (): Promise<ArrayBuffer | null> => {
     if (audioBytesRef.current) return audioBytesRef.current
     if (!summaryText.trim()) return null
-    const response = await fetch("/api/tts", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ beatContent: summaryText }),
-    })
-    if (!response.ok) {
-      const errText = await response.text().catch(() => "")
-      throw new Error(`TTS request failed (${response.status}): ${errText}`)
-    }
-    const buffer = await response.arrayBuffer()
-    if (buffer.byteLength === 0) throw new Error("Received empty audio buffer")
+    const pending =
+      getCachedSummaryAudio(summaryText) ?? preloadSummaryAudio(summaryText)
+    const buffer = await pending
+    if (!buffer) throw new Error("TTS request failed or returned empty buffer")
     audioBytesRef.current = buffer
     return buffer
   }
@@ -291,7 +294,15 @@ export function JourneySummaryScreen({ audience }: { audience: Audience }) {
   // streaming connection.  This makes the summary page render
   // instantly AND removes the ECONNRESET noise that came from aborting an
   // in-flight upstream stream when the user navigated away.
+  //
+  // We MUST wait for `isHydrated` before deciding which path to take —
+  // otherwise on a page refresh this effect runs before localStorage
+  // rehydration finishes, observes an empty `state.summaryText`, and
+  // wrongly falls through to the streaming path (regenerating the summary
+  // and producing the ECONNRESET noise the cache was designed to avoid).
   useEffect(() => {
+    if (!isHydrated) return
+
     fullTextRef.current = ""
     setVisibleChars(0)
 
@@ -343,7 +354,7 @@ export function JourneySummaryScreen({ audience }: { audience: Audience }) {
       if (charTimerRef.current) clearInterval(charTimerRef.current)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [isHydrated])
 
   // Show the CTA when streaming done AND text is fully displayed
   useEffect(() => {
@@ -453,15 +464,15 @@ export function JourneySummaryScreen({ audience }: { audience: Audience }) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6"
+      className="fixed inset-0 z-50 overflow-y-auto overscroll-contain"
       style={{
-        background: "rgba(10, 7, 24, 0.96)",
-        backdropFilter: "blur(12px)",
-        WebkitBackdropFilter: "blur(12px)",
+        background: "linear-gradient(160deg, #13102a 0%, #0a0718 60%, #10091f 100%)",
+        scrollbarWidth: "thin",
+        scrollbarColor: "rgba(139,124,246,0.3) transparent",
       }}
     >
       {/* Atmospheric particles */}
-      <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
+      <div className="pointer-events-none fixed inset-0 overflow-hidden" aria-hidden>
         <div className="absolute top-[12%] left-[8%] w-1 h-1 rounded-full bg-[#8b7cf6]/40 animate-float" style={{ animationDelay: "0.2s" }} />
         <div className="absolute top-[25%] right-[12%] w-1.5 h-1.5 rounded-full bg-[#8b7cf6]/25 animate-float" style={{ animationDelay: "0.7s" }} />
         <div className="absolute bottom-[20%] left-[15%] w-1 h-1 rounded-full bg-[#8b7cf6]/30 animate-float" style={{ animationDelay: "1.1s" }} />
@@ -472,258 +483,256 @@ export function JourneySummaryScreen({ audience }: { audience: Audience }) {
         <div className="absolute -bottom-20 right-1/4 w-80 h-80 rounded-full bg-[#2d1b9e]/10 blur-3xl animate-glow-pulse" style={{ animationDelay: "2s" }} />
       </div>
 
-      {/* Card — 80-90% of viewport */}
+      {/* Top accent bar */}
       <div
-        className="relative w-full max-w-3xl"
+        className="sticky top-0 z-20 h-0.5 w-full"
         style={{
-          maxHeight: "90vh",
-          width: "min(90vw, 820px)",
+          background: "linear-gradient(90deg, transparent, #8b7cf6, #2d1b9e, #8b7cf6, transparent)",
+        }}
+      />
+
+      {/* Full-page content */}
+      <div
+        className="relative min-h-screen flex flex-col"
+        style={{
           transition: "opacity 0.8s cubic-bezier(0.16,1,0.3,1), transform 0.8s cubic-bezier(0.16,1,0.3,1)",
           opacity: isVisible ? 1 : 0,
-          transform: isVisible ? "translateY(0) scale(1)" : "translateY(32px) scale(0.97)",
+          transform: isVisible ? "translateY(0)" : "translateY(24px)",
         }}
       >
-        {/* Outer glow ring */}
-        <div
-          className="absolute -inset-px rounded-2xl pointer-events-none"
-          style={{
-            background: "linear-gradient(135deg, rgba(139,124,246,0.35) 0%, transparent 50%, rgba(45,27,158,0.2) 100%)",
-          }}
-        />
-
-        <div
-          className="relative rounded-2xl overflow-hidden flex flex-col"
-          style={{
-            background: "linear-gradient(160deg, #13102a 0%, #0a0718 60%, #10091f 100%)",
-            border: "1.5px solid rgba(139,124,246,0.25)",
-            boxShadow: "0 0 60px rgba(139,124,246,0.08), 0 32px 64px rgba(0,0,0,0.6)",
-            maxHeight: "90vh",
-          }}
-        >
-          {/* Top accent bar */}
+        <div className="flex-1 w-full max-w-none w-full px-5 sm:px-10 pt-10 sm:pt-14 pb-10">
+          {/* Header */}
           <div
-            className="h-0.5 w-full shrink-0"
             style={{
-              background: "linear-gradient(90deg, transparent, #8b7cf6, #2d1b9e, #8b7cf6, transparent)",
+              transition: "opacity 0.7s 0.3s, transform 0.7s 0.3s",
+              opacity: isVisible ? 1 : 0,
+              transform: isVisible ? "translateY(0)" : "translateY(16px)",
             }}
-          />
-
-          {/* Scrollable body */}
-          <div
-            className="flex-1 overflow-y-auto overscroll-contain"
-            style={{ scrollbarWidth: "thin", scrollbarColor: "rgba(139,124,246,0.3) transparent" }}
           >
-            <div className="px-6 sm:px-10 pt-8 pb-6">
-
-              {/* Header */}
+            <div className="flex items-center gap-3 mb-3">
               <div
-                style={{
-                  transition: "opacity 0.7s 0.3s, transform 0.7s 0.3s",
-                  opacity: isVisible ? 1 : 0,
-                  transform: isVisible ? "translateY(0)" : "translateY(16px)",
-                }}
+                className="flex items-center justify-center w-9 h-9 rounded-xl"
+                style={{ background: "rgba(139,124,246,0.15)", border: "1px solid rgba(139,124,246,0.3)" }}
               >
-                <div className="flex items-center gap-3 mb-3">
-                  <div
-                    className="flex items-center justify-center w-9 h-9 rounded-xl"
-                    style={{ background: "rgba(139,124,246,0.15)", border: "1px solid rgba(139,124,246,0.3)" }}
-                  >
-                    <Sparkles className="w-4 h-4 text-[#8b7cf6]" />
-                  </div>
-                  <span
-                    className="text-xs font-black uppercase tracking-[0.12em]"
-                    style={{ color: "rgba(139,124,246,0.8)" }}
-                  >
-                    Your Journey, Reflected
-                  </span>
-                </div>
-
-                <div className="flex items-start justify-between gap-4 mb-2">
-                  <h1
-                    className="font-black tracking-tighter leading-tight"
-                    style={{
-                      fontSize: "clamp(22px, 3.5vw, 30px)",
-                      color: "#fafaf9",
-                    }}
-                  >
-                    {state.firstName ? `${state.firstName}, here is what surfaced.` : "Here is what surfaced."}
-                  </h1>
-
-                  {/* Audio controls — only shown once text is available */}
-                  {summaryText && (
-                    <div className="shrink-0 flex items-center gap-2 mt-1">
-                      <button
-                        type="button"
-                        id="summary-audio-btn"
-                        onClick={handlePlayAudio}
-                        disabled={isLoadingAudio}
-                        aria-label={isPlaying ? "Stop audio" : "Listen to summary"}
-                        title={isPlaying ? "Stop audio" : "Listen to summary"}
-                        className="flex items-center justify-center w-10 h-10 rounded-full transition-all duration-300 hover:scale-105 disabled:opacity-50 disabled:hover:scale-100"
-                        style={{
-                          background: "rgba(139,124,246,0.15)",
-                          border: "1px solid rgba(139,124,246,0.35)",
-                          color: "#8b7cf6",
-                        }}
-                      >
-                        {isLoadingAudio ? (
-                          <Loader2 className="w-5 h-5 animate-spin" />
-                        ) : isPlaying ? (
-                          <Square className="w-4 h-4 fill-current" />
-                        ) : (
-                          <Volume2 className="w-5 h-5" />
-                        )}
-                      </button>
-                      <button
-                        type="button"
-                        id="summary-audio-download-btn"
-                        onClick={handleDownloadAudio}
-                        disabled={isDownloadingAudio}
-                        aria-label="Download audio summary"
-                        title="Download audio summary"
-                        className="flex items-center justify-center w-10 h-10 rounded-full transition-all duration-300 hover:scale-105 disabled:opacity-50 disabled:hover:scale-100"
-                        style={{
-                          background: "rgba(139,124,246,0.15)",
-                          border: "1px solid rgba(139,124,246,0.35)",
-                          color: "#8b7cf6",
-                        }}
-                      >
-                        {isDownloadingAudio ? (
-                          <Loader2 className="w-5 h-5 animate-spin" />
-                        ) : (
-                          <Download className="w-5 h-5" />
-                        )}
-                      </button>
-                    </div>
-                  )}
-                </div>
-
-                <div
-                  className="h-px w-16 mb-7 rounded-full"
-                  style={{
-                    background: "linear-gradient(90deg, #8b7cf6, transparent)",
-                    transition: "opacity 0.5s 0.6s",
-                    opacity: isVisible ? 1 : 0,
-                  }}
-                />
+                <Sparkles className="w-4 h-4 text-[#8b7cf6]" />
               </div>
-
-              {/* Summary Text */}
-              <div className="min-h-[120px]">
-                {!summaryText && isStreaming && (
-                  <div className="flex items-center gap-3 mt-4">
-                    <span className="flex gap-1">
-                      {[0, 1, 2].map((i) => (
-                        <span
-                          key={i}
-                          className="w-1.5 h-1.5 rounded-full bg-[#8b7cf6]"
-                          style={{
-                            animation: "pulse 1.2s ease-in-out infinite",
-                            animationDelay: `${i * 0.2}s`,
-                          }}
-                        />
-                      ))}
-                    </span>
-                    <span
-                      className="text-sm font-sans"
-                      style={{ color: "rgba(250,250,249,0.4)" }}
-                    >
-                      Reading everything you shared...
-                    </span>
-                  </div>
-                )}
-
-                {hasFailed && !summaryText && (
-                  <p className="text-sm" style={{ color: "rgba(250,250,249,0.5)" }}>
-                    Something went wrong generating your summary. Please proceed to see your full results.
-                  </p>
-                )}
-
-                <div className="space-y-5">
-                  {paragraphs.map((para, idx) => (
-                    <p
-                      key={idx}
-                      className="font-sans leading-[1.85] text-base sm:text-[17px]"
-                      style={{
-                        color: "rgba(250,250,249,0.88)",
-                        animation: "fade-in-up 0.5s cubic-bezier(0.16,1,0.3,1) both",
-                        animationDelay: `${idx * 80}ms`,
-                      }}
-                    >
-                      {para}
-                      {/* Cursor only on last paragraph while streaming */}
-                      {idx === paragraphs.length - 1 && isCursorVisible && (
-                        <span
-                          className="inline-block w-[2px] h-[1.1em] bg-[#8b7cf6] ml-0.5 align-middle rounded-full typewriter-cursor"
-                          aria-hidden
-                        />
-                      )}
-                    </p>
-                  ))}
-                </div>
-              </div>
-
-              {/* Clarity Readiness Index — revealed with the CTA */}
-              <div
-                className="mt-10"
-                style={{
-                  transition:
-                    "opacity 0.8s cubic-bezier(0.16,1,0.3,1), transform 0.8s cubic-bezier(0.16,1,0.3,1)",
-                  opacity: ctaVisible ? 1 : 0,
-                  transform: ctaVisible ? "translateY(0)" : "translateY(14px)",
-                  pointerEvents: ctaVisible ? "auto" : "none",
-                }}
+              <span
+                className="text-xs font-black uppercase tracking-[0.12em]"
+                style={{ color: "rgba(139,124,246,0.8)" }}
               >
-                {clarity ? (
-                  <ClarityScoreCard
-                    clarity={clarity}
-                    source={scoreSource}
-                    reasons={scoreReasons}
-                    nsState={nsState}
-                  />
-                ) : (
-                  <ClarityScorePending />
-                )}
-              </div>
+                Your Journey, Reflected
+              </span>
             </div>
+
+            <h1
+              className="font-black tracking-tighter leading-tight mb-2"
+              style={{
+                fontSize: "clamp(24px, 4vw, 36px)",
+                color: "#fafaf9",
+              }}
+            >
+              {state.firstName ? `${state.firstName}, here is what surfaced.` : "Here is what surfaced."}
+            </h1>
+
+            <div
+              className="h-px w-16 mb-8 rounded-full"
+              style={{
+                background: "linear-gradient(90deg, #8b7cf6, transparent)",
+                transition: "opacity 0.5s 0.6s",
+                opacity: isVisible ? 1 : 0,
+              }}
+            />
           </div>
 
-          {/* Footer CTA */}
+          {/* 1. Clarity Readiness Index — scorecard FIRST. Reveals on initial
+                mount (with glass morphism overlay) so it is visible
+                immediately on reload, not after streaming completes. */}
           <div
-            className="shrink-0 px-6 sm:px-10 py-5 border-t"
             style={{
-              borderColor: "rgba(139,124,246,0.15)",
-              background: "rgba(10,7,24,0.6)",
-              backdropFilter: "blur(8px)",
-              transition: "opacity 0.7s, transform 0.7s",
-              opacity: ctaVisible ? 1 : 0,
-              transform: ctaVisible ? "translateY(0)" : "translateY(12px)",
-              pointerEvents: ctaVisible ? "auto" : "none",
+              transition:
+                "opacity 0.8s cubic-bezier(0.16,1,0.3,1), transform 0.8s cubic-bezier(0.16,1,0.3,1)",
+              opacity: isVisible ? 1 : 0,
+              transform: isVisible ? "translateY(0)" : "translateY(14px)",
             }}
           >
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-              <p
-                className="text-sm font-sans text-center sm:text-left"
-                style={{ color: "rgba(250,250,249,0.45)" }}
+            {clarity ? (
+              <ClarityScoreCard
+                clarity={clarity}
+                source={scoreSource}
+                reasons={scoreReasons}
+                nsState={nsState}
+                unlocked={unlocked}
+                onUnlock={() => setUnlocked(true)}
+              />
+            ) : (
+              <ClarityScorePending />
+            )}
+          </div>
+
+          {/* 2. Big bold "Click here to listen" button */}
+          {summaryText && (
+            <div className="mt-10 flex flex-col items-center gap-3">
+              <button
+                type="button"
+                id="summary-audio-btn"
+                onClick={handlePlayAudio}
+                disabled={isLoadingAudio}
+                aria-label={isPlaying ? "Stop audio" : "Click here to listen"}
+                className="group relative w-full flex items-center justify-center gap-3 px-8 py-5 sm:py-6 rounded-2xl font-black uppercase tracking-[0.14em] text-white transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-60 disabled:hover:scale-100"
+                style={{
+                  fontSize: "clamp(16px, 2.2vw, 20px)",
+                  background: "linear-gradient(135deg, #8b7cf6 0%, #6b5ee0 100%)",
+                  border: "1px solid rgba(255,255,255,0.2)",
+                  boxShadow:
+                    "0 18px 40px rgba(139,124,246,0.35), inset 0 1px 0 rgba(255,255,255,0.25)",
+                  animation: !isPlaying && !isLoadingAudio
+                    ? "attention-pulse 2.5s ease-out infinite"
+                    : "none",
+                }}
               >
-                Five beats. One thread. The signal is clear.
-              </p>
+                {isLoadingAudio ? (
+                  <>
+                    <Loader2 className="w-6 h-6 animate-spin" />
+                    <span>Loading audio…</span>
+                  </>
+                ) : isPlaying ? (
+                  <>
+                    <Square className="w-5 h-5 fill-current" />
+                    <span>Stop Listening</span>
+                  </>
+                ) : (
+                  <>
+                    <Volume2 className="w-6 h-6" />
+                    <span>Click Here to Listen</span>
+                  </>
+                )}
+              </button>
 
               <button
                 type="button"
-                id="summary-continue-btn"
-                onClick={() => router.push(`/challenge/${audience}/offer`)}
-                className="group relative flex items-center gap-2.5 px-7 py-3.5 rounded-xl font-black text-[15px] text-white transition-all duration-300 hover:scale-[1.03] active:scale-[0.98]"
+                id="summary-audio-download-btn"
+                onClick={handleDownloadAudio}
+                disabled={isDownloadingAudio}
+                aria-label="Download audio summary"
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-black uppercase tracking-[0.14em] transition-all duration-300 hover:scale-[1.03] disabled:opacity-50 disabled:hover:scale-100"
                 style={{
-                  background: "linear-gradient(135deg, #8b7cf6 0%, #6b5ee0 100%)",
-                  boxShadow: "0 0 0 0 rgba(139,124,246,0.4)",
-                  animation: ctaVisible ? "attention-pulse 2.5s ease-out infinite" : "none",
+                  background: "rgba(139,124,246,0.12)",
+                  border: "1px solid rgba(139,124,246,0.3)",
+                  color: "#b5a8ff",
                 }}
               >
-                <span>See What Comes Next</span>
-                <ArrowRight className="w-4 h-4 transition-transform duration-300 group-hover:translate-x-1" />
+                {isDownloadingAudio ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Download className="w-4 h-4" />
+                )}
+                <span>Download Audio</span>
               </button>
             </div>
+          )}
+
+          {/* 3. Summary text — last */}
+          <div className="mt-12 min-h-[120px]">
+            {!summaryText && isStreaming && (
+              <div className="flex items-center gap-3 mt-4">
+                <span className="flex gap-1">
+                  {[0, 1, 2].map((i) => (
+                    <span
+                      key={i}
+                      className="w-1.5 h-1.5 rounded-full bg-[#8b7cf6]"
+                      style={{
+                        animation: "pulse 1.2s ease-in-out infinite",
+                        animationDelay: `${i * 0.2}s`,
+                      }}
+                    />
+                  ))}
+                </span>
+                <span
+                  className="text-sm font-sans"
+                  style={{ color: "rgba(250,250,249,0.4)" }}
+                >
+                  Reading everything you shared...
+                </span>
+              </div>
+            )}
+
+            {hasFailed && !summaryText && (
+              <p className="text-sm" style={{ color: "rgba(250,250,249,0.5)" }}>
+                Something went wrong generating your summary. Please proceed to see your full results.
+              </p>
+            )}
+
+            <div className="space-y-5">
+              {paragraphs.map((para, idx) => (
+                <p
+                  key={idx}
+                  className="font-sans leading-[1.85] text-base sm:text-[17px]"
+                  style={{
+                    color: "rgba(250,250,249,0.88)",
+                    animation: "fade-in-up 0.5s cubic-bezier(0.16,1,0.3,1) both",
+                    animationDelay: `${idx * 80}ms`,
+                  }}
+                >
+                  {para}
+                  {/* Cursor only on last paragraph while streaming */}
+                  {idx === paragraphs.length - 1 && isCursorVisible && (
+                    <span
+                      className="inline-block w-[2px] h-[1.1em] bg-[#8b7cf6] ml-0.5 align-middle rounded-full typewriter-cursor"
+                      aria-hidden
+                    />
+                  )}
+                </p>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Footer CTA — sticks to bottom of the page */}
+        <div
+          className="sticky bottom-0 z-10 w-full border-t"
+          style={{
+            borderColor: "rgba(139,124,246,0.15)",
+            background: "rgba(10,7,24,0.85)",
+            backdropFilter: "blur(10px)",
+            WebkitBackdropFilter: "blur(10px)",
+            transition: "opacity 0.7s, transform 0.7s",
+            opacity: ctaVisible ? 1 : 0,
+            transform: ctaVisible ? "translateY(0)" : "translateY(12px)",
+            pointerEvents: ctaVisible ? "auto" : "none",
+          }}
+        >
+          <div className="w-full max-w-none w-full px-5 sm:px-10 py-5 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <p
+              className="text-sm font-sans text-center sm:text-left"
+              style={{ color: "rgba(250,250,249,0.45)" }}
+            >
+              Five beats. One thread. The signal is clear.
+            </p>
+
+            <button
+              type="button"
+              id="summary-continue-btn"
+              onClick={() =>
+                unlocked
+                  ? router.push(`/challenge/${audience}/offer`)
+                  : router.push("/")
+              }
+              className="group relative flex items-center gap-2.5 px-7 py-3.5 rounded-xl font-black text-[15px] text-white transition-all duration-300 hover:scale-[1.03] active:scale-[0.98]"
+              style={{
+                background: unlocked
+                  ? "linear-gradient(135deg, #8b7cf6 0%, #6b5ee0 100%)"
+                  : "linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.04))",
+                border: "1px solid rgba(255,255,255,0.18)",
+                boxShadow: "0 0 0 0 rgba(139,124,246,0.4)",
+                animation:
+                  ctaVisible && unlocked
+                    ? "attention-pulse 2.5s ease-out infinite"
+                    : "none",
+              }}
+            >
+              <span>{unlocked ? "See What Comes Next" : "Exit"}</span>
+              <ArrowRight className="w-4 h-4 transition-transform duration-300 group-hover:translate-x-1" />
+            </button>
           </div>
         </div>
       </div>
@@ -762,11 +771,15 @@ function ClarityScoreCard({
   source,
   reasons,
   nsState,
+  unlocked,
+  onUnlock,
 }: {
   clarity: ClarityScore
   source: ScoreSource
   reasons: ScoreReasons
   nsState?: string
+  unlocked: boolean
+  onUnlock: () => void
 }) {
   const bandColor = bandAccent(clarity.band)
 
@@ -855,27 +868,42 @@ function ClarityScoreCard({
         </p>
       </div>
 
-      {/* Subscores */}
-      <div className="px-5 sm:px-7 py-5 space-y-4">
-        {clarity.subscoreDetails.map((s) => (
-          <SubscoreRow
-            key={s.key}
-            label={s.label}
-            pillar={s.pillar}
-            value={s.value}
-            reason={reasons[s.key]}
-          />
-        ))}
-      </div>
+      {/* Details (subscores + benchmark) — hidden behind a frosted glass overlay until unlocked.
+          The blur is applied directly to the content container via `filter: blur()` (not
+          `backdrop-filter`) so it is part of the element's first paint — no flash on reload. */}
+      <div className="relative">
+        {/* Blurred content. `filter` is applied atomically with the element's
+            first paint, so the children never appear sharp before the blur lands. */}
+        <div
+          aria-hidden={!unlocked}
+          style={{
+            filter: !unlocked ? "blur(14px) saturate(120%)" : "none",
+            transition: "filter 0.4s cubic-bezier(0.16,1,0.3,1)",
+            pointerEvents: !unlocked ? "none" : "auto",
+            userSelect: !unlocked ? "none" : "auto",
+          }}
+        >
+          {/* Subscores */}
+          <div className="px-5 sm:px-7 py-5 space-y-4">
+            {clarity.subscoreDetails.map((s) => (
+              <SubscoreRow
+                key={s.key}
+                label={s.label}
+                pillar={s.pillar}
+                value={s.value}
+                reason={reasons[s.key]}
+              />
+            ))}
+          </div>
 
-      {/* Benchmark footer */}
-      <div
-        className="px-5 sm:px-7 py-4 border-t"
-        style={{
-          borderColor: "rgba(139,124,246,0.15)",
-          background: "rgba(10,7,24,0.35)",
-        }}
-      >
+          {/* Benchmark footer */}
+          <div
+            className="px-5 sm:px-7 py-4 border-t"
+            style={{
+              borderColor: "rgba(139,124,246,0.15)",
+              background: "rgba(10,7,24,0.35)",
+            }}
+          >
         <div className="flex items-center justify-between gap-3 mb-1.5">
           <span
             className="text-[10px] font-black uppercase tracking-[0.14em]"
@@ -904,6 +932,36 @@ function ClarityScoreCard({
           >
             Offline estimate — full model scoring was unavailable.
           </p>
+        ) : null}
+          </div>
+        </div>
+
+        {/* Unlock overlay — sits on top of the (already-blurred) content with
+            a soft glass tint and the Unlock button. */}
+        {!unlocked ? (
+          <div
+            className="absolute inset-0 z-10 flex items-center justify-center"
+            style={{
+              background:
+                "linear-gradient(180deg, rgba(13,7,30,0.25) 0%, rgba(13,7,30,0.35) 100%)",
+              borderTop: "1px solid rgba(255,255,255,0.06)",
+            }}
+          >
+            <button
+              type="button"
+              onClick={onUnlock}
+              className="px-6 py-3 rounded-full text-sm font-black uppercase tracking-[0.16em] transition-transform hover:scale-[1.03] active:scale-[0.98]"
+              style={{
+                background: "linear-gradient(135deg, #8b7cf6, #6b5ee0)",
+                color: "#fafaf9",
+                border: "1px solid rgba(255,255,255,0.18)",
+                boxShadow:
+                  "0 10px 30px rgba(139,124,246,0.35), inset 0 1px 0 rgba(255,255,255,0.25)",
+              }}
+            >
+              Unlock
+            </button>
+          </div>
         ) : null}
       </div>
     </section>

@@ -180,9 +180,21 @@ export async function POST(request: Request) {
             }
           }
         }
+      } catch (err) {
+        // Client navigating away mid-stream surfaces here as ECONNRESET /
+        // "aborted". That is expected, not a bug — swallow it so it does
+        // not propagate as an uncaughtException at the Node level. Only
+        // log genuinely unexpected upstream failures.
+        const code = (err as { code?: string })?.code ?? ""
+        const msg = err instanceof Error ? err.message : String(err)
+        const isAbort =
+          code === "ECONNRESET" ||
+          code === "ABORT_ERR" ||
+          /aborted|ECONNRESET|ERR_STREAM_PREMATURE_CLOSE/i.test(msg)
+        if (!isAbort) console.error("[summary] stream error", redactError(err))
       } finally {
-        controller.enqueue(sseData({ done: true }))
-        controller.close()
+        try { controller.enqueue(sseData({ done: true })) } catch { /* already closed */ }
+        try { controller.close() } catch { /* idempotent */ }
       }
     },
     cancel() {
