@@ -863,22 +863,175 @@ a:hover > .brand-mark {
    inline style staggers the cascade. We can't use the shared `.reveal`
    class because the wall is a horizontal flex row: cards beyond the
    viewport's right edge would never trigger their own observers. */
+/* Voice card transition contract.
+   Tailwind v4 emits `translate-*`, `scale-*`, `rotate-*` against the
+   *separate* CSS properties (translate / scale / rotate), not as a
+   composed `transform`. Listing only `transform` here would leave the
+   hover-driven translate-y / scale changes un-animated. We therefore
+   transition `all` for the snappy 0.4s family (translate, scale, rotate,
+   transform, box-shadow, ring colour) and override `opacity` to 1s so
+   the entrance fade still feels editorial-slow. */
 .voice-card {
   opacity: 0;
   transform: translateY(28px) scale(0.97);
   transition:
-    opacity 1s cubic-bezier(0.22, 1, 0.36, 1),
-    transform 1s cubic-bezier(0.22, 1, 0.36, 1),
-    box-shadow 0.5s cubic-bezier(0.22, 1, 0.36, 1),
-    --tw-ring-color 0.5s ease;
+    all 0.4s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 1s cubic-bezier(0.22, 1, 0.36, 1);
 }
 [data-revealed="true"] .voice-card {
   opacity: 1;
   transform: translateY(0) scale(1);
 }
+
+/* Edge fades on the voice wall — soft gradient overlays on the row's
+   left/right edges that hint there is more content in that direction.
+   Hidden via data-show=false when the row reaches the corresponding end.
+   Background colour matches the section so the fade reads as the page
+   absorbing the row, not as a stripe. */
+.voice-edge {
+  background: linear-gradient(
+    to right,
+    var(--background) 0%,
+    color-mix(in srgb, var(--background) 60%, transparent) 55%,
+    transparent 100%
+  );
+  opacity: 0;
+  transition: opacity 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.voice-edge-right {
+  background: linear-gradient(
+    to left,
+    var(--background) 0%,
+    color-mix(in srgb, var(--background) 60%, transparent) 55%,
+    transparent 100%
+  );
+}
+.voice-edge[data-show="true"] {
+  opacity: 1;
+}
+
+/* Mobile swipe hint — small horizontal nudge on the arrow icon to
+   reinforce the gesture direction. Hidden under reduced-motion. */
+@keyframes swipe-nudge {
+  0%, 100% { transform: translateX(0); opacity: 0.55; }
+  50%      { transform: translateX(4px); opacity: 1; }
+}
+.swipe-arrow {
+  animation: swipe-nudge 2.4s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .swipe-arrow { animation: none; }
+}
 @media (prefers-reduced-motion: reduce) {
   .voice-card {
     opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}
+
+/* Mobile sheet — backdrop fades, panel slides down from above (sheets
+   that descend from the top read as nav, not modals). Each link inside
+   the panel cascades in with a stagger via animationDelay set inline. */
+@keyframes sheet-backdrop-fade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes sheet-panel-down {
+  from {
+    opacity: 0;
+    transform: translateY(-8%);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes sheet-link-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+    filter: blur(2px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0);
+  }
+}
+.sheet-backdrop {
+  animation: sheet-backdrop-fade 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.sheet-panel {
+  animation: sheet-panel-down 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+  will-change: transform;
+}
+.sheet-link {
+  opacity: 0;
+  animation: sheet-link-in 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .sheet-backdrop,
+  .sheet-panel,
+  .sheet-link {
+    animation: none;
+    opacity: 1;
+  }
+}
+
+/* Take-home deliverables deck — three artifact cards composed on a
+   diagonal flow. Cards live in the document flow (no absolute positions
+   except the audio chip), so the visual height matches actual content
+   and we never end up with dead space below. Tilts are gentle so the
+   page never feels theatrical; on group hover the cards spread apart
+   for a "fanning a stack" feel. */
+.take-deck .take-back {
+  transform: rotate(-2.4deg);
+  transition: transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.take-deck .take-front {
+  transform: rotate(2.6deg);
+  transition: transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.take-deck .take-audio {
+  transform: rotate(-5deg);
+  transition: transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+  z-index: 2;
+}
+.take-deck .take-halo {
+  position: absolute;
+  inset: -10% -8% -10% -8%;
+  background: radial-gradient(
+    ellipse at 55% 45%,
+    rgba(var(--glow), 0.18) 0%,
+    rgba(var(--glow), 0.08) 38%,
+    transparent 70%
+  );
+  filter: blur(40px);
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.85;
+}
+.take-deck .take-back,
+.take-deck .take-front {
+  position: relative;
+  z-index: 1;
+}
+@media (hover: hover) {
+  .take-deck:hover .take-back {
+    transform: rotate(-1.6deg) translate3d(-4px, -3px, 0);
+  }
+  .take-deck:hover .take-front {
+    transform: rotate(1.6deg) translate3d(4px, 4px, 0);
+  }
+  .take-deck:hover .take-audio {
+    transform: rotate(-3deg) translate3d(2px, -3px, 0);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .take-deck .take-back,
+  .take-deck .take-front,
+  .take-deck .take-audio {
     transform: none;
     transition: none;
   }

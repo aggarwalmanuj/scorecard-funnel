@@ -96,7 +96,8 @@ export function VideoTestimonialsWall() {
     <div ref={wrapperRef} data-revealed={revealed ? "true" : "false"}>
       {/* Arrow controls — aligned with the section's content gutter so they
           line up with surrounding text/headers. The arrow icon nudges on
-          hover to telegraph direction. */}
+          hover to telegraph direction. The state pair (atStart/atEnd) also
+          drives the edge fade gradients on the row below. */}
       <div className="mx-auto max-w-7xl px-6 sm:px-10 lg:px-16">
         <div className="hidden md:flex justify-end gap-2 mb-5">
           <button
@@ -104,10 +105,10 @@ export function VideoTestimonialsWall() {
             onClick={() => scroll(-1)}
             disabled={edges.atStart}
             aria-label="Scroll voices left"
-            className="group inline-flex h-10 w-10 items-center justify-center rounded-full border border-border bg-background/60 text-foreground backdrop-blur-sm transition-all duration-300 hover:-translate-y-0.5 hover:scale-105 hover:border-foreground hover:bg-foreground/10 active:scale-95 disabled:opacity-25 disabled:cursor-not-allowed disabled:hover:bg-background/60 disabled:hover:translate-y-0 disabled:hover:scale-100"
+            className="group inline-flex h-10 w-10 items-center justify-center rounded-full border border-border bg-background/60 text-foreground backdrop-blur-sm transition-all duration-[260ms] ease-[cubic-bezier(0.22,1,0.36,1)] hover:-translate-y-0.5 hover:scale-[1.04] hover:border-foreground hover:bg-foreground/10 active:scale-[0.96] disabled:opacity-25 disabled:cursor-not-allowed disabled:hover:bg-background/60 disabled:hover:translate-y-0 disabled:hover:scale-100"
           >
             <ArrowLeft
-              className="h-4 w-4 transition-transform duration-500 group-hover:-translate-x-0.5"
+              className="h-4 w-4 transition-transform duration-[420ms] ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:-translate-x-0.5"
               strokeWidth={1.6}
             />
           </button>
@@ -116,37 +117,55 @@ export function VideoTestimonialsWall() {
             onClick={() => scroll(1)}
             disabled={edges.atEnd}
             aria-label="Scroll voices right"
-            className="group inline-flex h-10 w-10 items-center justify-center rounded-full border border-border bg-background/60 text-foreground backdrop-blur-sm transition-all duration-300 hover:-translate-y-0.5 hover:scale-105 hover:border-foreground hover:bg-foreground/10 active:scale-95 disabled:opacity-25 disabled:cursor-not-allowed disabled:hover:bg-background/60 disabled:hover:translate-y-0 disabled:hover:scale-100"
+            className="group inline-flex h-10 w-10 items-center justify-center rounded-full border border-border bg-background/60 text-foreground backdrop-blur-sm transition-all duration-[260ms] ease-[cubic-bezier(0.22,1,0.36,1)] hover:-translate-y-0.5 hover:scale-[1.04] hover:border-foreground hover:bg-foreground/10 active:scale-[0.96] disabled:opacity-25 disabled:cursor-not-allowed disabled:hover:bg-background/60 disabled:hover:translate-y-0 disabled:hover:scale-100"
           >
             <ArrowRight
-              className="h-4 w-4 transition-transform duration-500 group-hover:translate-x-0.5"
+              className="h-4 w-4 transition-transform duration-[420ms] ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:translate-x-0.5"
               strokeWidth={1.6}
             />
           </button>
         </div>
       </div>
 
-      {/* Full-viewport-width row. Padding-left = section gutter so the first
-          card aligns with the section header; the row scrolls to viewport
-          edges from there. */}
-      <div
-        ref={scrollRef}
-        className="flex overflow-x-auto snap-x snap-mandatory gap-4 sm:gap-5 scrollbar-hide pb-4 px-6 sm:px-10 lg:px-16"
-      >
-        {VOICES.map((v, i) => (
-          <VoiceCard
-            key={v.src}
-            poster={v.poster}
-            index={i}
-            total={VOICES.length}
-            revealed={revealed}
-            onOpen={() => setActiveIndex(i)}
-          />
-        ))}
+      {/* Full-viewport-width row + edge fades. The relative wrapper holds
+          the scroll container plus two pointer-events-none gradient
+          overlays at the left/right edges. Each gradient fades out when
+          the row reaches that side (atStart hides the left fade, atEnd
+          hides the right fade) so the affordance reads as "more content
+          this direction" — Netflix / Apple Store row pattern. */}
+      <div className="voice-wall relative">
+        <div
+          aria-hidden
+          data-show={!edges.atStart}
+          className="voice-edge voice-edge-left pointer-events-none absolute inset-y-0 left-0 z-10 w-12 sm:w-16 lg:w-24"
+        />
+        <div
+          aria-hidden
+          data-show={!edges.atEnd}
+          className="voice-edge voice-edge-right pointer-events-none absolute inset-y-0 right-0 z-10 w-12 sm:w-16 lg:w-24"
+        />
+        <div
+          ref={scrollRef}
+          className="flex overflow-x-auto snap-x snap-mandatory gap-4 sm:gap-5 scrollbar-hide pb-4 px-6 sm:px-10 lg:px-16"
+        >
+          {VOICES.map((v, i) => (
+            <VoiceCard
+              key={v.src}
+              poster={v.poster}
+              index={i}
+              total={VOICES.length}
+              revealed={revealed}
+              onOpen={() => setActiveIndex(i)}
+            />
+          ))}
+        </div>
       </div>
 
       <div className="mx-auto max-w-7xl px-6 sm:px-10 lg:px-16">
-        <p className="mt-3 text-[0.7rem] uppercase tracking-[0.22em] text-foreground/55 md:hidden">
+        <p className="mt-3 flex items-center gap-2.5 text-[0.7rem] uppercase tracking-[0.22em] text-foreground/55 md:hidden">
+          <span className="swipe-arrow inline-block" aria-hidden>
+            <ArrowRight className="h-3.5 w-3.5" strokeWidth={1.6} />
+          </span>
           Swipe to explore · tap to play
         </p>
       </div>
@@ -203,14 +222,14 @@ function VoiceCard({
       aria-label={`Play voice ${index + 1} of ${total}`}
       data-revealed={revealed ? "true" : "false"}
       style={style}
-      className="voice-card group relative shrink-0 snap-start overflow-hidden rounded-md bg-[#0b1226] shadow-[0_2px_12px_-6px_rgba(0,0,0,0.25)] ring-1 ring-border transition-all duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] hover:-translate-y-1 hover:shadow-[0_22px_44px_-26px_rgba(0,0,0,0.45)] hover:ring-foreground/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-foreground active:scale-[0.99] w-[72vw] sm:w-[300px] md:w-[280px] lg:w-[300px] aspect-4/5"
+      className="voice-card group relative shrink-0 snap-start overflow-hidden rounded-md bg-[#0b1226] shadow-[0_2px_12px_-6px_rgba(0,0,0,0.25)] ring-1 ring-border hover:-translate-y-1 hover:shadow-[0_22px_44px_-26px_rgba(0,0,0,0.45)] hover:ring-foreground/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-foreground active:scale-[0.99] w-[72vw] sm:w-[300px] md:w-[280px] lg:w-[300px] aspect-4/5"
     >
       <Image
         src={poster}
         alt={`Voice ${index + 1} testimonial`}
         fill
         sizes="(max-width: 640px) 72vw, 300px"
-        className="object-cover transition-transform duration-[900ms] ease-out group-hover:scale-[1.06]"
+        className="object-cover transition-transform duration-[680ms] ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:scale-[1.05]"
       />
 
       {/* Bottom gradient — only enough lift to seat the index counter.

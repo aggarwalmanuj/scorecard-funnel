@@ -1,6 +1,7 @@
 "use client"
 
 import Image from "next/image"
+import Link from "next/link"
 import { ArrowRight } from "lucide-react"
 import { MagneticButton, ParallaxImage, Reveal } from "./motion"
 
@@ -96,21 +97,13 @@ export function SanctuarySection() {
 
             <div className="pt-4">
               <MagneticButton>
-                <button
-                  type="button"
-                  onClick={() =>
-                    document
-                      .getElementById("begin")
-                      ?.scrollIntoView({ behavior: "smooth", block: "center" })
-                  }
-                  className="s-btn group"
-                >
+                <Link href="/challenge/audience" className="s-btn group">
                   Begin the reading
                   <ArrowRight
                     className="h-3.5 w-3.5 transition-transform duration-500 group-hover:translate-x-1"
                     strokeWidth={1.6}
                   />
-                </button>
+                </Link>
               </MagneticButton>
             </div>
           </Reveal>

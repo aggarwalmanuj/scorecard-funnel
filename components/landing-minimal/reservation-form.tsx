@@ -1,14 +1,16 @@
 "use client"
 
-import { useRouter } from "next/navigation"
-import { useState } from "react"
+import Link from "next/link"
 import { ArrowRight } from "lucide-react"
 import { MagneticButton } from "./motion"
 
 /**
- * Inline reservation form, modelled on the Sensorium "Begin your free
- * preview" card. The actual lead-capture flow continues to live at
- * /challenge/audience — we just hand off the values via the URL.
+ * Reservation CTA card. Originally an inline lead-capture form (first
+ * name + email) that handed off to /challenge/audience via URL params;
+ * we removed the inputs so the landing page only gathers commitment, not
+ * data. The actual capture happens on the audience page itself, which
+ * has the proper inputs, validation, and Google Sheet submission. The
+ * file name + export are preserved so existing imports keep working.
  */
 export function ReservationForm({
   id,
@@ -19,28 +21,9 @@ export function ReservationForm({
   eyebrow?: string
   title?: string
 }) {
-  const router = useRouter()
-  const [first, setFirst] = useState("")
-  const [email, setEmail] = useState("")
-  const [error, setError] = useState("")
-
-  const onSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    setError("")
-    if (!first.trim()) return setError("Please share your first name")
-    if (!email.trim() || !email.includes("@"))
-      return setError("Please enter a valid email")
-
-    const params = new URLSearchParams()
-    params.set("first", first.trim())
-    params.set("email", email.trim())
-    router.push(`/challenge/audience?${params.toString()}`)
-  }
-
   return (
-    <form
+    <div
       id={id}
-      onSubmit={onSubmit}
       className="rounded-md p-6 sm:p-7"
       style={{
         backgroundColor: "color-mix(in srgb, var(--card) 92%, transparent)",
@@ -48,83 +31,60 @@ export function ReservationForm({
         boxShadow: "0 18px 50px -35px rgba(var(--shadow-ink), 0.4)",
       }}
     >
-      <p className="eyebrow" style={{ color: "color-mix(in srgb, var(--foreground) 72%, transparent)" }}>
+      <p
+        className="eyebrow"
+        style={{ color: "color-mix(in srgb, var(--foreground) 72%, transparent)" }}
+      >
         {eyebrow}
       </p>
-      <p className="font-serif-italic mt-1.5 text-[18px] leading-snug" style={{ color: "var(--ink)" }}>
+      <p
+        className="font-serif-italic mt-1.5 text-[18px] leading-snug"
+        style={{ color: "var(--ink)" }}
+      >
         {title}
       </p>
 
-      <div className="mt-6 space-y-5">
-        <label className="block">
-          <span
-            className="eyebrow mb-2 block"
-            style={{ color: "color-mix(in srgb, var(--foreground) 72%, transparent)" }}
-          >
-            First name
-          </span>
-          <input
-            type="text"
-            autoComplete="given-name"
-            value={first}
-            onChange={(e) => {
-              setFirst(e.target.value)
-              setError("")
-            }}
-            placeholder="How we will greet you"
-            className="s-input"
-            required
-          />
-        </label>
-        <label className="block">
-          <span
-            className="eyebrow mb-2 block"
-            style={{ color: "color-mix(in srgb, var(--foreground) 72%, transparent)" }}
-          >
-            Email
-          </span>
-          <input
-            type="email"
-            autoComplete="email"
-            value={email}
-            onChange={(e) => {
-              setEmail(e.target.value)
-              setError("")
-            }}
-            placeholder="name@email.com"
-            className="s-input"
-            required
-          />
-        </label>
-      </div>
+      <ul
+        className="mt-5 grid gap-2 text-[13.5px] leading-snug sm:text-[14px]"
+        style={{ color: "color-mix(in srgb, var(--foreground) 80%, transparent)" }}
+      >
+        {[
+          "Ten quiet minutes",
+          "A precise read across seven dimensions",
+          "Delivered the same day",
+        ].map((line) => (
+          <li key={line} className="flex items-baseline gap-2.5">
+            <span
+              aria-hidden
+              className="mt-2 inline-block h-px w-3 shrink-0"
+              style={{ backgroundColor: "color-mix(in srgb, var(--foreground) 45%, transparent)" }}
+            />
+            <span>{line}</span>
+          </li>
+        ))}
+      </ul>
 
-      {error && (
-        <p
-          className="mt-4 text-sm font-medium"
-          style={{ color: "var(--destructive, #a04b3d)" }}
-        >
-          {error}
-        </p>
-      )}
-
-      <div className="mt-7 flex flex-col gap-4 sm:flex-row sm:items-center">
+      <div className="mt-7 flex flex-col gap-4 lg:flex-row lg:items-center">
         <MagneticButton className="flex-1">
-          <button type="submit" className="s-btn group w-full justify-center">
+          <Link
+            href="/challenge/audience"
+            className="s-btn group w-full justify-center whitespace-nowrap"
+          >
             Begin the reading
             <ArrowRight
-              className="h-3.5 w-3.5 transition-transform duration-500 group-hover:translate-x-1"
+              className="h-3.5 w-3.5 transition-transform duration-[420ms] ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:translate-x-1"
               strokeWidth={1.6}
             />
-          </button>
+          </Link>
         </MagneticButton>
         <p
-          className="text-[0.7rem] uppercase tracking-[0.22em] sm:text-right"
+          className="text-[0.7rem] uppercase tracking-[0.22em] lg:text-right"
           style={{ color: "color-mix(in srgb, var(--foreground) 60%, transparent)" }}
         >
           Ten minutes
-          <span className="block sm:inline sm:ml-2">In confidence</span>
+          <span className="block lg:inline lg:ml-2">In confidence</span>
         </p>
       </div>
-    </form>
+    </div>
   )
 }

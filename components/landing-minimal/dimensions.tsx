@@ -1,5 +1,6 @@
 "use client"
 
+import Link from "next/link"
 import { ArrowRight } from "lucide-react"
 import { MagneticButton, Reveal } from "./motion"
 
@@ -102,13 +103,8 @@ export function DimensionsSection() {
             Seven dimensions, named precisely. One pattern, finally surfaced.
           </p>
           <MagneticButton>
-            <button
-              type="button"
-              onClick={() =>
-                document
-                  .getElementById("begin")
-                  ?.scrollIntoView({ behavior: "smooth", block: "center" })
-              }
+            <Link
+              href="/challenge/audience"
               className="s-btn group shrink-0"
             >
               Begin the reading
@@ -116,7 +112,7 @@ export function DimensionsSection() {
                 className="h-3.5 w-3.5 transition-transform duration-500 group-hover:translate-x-1"
                 strokeWidth={1.6}
               />
-            </button>
+            </Link>
           </MagneticButton>
         </Reveal>
       </div>

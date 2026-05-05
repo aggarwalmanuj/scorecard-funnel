@@ -61,12 +61,10 @@ export function MinimalHero() {
               delay={500}
               className="mt-9 max-w-xl scroll-mt-24 sm:mt-12 sm:scroll-mt-28"
             >
-              <div id="begin">
-                <ReservationForm
-                  eyebrow="Begin your free reading"
-                  title="Five quiet questions. One personal preview."
-                />
-              </div>
+              <ReservationForm
+                eyebrow="Begin your free reading"
+                title="Five quiet questions. One personal preview."
+              />
             </Reveal>
 
             <Reveal
