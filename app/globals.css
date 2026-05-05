@@ -819,25 +819,94 @@
 /* Brand mark — uses the white-on-transparent logo as an alpha mask so the
    rendered colour follows the active palette's --ink token. One asset
    works for every palette: dark Marine renders the mark in paper white;
-   light Aurora renders it in deep teal. No second logo file required.
-   Lives outside the [data-palette] scope so admin/login/etc. that may not
-   sit under a palette wrapper still pick up a sensible default ink. */
+   the clarity-report's local light surface renders it in deep navy.
+   The asset's true aspect is 7.12 : 1 (1274×179). aspect-ratio drives
+   height from width so we never crush the wordmark into the wrong box. */
 .brand-mark {
   display: inline-block;
-  width: 28px;
-  height: 28px;
+  width: 140px;
+  aspect-ratio: 1274 / 179;
   background-color: var(--ink, #0f2c3b);
   -webkit-mask: url("/newui/logo.png") center / contain no-repeat;
   mask: url("/newui/logo.png") center / contain no-repeat;
   flex-shrink: 0;
+  /* Subtle hover lift — picks up automatically on the home-link wrapper. */
+  transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1),
+              opacity 0.3s ease;
 }
 .brand-mark-sm {
-  width: 22px;
-  height: 22px;
+  width: 110px;
 }
 .brand-mark-lg {
-  width: 36px;
-  height: 36px;
+  width: 200px;
+}
+/* Hover state lives on the parent <a>/<button> via .group, so the mark
+   inherits the lift without each call site re-declaring it. */
+.group:hover > .brand-mark,
+a:hover > .brand-mark {
+  transform: translateY(-1px) scale(1.02);
+}
+
+/* Scrollbar-hide — Tailwind v4 doesn't ship this by default. Used by the
+   horizontal video testimonial wall so the Netflix-style row doesn't
+   render an OS scrollbar across the cards. */
+.scrollbar-hide {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* Video wall card entrance — paired with `data-revealed` flipped from
+   the wrapper's IntersectionObserver. The per-card transitionDelay
+   inline style staggers the cascade. We can't use the shared `.reveal`
+   class because the wall is a horizontal flex row: cards beyond the
+   viewport's right edge would never trigger their own observers. */
+.voice-card {
+  opacity: 0;
+  transform: translateY(28px) scale(0.97);
+  transition:
+    opacity 1s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 1s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.5s cubic-bezier(0.22, 1, 0.36, 1),
+    --tw-ring-color 0.5s ease;
+}
+[data-revealed="true"] .voice-card {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+@media (prefers-reduced-motion: reduce) {
+  .voice-card {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}
+
+/* Modal entrance — backdrop fades while the stage scales/lifts in.
+   Slightly longer than a typical fade so the page-blur layer feels like
+   it's settling rather than snapping. */
+@keyframes voice-modal-fade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes voice-modal-stage {
+  from { opacity: 0; transform: translateY(18px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0)    scale(1); }
+}
+.voice-modal {
+  animation: voice-modal-fade 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.voice-modal-stage {
+  animation: voice-modal-stage 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: 0.05s;
+}
+@media (prefers-reduced-motion: reduce) {
+  .voice-modal,
+  .voice-modal-stage {
+    animation: none;
+  }
 }
 
 /* Form input — focus ring breathes on focus. */

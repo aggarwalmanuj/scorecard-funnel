@@ -415,7 +415,7 @@ export function QuestionScreen({
                 {stageFraming}
               </p>
 
-              <h1 className="mb-5 whitespace-pre-line font-serif text-[28px] leading-[1.15] text-ink sm:text-[32px] md:text-[36px]">
+              <h1 className="mb-5 whitespace-pre-line font-serif text-[1.5rem] leading-[1.2] text-ink sm:text-[28px] sm:leading-[1.15] md:text-[32px]">
                 {question}
               </h1>
 

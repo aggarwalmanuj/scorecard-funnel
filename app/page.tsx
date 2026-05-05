@@ -1,4 +1,3 @@
-import { PaletteProvider } from "@/components/landing-minimal/palette-switcher"
 import { MinimalHeader } from "@/components/landing-minimal/header"
 import { MinimalHero } from "@/components/landing-minimal/hero"
 import { SanctuarySection } from "@/components/landing-minimal/sanctuary"
@@ -10,23 +9,30 @@ import { NotesSection } from "@/components/landing-minimal/notes"
 import { ClosingSection } from "@/components/landing-minimal/closing"
 import { MinimalFooter } from "@/components/landing-minimal/footer"
 
+/**
+ * Landing page is locked to the Marine palette to match the rest of the
+ * funnel. The previous PaletteProvider + floating switcher widget have
+ * been removed now that the brand has settled on a single mood — they
+ * live in git history if a future moodboard pass needs them again.
+ */
 export default function Home() {
   return (
-    <PaletteProvider>
-      <div className="min-h-screen bg-background text-foreground font-sans">
-        <MinimalHeader />
-        <main>
-          <MinimalHero />
-          <SanctuarySection />
-          <DimensionsSection />
-          <TakeHomeSection />
-          <VoicesSection />
-          <CredentialsSection />
-          <NotesSection />
-          <ClosingSection />
-        </main>
-        <MinimalFooter />
-      </div>
-    </PaletteProvider>
+    <div
+      data-palette="marine"
+      className="min-h-screen bg-background text-foreground font-sans"
+    >
+      <MinimalHeader />
+      <main>
+        <MinimalHero />
+        <SanctuarySection />
+        <DimensionsSection />
+        <TakeHomeSection />
+        <VoicesSection />
+        <CredentialsSection />
+        <NotesSection />
+        <ClosingSection />
+      </main>
+      <MinimalFooter />
+    </div>
   )
 }

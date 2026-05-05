@@ -214,7 +214,7 @@ export function BeatRevealScreen({
                 isRevealed ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"
               }`}
             >
-              <h1 className="font-serif text-[26px] leading-[1.2] text-ink sm:text-[30px]">
+              <h1 className="font-serif text-[1.45rem] leading-[1.22] text-ink sm:text-[26px] sm:leading-[1.2] md:text-[30px]">
                 {title}
               </h1>
             </div>

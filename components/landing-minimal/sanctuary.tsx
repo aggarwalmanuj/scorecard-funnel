@@ -15,13 +15,13 @@ export function SanctuarySection() {
   return (
     <section
       id="sanctuary"
-      className="bg-secondary/60 py-24 sm:py-32 lg:py-40"
+      className="bg-secondary/60 py-16 sm:py-28 lg:py-36"
     >
-      <div className="mx-auto max-w-7xl px-6 sm:px-10 lg:px-16">
+      <div className="mx-auto max-w-7xl px-5 sm:px-10 lg:px-16">
         <Reveal as="div" className="grid gap-10 lg:grid-cols-12 lg:gap-16">
           <div className="lg:col-span-5">
             <p className="eyebrow mb-6 text-foreground/70">II · The pain</p>
-            <h2 className="font-serif text-4xl leading-[1.05] text-ink sm:text-5xl lg:text-6xl">
+            <h2 className="font-serif text-[1.95rem] leading-[1.08] text-ink sm:text-5xl sm:leading-[1.05] lg:text-6xl">
               You&apos;ve already tried
               <span className="block font-serif-italic text-foreground">
                 the obvious things.

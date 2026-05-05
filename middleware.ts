@@ -115,10 +115,13 @@ export async function middleware(request: NextRequest) {
     "default-src 'self'",
     `script-src ${scriptSrc}`,
     "style-src 'self' 'unsafe-inline' https://assets.calendly.com",
-    "img-src 'self' data: blob: https://hebbkx1anhila5yf.public.blob.vercel-storage.com https://www.facebook.com https://*.clarity.ms",
-    "media-src 'self' blob:",
+    "img-src 'self' data: blob: https://hebbkx1anhila5yf.public.blob.vercel-storage.com https://bfyvfetxtgsgzjci.public.blob.vercel-storage.com https://www.facebook.com https://*.clarity.ms",
+    // The Vercel blob host serves the testimonial videos. Without
+    // explicit media-src, the browser silently CSP-blocks the <video>
+    // element with an empty player and no console error.
+    "media-src 'self' blob: https://bfyvfetxtgsgzjci.public.blob.vercel-storage.com",
     "font-src 'self' data:",
-    "connect-src 'self' https://openrouter.ai https://www.googleapis.com https://calendly.com https://connect.facebook.net https://www.facebook.com https://www.clarity.ms https://*.clarity.ms https://c.bing.com",
+    "connect-src 'self' https://openrouter.ai https://www.googleapis.com https://calendly.com https://connect.facebook.net https://www.facebook.com https://www.clarity.ms https://*.clarity.ms https://c.bing.com https://bfyvfetxtgsgzjci.public.blob.vercel-storage.com",
     "frame-src 'self' https://calendly.com",
     "frame-ancestors 'none'",
     "base-uri 'self'",

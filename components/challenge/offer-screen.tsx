@@ -17,6 +17,7 @@ import {
 import { useChallenge, type Audience } from "@/context/challenge-context"
 import { ChallengeNavHome } from "@/components/challenge/challenge-nav-home"
 import { ChallengeMenuButton } from "@/components/challenge/challenge-funnel-header-actions"
+import { VideoTestimonialsWall } from "@/components/video-testimonials-wall"
 
 export function OfferScreen({ audience }: { audience: Audience }) {
   const { state, markComplete } = useChallenge()
@@ -168,7 +169,7 @@ export function OfferScreen({ audience }: { audience: Audience }) {
             VIII · One option to go deeper
           </p>
 
-          <h1 className="mb-7 font-serif text-[32px] leading-[1.1] text-ink sm:text-[40px]">
+          <h1 className="mb-7 font-serif text-[1.85rem] leading-[1.12] text-ink sm:text-[2rem] sm:leading-[1.1] md:text-[2.5rem]">
             {state.firstName ? `${state.firstName}, the` : "The"} noise has been
             louder
             <span className="block font-serif-italic text-foreground">
@@ -232,6 +233,32 @@ export function OfferScreen({ audience }: { audience: Audience }) {
         </div>
       </section>
 
+      {/* Voices wall — sits between the report-download hero and the
+          offer pricing band. Full-bleed by design; the component manages
+          its own internal max-w wrappers for header/arrows so the cards
+          extend to viewport edges Netflix-style. */}
+      <section
+        aria-labelledby="offer-voices-heading"
+        className="border-t border-border py-16 sm:py-20"
+      >
+        <div className="mx-auto mb-10 max-w-4xl px-6 sm:px-8 sm:mb-12">
+          <p className="eyebrow mb-4 text-foreground/70">
+            <span className="mr-3 inline-block h-px w-6 align-middle bg-foreground/40" />
+            Voices from the reading
+          </p>
+          <h2
+            id="offer-voices-heading"
+            className="font-serif text-[26px] leading-[1.15] text-ink sm:text-[32px]"
+          >
+            Hear from those who
+            <span className="block font-serif-italic text-foreground">
+              sat with the mirror first.
+            </span>
+          </h2>
+        </div>
+        <VideoTestimonialsWall />
+      </section>
+
       {/* The Offer — slightly lifted Marine surface (var(--card) sits one
           tone above var(--background) on the deep-navy palette). Previously
           this band inverted to var(--ink) which read as a stark cream
@@ -268,7 +295,7 @@ export function OfferScreen({ audience }: { audience: Audience }) {
             One option to go deeper
           </p>
 
-          <h2 className="mb-7 font-serif text-[32px] leading-[1.1] text-ink sm:text-[40px]">
+          <h2 className="mb-7 font-serif text-[1.85rem] leading-[1.12] text-ink sm:text-[2rem] sm:leading-[1.1] md:text-[2.5rem]">
             The Honest Decision
             <span
               className="block font-serif-italic"
@@ -486,7 +513,7 @@ export function OfferScreen({ audience }: { audience: Audience }) {
           <p className="eyebrow mb-6 text-foreground/70">
             IX · If now is not the right time
           </p>
-          <h3 className="mb-7 font-serif text-[28px] leading-snug text-ink sm:text-[32px]">
+          <h3 className="mb-7 font-serif text-[1.6rem] leading-[1.18] text-ink sm:text-[1.95rem] sm:leading-snug">
             Your reading is yours
             <span className="block font-serif-italic text-foreground">
               regardless.

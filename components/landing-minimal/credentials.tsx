@@ -21,11 +21,11 @@ const credentials = [
 export function CredentialsSection() {
   return (
     <section id="guides" className="bg-secondary/60 py-20 sm:py-24 lg:py-28">
-      <div className="mx-auto max-w-7xl px-6 sm:px-10 lg:px-16">
+      <div className="mx-auto max-w-7xl px-5 sm:px-10 lg:px-16">
         <Reveal as="div" className="grid gap-12 lg:grid-cols-12 lg:gap-16">
           <div className="lg:col-span-4">
             <p className="eyebrow mb-6 text-foreground/70">VI · Trusted by</p>
-            <h2 className="font-serif text-3xl leading-[1.08] text-ink sm:text-4xl">
+            <h2 className="font-serif text-[1.75rem] leading-[1.1] text-ink sm:text-4xl sm:leading-[1.08]">
               The work composed
               <span className="block font-serif-italic text-foreground">
                 behind the reading.

@@ -474,7 +474,7 @@ export function JourneySummaryScreen({ audience }: { audience: Audience }) {
               Your journey, reflected
             </p>
 
-            <h1 className="font-serif text-[32px] leading-[1.05] text-ink sm:text-[44px] md:text-[52px]">
+            <h1 className="font-serif text-[1.85rem] leading-[1.1] text-ink sm:text-[2.1rem] sm:leading-[1.06] md:text-[2.6rem]">
               {state.firstName ? `${state.firstName}, here is what` : "Here is what"}
               <span className="block font-serif-italic text-foreground">
                 surfaced.
