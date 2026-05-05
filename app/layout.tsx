@@ -2,11 +2,19 @@ import type { Metadata, Viewport } from "next"
 import { Suspense } from "react"
 import { headers } from "next/headers"
 import Script from "next/script"
-import { Geist, Geist_Mono } from "next/font/google"
+import { Geist, Geist_Mono, Inter, Fraunces } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
 import { ChallengeProvider } from "@/context/challenge-context"
 import FacebookPixelTracker from "@/components/facebook-pixel"
+import ClarityInit from "@/components/clarity-init"
 import "./globals.css"
+
+// Server-only env read — the project ID is threaded down as a prop so it
+// never appears in the bundle as a NEXT_PUBLIC_* variable. The ID itself
+// isn't strictly secret (Clarity's loader script exposes it client-side
+// once init runs), but server-only reads stay consistent with our other
+// funnels and avoid leaking the variable name to bundle inspectors.
+const CLARITY_ID = process.env.MICROSOFT_CLARITY_ID ?? ""
 
 const geist = Geist({
   subsets: ["latin"],
@@ -14,6 +22,22 @@ const geist = Geist({
 
 const geistMono = Geist_Mono({
   subsets: ["latin"],
+})
+
+// Inter — clean modern sans for body copy on the minimal landing.
+const inter = Inter({
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-inter",
+})
+
+// Fraunces — variable serif for editorial display + italic emphasis.
+// Loaded with optical sizing for tighter headlines.
+const fraunces = Fraunces({
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-fraunces",
+  axes: ["opsz", "SOFT"],
 })
 
 const RAW_FB_PIXEL_ID = process.env.NEXT_PUBLIC_FACEBOOK_PIXEL_ID
@@ -27,8 +51,11 @@ export const metadata: Metadata = {
   description:
     "Discover what's quietly limiting your performance. A 10-minute diagnostic across 7 dimensions, built on the AI Merge framework — peer-reviewed in the Mensa Research Journal.",
   icons: {
-    icon: "/favicon.png",
-    apple: "/apple-icon.png",
+    // White-on-transparent favicon. Browsers render it on their own toolbar
+    // background, which is universally light or dark — the white mark stays
+    // legible on either, so no separate dark/light variant is shipped.
+    icon: "/newui/favicon.png",
+    apple: "/newui/favicon.png",
   },
   openGraph: {
     title: "Your Unfair Advantage Score",
@@ -53,7 +80,11 @@ export default async function RootLayout({
   const nonce = (await headers()).get("x-nonce") ?? undefined
 
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html
+      lang="en"
+      suppressHydrationWarning
+      className={`${inter.variable} ${fraunces.variable}`}
+    >
       <head>
         <Script
           id="strip-bitdefender-attrs"
@@ -65,6 +96,7 @@ export default async function RootLayout({
         />
       </head>
       <body suppressHydrationWarning className="font-sans antialiased">
+        {CLARITY_ID ? <ClarityInit projectId={CLARITY_ID} /> : null}
         {FB_PIXEL_ID ? (
           <>
             <Script

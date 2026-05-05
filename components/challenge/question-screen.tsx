@@ -4,14 +4,11 @@ import { useState, useEffect, useRef, useCallback } from "react"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
 import { ArrowRight, ArrowLeft, Mic, MicOff, Lightbulb, Check, Shield } from "lucide-react"
-import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { useChallenge, type Audience, type ChallengeState } from "@/context/challenge-context"
 import { submitToGoogleSheet } from "@/lib/submit-to-google-sheet"
 import { ChallengeNavHome } from "@/components/challenge/challenge-nav-home"
-import {
-  ChallengeMenuButton,
-} from "@/components/challenge/challenge-funnel-header-actions"
+import { ChallengeMenuButton } from "@/components/challenge/challenge-funnel-header-actions"
 
 interface QuestionScreenProps {
   audience: Audience
@@ -59,6 +56,14 @@ export function QuestionScreen({
   const recognitionRef = useRef<SpeechRecognitionInstance | null>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
+  // Voice-input state refs — required to fix three independent Android Chrome
+  // bugs documented at the bottom of this file. See `buildRecognition` for
+  // why each ref exists; do not collapse into local state.
+  const baseTextRef = useRef("")           // textarea contents before mic was tapped
+  const sessionFinalRef = useRef("")       // accumulated finals across restart cycles
+  const cycleFinalRef = useRef("")         // current cycle's final transcript
+  const wantListeningRef = useRef(false)   // true while user wants mic on
+
   useEffect(() => {
     if (!hasSetStep.current) {
       hasSetStep.current = true
@@ -69,21 +74,20 @@ export function QuestionScreen({
   useEffect(() => {
     setSpeakSupported(
       typeof window !== "undefined" &&
-        ("webkitSpeechRecognition" in window || "SpeechRecognition" in window)
+        ("webkitSpeechRecognition" in window || "SpeechRecognition" in window),
     )
   }, [])
 
-  // Auto-resize textarea
+  // Auto-resize textarea so it grows with the answer.
   useEffect(() => {
     if (textareaRef.current) {
       textareaRef.current.style.height = "auto"
-      textareaRef.current.style.height = `${Math.max(120, textareaRef.current.scrollHeight)}px`
+      textareaRef.current.style.height = `${Math.max(140, textareaRef.current.scrollHeight)}px`
     }
   }, [answer])
 
-  // Bug fix #1: on first paint the textarea sits below the fold on most
-  // devices — users saw the Continue button before the input and 29% dropped
-  // off without answering. Scroll the input into view once it's mounted.
+  // First-paint scroll: keep the textarea visible. Without this the input
+  // starts below the fold on mobile and ~29% of users never type a word.
   useEffect(() => {
     if (!textareaRef.current) return
     const t = window.setTimeout(() => {
@@ -92,22 +96,21 @@ export function QuestionScreen({
     return () => window.clearTimeout(t)
   }, [])
 
-  const clearVoiceUi = useCallback(() => {
-    setSpeechInterim("")
-    setIsListening(false)
-  }, [])
-
-  // Voice input setup (Chrome / Edge / Safari 14.1+ / Android Chrome)
-  const startListening = useCallback(() => {
-    if (!("webkitSpeechRecognition" in window) && !("SpeechRecognition" in window)) {
-      alert("Voice input is not supported in this browser. Please use your keyboard.")
-      return
-    }
-
-    const Ctor = window.SpeechRecognition ?? window.webkitSpeechRecognition
-    if (!Ctor) return
-    const recognition = new Ctor()
-
+  /**
+   * Build a fresh SpeechRecognition instance. We MUST construct a new
+   * instance on every cycle (initial start AND every onend auto-restart)
+   * because Android Chrome's `event.results` array does not reliably
+   * reset across `start()` calls on the same instance — previous-cycle
+   * finals leak in and accumulate. See Bug 2 below.
+   *
+   * Inferred return type by design — adding an explicit annotation forces
+   * a reference to the project's pre-existing tolerated `SpeechRecognition`
+   * Window declaration and produces a new TS error.
+   */
+  const buildRecognition = useCallback(() => {
+    const SR = window.SpeechRecognition ?? window.webkitSpeechRecognition
+    if (!SR) throw new Error("SpeechRecognition unavailable")
+    const recognition = new SR()
     recognition.continuous = true
     recognition.interimResults = true
     recognition.lang = "en-US"
@@ -118,54 +121,166 @@ export function QuestionScreen({
     }
 
     recognition.onresult = (event: SpeechRecognitionEvent) => {
+      // Bug 3 fix: Android Chrome emits multiple progressively-longer
+      // FINAL results inside the same event.results for ONE utterance
+      // ("what" → "what do" → "what do you" → …). Naive concatenation
+      // produces the cascading-prefix duplication. We dedupe by collapsing
+      // adjacent finals that are prefixes of each other and keeping the
+      // longer.
       let interimTranscript = ""
-      let finalTranscript = ""
-
-      for (let i = event.resultIndex; i < event.results.length; i++) {
+      const dedupedFinals: string[] = []
+      for (let i = 0; i < event.results.length; i++) {
         const transcript = event.results[i][0].transcript
-        if (event.results[i].isFinal) {
-          finalTranscript += transcript + " "
-        } else {
+        if (!event.results[i].isFinal) {
           interimTranscript += transcript
+          continue
+        }
+        const trimmed = transcript.trim()
+        if (!trimmed) continue
+        const last = dedupedFinals[dedupedFinals.length - 1]
+        const lastTrimmed = last?.trim() ?? ""
+        if (
+          lastTrimmed &&
+          (trimmed.startsWith(lastTrimmed) || lastTrimmed.startsWith(trimmed))
+        ) {
+          // Same utterance refining itself — keep the longer.
+          dedupedFinals[dedupedFinals.length - 1] =
+            trimmed.length >= lastTrimmed.length ? transcript : last
+        } else {
+          // Genuinely separate utterance (desktop continuous mode emits
+          // one of these per natural pause).
+          dedupedFinals.push(transcript)
         }
       }
+      let cycleFinal = ""
+      for (const t of dedupedFinals) cycleFinal += t.trim() + " "
+      cycleFinalRef.current = cycleFinal
 
-      if (finalTranscript) {
-        setAnswer((prev) => prev + finalTranscript)
-      }
+      // Build the answer absolutely — base + session + cycle. NEVER append
+      // (`prev => prev + final`); appending was the original bug because
+      // Android Chrome's prefix-cascade gets concatenated multiple times.
+      const base = baseTextRef.current
+      const session = sessionFinalRef.current
+      const needsSep =
+        base.length > 0 &&
+        !/\s$/.test(base) &&
+        (session.length > 0 || cycleFinal.length > 0)
+      const sep = needsSep ? " " : ""
+      setAnswer(base + sep + session + cycleFinal)
       setSpeechInterim(interimTranscript)
     }
 
-    recognition.onerror = () => {
-      clearVoiceUi()
+    recognition.onerror = (event: Event) => {
+      const code = (event as { error?: string }).error
+      if (
+        code === "not-allowed" ||
+        code === "service-not-allowed" ||
+        code === "audio-capture"
+      ) {
+        // Permission denied / mic busy — stop trying. User has to clear
+        // the denial in browser settings; there's no programmatic re-prompt.
+        wantListeningRef.current = false
+      }
+      // Other errors (no-speech, network, aborted) fall through to onend
+      // and the auto-restart logic.
     }
 
     recognition.onend = () => {
-      setSpeechInterim("")
-      setIsListening(false)
+      // Commit this cycle's final transcript to the session aggregate
+      // before discarding the instance — otherwise the next cycle starts
+      // fresh and we lose what was just transcribed.
+      sessionFinalRef.current += cycleFinalRef.current
+      cycleFinalRef.current = ""
+
+      if (!wantListeningRef.current) {
+        setSpeechInterim("")
+        setIsListening(false)
+        return
+      }
+
+      // Bug 1 + Bug 2 fix: `continuous = true` is silently ignored on
+      // mobile Chrome — the engine ends after ~10s of silence even though
+      // we asked for continuous. Auto-restart by building a fresh instance
+      // (never re-call start() on the same object). The 100ms delay lets
+      // the engine fully tear down before a new start, preventing
+      // InvalidStateError on some Android builds.
+      window.setTimeout(() => {
+        if (!wantListeningRef.current) return
+        try {
+          const fresh = buildRecognition()
+          recognitionRef.current = fresh
+          fresh.start()
+        } catch {
+          wantListeningRef.current = false
+          setIsListening(false)
+          setSpeechInterim("")
+        }
+      }, 100)
     }
 
-    recognitionRef.current = recognition
-    recognition.start()
-  }, [clearVoiceUi])
+    return recognition
+  }, [])
+
+  const startListening = useCallback(() => {
+    if (!("webkitSpeechRecognition" in window) && !("SpeechRecognition" in window)) {
+      alert("Voice input is not supported in this browser. Please use your keyboard.")
+      return
+    }
+
+    // Snapshot the textarea BEFORE the mic was tapped so subsequent
+    // absolute reconstructions in onresult always know the prefix.
+    baseTextRef.current = answer
+    sessionFinalRef.current = ""
+    cycleFinalRef.current = ""
+    wantListeningRef.current = true
+
+    try {
+      const recognition = buildRecognition()
+      recognitionRef.current = recognition
+      recognition.start()
+    } catch {
+      wantListeningRef.current = false
+      setIsListening(false)
+    }
+  }, [answer, buildRecognition])
 
   const stopListening = useCallback(() => {
+    // wantListeningRef = false MUST happen before .stop() so onend knows
+    // not to auto-restart this cycle.
+    wantListeningRef.current = false
     if (recognitionRef.current) {
-      recognitionRef.current.stop()
+      try {
+        recognitionRef.current.stop()
+      } catch {
+        /* already stopped */
+      }
     }
     setSpeechInterim("")
     setIsListening(false)
+  }, [])
+
+  // Cleanup — abort any in-flight recognition if the user navigates away
+  // mid-recording. Without this the mic stays hot in the background.
+  useEffect(() => {
+    return () => {
+      wantListeningRef.current = false
+      const r = recognitionRef.current
+      if (r) {
+        try {
+          r.abort()
+        } catch {
+          /* already stopped */
+        }
+      }
+    }
   }, [])
 
   const voiceLabelIdle =
     questionNumber === 5 ? "Describe your day aloud" : "Tap to speak"
 
   const toggleVoice = () => {
-    if (isListening) {
-      stopListening()
-    } else {
-      startListening()
-    }
+    if (isListening) stopListening()
+    else startListening()
   }
 
   const handleNext = async () => {
@@ -174,7 +289,6 @@ export function QuestionScreen({
     setIsNavigating(true)
     try {
       setResponse(responseKey, answer)
-
       if (state.serialNumber) {
         void submitToGoogleSheet({
           action: "answer",
@@ -184,13 +298,9 @@ export function QuestionScreen({
           serialNumber: state.serialNumber,
           questionNumber,
           answer,
-          // Snapshot the prompt text the user actually saw. Admins can edit
-          // question copy at any time, so this is the only reliable record of
-          // what the answer was responding to.
           questionText: question,
         })
       }
-
       await new Promise((resolve) => setTimeout(resolve, 200))
       router.push(nextRoute)
     } catch (e) {
@@ -209,134 +319,146 @@ export function QuestionScreen({
 
   if (isMissing) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center px-5">
-        <div className="max-w-md w-full text-center bg-card rounded-2xl p-8 neu-card-primary animate-fade-in-up">
-          <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-primary/10 text-primary mb-5">
-            <Lightbulb className="w-6 h-6" />
-          </div>
-          <h2 className="font-black tracking-tight text-[22px] text-foreground mb-2">
-            {audience === "team" ? "Team content" : "Content"} not yet configured
+      <div className="flex min-h-screen items-center justify-center px-5">
+        <div className="s-card-static animate-fade-in-up w-full max-w-md p-8 text-center">
+          <span className="mb-5 inline-flex h-12 w-12 items-center justify-center rounded-full bg-secondary text-ink">
+            <Lightbulb className="h-5 w-5" strokeWidth={1.5} />
+          </span>
+          <h2 className="mb-3 font-serif text-[24px] leading-snug text-ink">
+            {audience === "team" ? "Team content" : "Content"} not yet
+            <span className="block font-serif-italic">configured.</span>
           </h2>
-          <p className="text-[15px] text-muted-foreground leading-relaxed mb-6">
-            The {audience} version of question {questionNumber} hasn&apos;t been seeded in the
-            database yet. An admin needs to upload prompts via the admin page before this
-            audience can take the diagnostic.
+          <p className="mb-7 text-[15px] leading-[1.75] text-foreground/80">
+            The {audience} version of question {questionNumber} hasn&apos;t been seeded
+            yet. An admin needs to upload prompts before this audience can take
+            the diagnostic.
           </p>
-          <Button asChild className="rounded-xl font-bold neu-border-primary neu-shadow-primary-xs neu-btn-press">
-            <a href="/">Back to home</a>
-          </Button>
+          <a href="/" className="s-btn">
+            Back to home
+            <ArrowRight className="h-3.5 w-3.5" strokeWidth={1.6} />
+          </a>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      {/* Fixed Top Nav */}
-      <header className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-xl h-14 flex items-center px-5 sm:px-8 border-b-2 border-foreground/10 transition-all duration-300">
-        <div className="flex-1 flex items-center gap-1 min-w-0">
+    <div className="flex min-h-screen flex-col">
+      {/* Fixed editorial nav with progress reading */}
+      <header className="fixed inset-x-0 top-0 z-40 flex h-14 items-center border-b border-border bg-background/85 px-5 backdrop-blur-xl sm:px-8">
+        <div className="flex min-w-0 flex-1 items-center gap-3">
           <ChallengeMenuButton />
-          <Image
-            src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Colored%20%28Transparent%29-bv50Oy3VWMzhtF45BmSeOwOLdZcNoM.png"
-            alt="Logo"
-            width={100}
-            height={28}
-            className="h-6 w-auto"
-          />
+          <span className="pulse-dot ml-1" aria-hidden />
         </div>
 
-        {/* Enhanced Progress Dots with Connectors */}
-        <div className="flex items-center gap-1 sm:gap-1.5" role="progressbar" aria-valuenow={questionNumber} aria-valuemin={1} aria-valuemax={5} aria-label={`Question ${questionNumber} of 5`}>
+        <div
+          className="flex items-center gap-1.5 sm:gap-2"
+          role="progressbar"
+          aria-valuenow={questionNumber}
+          aria-valuemin={1}
+          aria-valuemax={5}
+          aria-label={`Question ${questionNumber} of 5`}
+        >
           {progressDots.map((dot, idx) => (
-            <div key={dot} className="flex items-center gap-1 sm:gap-1.5">
+            <div key={dot} className="flex items-center gap-1.5 sm:gap-2">
               {dot < questionNumber ? (
-                <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center transition-all duration-500 animate-pulse-ring">
-                  <Check className="w-3 h-3 text-primary-foreground" aria-hidden />
-                </div>
+                <span
+                  className="flex h-5 w-5 items-center justify-center rounded-full bg-ink text-background transition-all duration-500"
+                  aria-hidden
+                >
+                  <Check className="h-2.5 w-2.5" strokeWidth={2.5} />
+                </span>
               ) : dot === questionNumber ? (
-                <div className="w-7 h-7 rounded-full bg-primary ring-4 ring-primary/20 flex items-center justify-center transition-all duration-500">
-                  <span className="text-[11px] font-black text-primary-foreground">{dot}</span>
-                </div>
+                <span
+                  className="flex h-6 w-6 items-center justify-center rounded-full bg-ink font-serif text-[10px] text-background ring-4 ring-ink/15 transition-all duration-500"
+                  aria-hidden
+                >
+                  {dot}
+                </span>
               ) : (
-                <div className="w-5 h-5 rounded-full border-2 border-border bg-background flex items-center justify-center transition-all duration-500">
-                  <span className="w-1.5 h-1.5 rounded-full bg-border" />
-                </div>
+                <span
+                  className="flex h-5 w-5 items-center justify-center rounded-full border border-border transition-all duration-500"
+                  aria-hidden
+                >
+                  <span className="h-1 w-1 rounded-full bg-foreground/40" />
+                </span>
               )}
               {idx < progressDots.length - 1 && (
-                <div className={`hidden sm:block w-4 h-0.5 rounded-full transition-all duration-500 ${
-                  dot < questionNumber ? "bg-primary" : "bg-border"
-                }`} />
+                <span
+                  className={`hidden h-px w-4 transition-all duration-500 sm:block ${
+                    dot < questionNumber ? "bg-ink" : "bg-border"
+                  }`}
+                  aria-hidden
+                />
               )}
             </div>
           ))}
         </div>
 
-        <div className="flex-1 flex flex-col items-end gap-0.5 text-right min-w-0">
-          <div className="flex items-center gap-2 flex-wrap justify-end">
-            <ChallengeNavHome />
-          </div>
-          <span className="text-[13px] text-muted-foreground">
-            Stage {questionNumber} of 5
+        <div className="flex min-w-0 flex-1 flex-col items-end gap-0.5 text-right">
+          <ChallengeNavHome />
+          <span className="text-[10px] uppercase tracking-[0.2em] text-foreground/55">
+            Question {questionNumber} · 5
           </span>
         </div>
       </header>
 
-      {/* Main Content — two-column on desktop: input left, media/hint right.
-          On mobile the media column renders first (order-first) so users still
-          see the image for context before answering; auto-scroll-to-textarea
-          then centers the input in the viewport. */}
-      <main className="flex-1 pt-14">
-        <div className="px-5 sm:px-8 py-6">
-          <div className="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-[1.1fr_1fr] gap-6 md:gap-10 items-start">
-            {/* LEFT COLUMN — question text + input + mic */}
-            <div className="animate-fade-in-left delay-200 md:sticky md:top-20 md:self-start">
-              <p className="text-xs font-bold uppercase tracking-[0.12em] text-primary mb-4 flex items-center gap-2">
-                <span className="w-5 h-px bg-primary/40" />
+      {/* Two-column on desktop: input left (sticky), media right.
+          On mobile the media renders first so the visual narrative is intact. */}
+      <main className="flex-1 pt-20 sm:pt-24">
+        <div className="px-5 sm:px-8 pb-8">
+          <div className="mx-auto grid max-w-5xl grid-cols-1 items-start gap-8 md:grid-cols-[1.1fr_1fr] md:gap-14">
+            {/* LEFT — question + textarea + mic */}
+            <div className="animate-fade-in-up md:sticky md:top-24 md:self-start">
+              <p className="eyebrow mb-5 flex items-center gap-3 text-foreground/70">
+                <span className="h-px w-6 bg-foreground/40" aria-hidden />
                 {stageFraming}
               </p>
 
-              <h1 className="font-black tracking-tighter text-[24px] sm:text-[28px] text-foreground leading-[1.3] mb-4 whitespace-pre-line">
+              <h1 className="mb-5 whitespace-pre-line font-serif text-[28px] leading-[1.15] text-ink sm:text-[32px] md:text-[36px]">
                 {question}
               </h1>
 
-              <div className="text-muted-foreground font-sans text-[15px] leading-[1.7] mb-6 whitespace-pre-line">
+              <p className="mb-7 whitespace-pre-line text-[15px] leading-[1.8] text-foreground/85">
                 {prompt}
-              </div>
+              </p>
 
-              <Textarea
-                ref={textareaRef}
-                value={answer}
-                onChange={(e) => setAnswer(e.target.value)}
-                onFocus={() => setIsFocused(true)}
-                onBlur={() => setIsFocused(false)}
-                placeholder={placeholder}
-                className={`min-h-30 p-4 text-[16px] font-sans bg-card rounded-xl resize-none placeholder:text-muted-foreground text-foreground transition-all duration-300 ${
-                  isFocused
-                    ? "border-2 border-primary ring-[3px] ring-primary/10 neu-shadow-primary-sm"
-                    : "border-2 border-foreground/15 neu-shadow-xs"
-                }`}
-              />
+              <div className="relative">
+                <Textarea
+                  ref={textareaRef}
+                  value={answer}
+                  onChange={(e) => setAnswer(e.target.value)}
+                  onFocus={() => setIsFocused(true)}
+                  onBlur={() => setIsFocused(false)}
+                  placeholder={placeholder}
+                  className={`s-input min-h-36 resize-none p-4 font-sans text-[16px] leading-[1.7] transition-all duration-300 ${
+                    isFocused ? "border-ink" : ""
+                  }`}
+                />
+              </div>
 
               {(isListening || speechInterim) && (
                 <div
-                  className="mt-2 min-h-11 rounded-xl border-2 border-dashed border-primary/35 bg-secondary/30 px-5 py-3 animate-in fade-in slide-in-from-bottom-2 duration-300"
+                  className="mt-3 min-h-12 rounded-md border border-dashed border-foreground/30 bg-secondary/40 px-5 py-3 animate-in fade-in slide-in-from-bottom-2 duration-300"
                   aria-live="polite"
                   aria-atomic="true"
                 >
-                  <p className="text-[11px] font-semibold uppercase tracking-wide text-primary mb-1">
-                    Live transcript
-                  </p>
-                  <p className="font-sans text-[16px] leading-relaxed text-foreground">
+                  <p className="eyebrow mb-1 text-foreground/65">Live transcript</p>
+                  <p className="font-sans text-[16px] leading-relaxed">
                     {speechInterim ? (
-                      <span className="text-muted-foreground italic">{speechInterim}</span>
+                      <span className="font-serif-italic text-foreground/75">
+                        {speechInterim}
+                      </span>
                     ) : (
-                      <span className="text-muted-foreground">Listening... speak now; text appears in the box above as you go.</span>
+                      <span className="text-foreground/65">
+                        Listening… speak now; text appears in the box above.
+                      </span>
                     )}
                   </p>
                 </div>
               )}
 
-              <Button
+              <button
                 type="button"
                 onClick={toggleVoice}
                 disabled={!speakSupported}
@@ -346,123 +468,142 @@ export function QuestionScreen({
                     ? "Stop voice input"
                     : `${voiceLabelIdle}. Your speech is converted to text in the answer above.`
                 }
-                className={`group w-full h-13 mt-4 rounded-xl font-medium text-base transition-all duration-300 touch-manipulation ${
+                className={`group mt-4 flex h-12 w-full items-center justify-center gap-2 rounded-full border text-[12px] uppercase tracking-[0.22em] transition-all duration-500 ${
                   !speakSupported
-                    ? "bg-muted text-muted-foreground cursor-not-allowed border-2 border-border"
+                    ? "cursor-not-allowed border-border text-foreground/40"
                     : isListening
-                      ? "bg-primary text-primary-foreground neu-border-primary-thick neu-shadow-primary-sm shadow-lg shadow-primary/20"
-                      : "bg-secondary text-primary hover:bg-primary hover:text-primary-foreground border-2 border-primary neu-shadow-primary-xs neu-btn-press"
+                      ? "border-ink bg-ink text-background"
+                      : "border-foreground/40 text-ink hover:bg-ink hover:text-background hover:border-ink"
                 }`}
               >
                 {isListening ? (
                   <>
-                    <MicOff className="w-5 h-5 mr-2 shrink-0" aria-hidden />
+                    <MicOff className="h-4 w-4" strokeWidth={1.6} aria-hidden />
                     Tap to stop
-                    <span className="ml-2 flex gap-1">
-                      <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
-                      <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" style={{ animationDelay: "0.15s" }} />
-                      <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" style={{ animationDelay: "0.3s" }} />
+                    <span className="ml-1 flex gap-1">
+                      <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-current" />
+                      <span
+                        className="h-1.5 w-1.5 animate-pulse rounded-full bg-current"
+                        style={{ animationDelay: "0.15s" }}
+                      />
+                      <span
+                        className="h-1.5 w-1.5 animate-pulse rounded-full bg-current"
+                        style={{ animationDelay: "0.3s" }}
+                      />
                     </span>
                   </>
                 ) : (
                   <>
-                    <Mic className="w-5 h-5 mr-2 shrink-0 transition-transform duration-300 group-hover:scale-110" aria-hidden />
+                    <Mic
+                      className="h-4 w-4 transition-transform duration-500 group-hover:scale-110"
+                      strokeWidth={1.6}
+                      aria-hidden
+                    />
                     {voiceLabelIdle}
                   </>
                 )}
-              </Button>
+              </button>
 
               {!speakSupported && (
-                <p className="mt-2 text-[13px] text-muted-foreground text-center">
-                  Voice typing needs a supported browser (e.g. Chrome or Edge). You can still type your answer.
+                <p className="mt-3 text-center text-[12px] text-foreground/65">
+                  Voice typing needs a supported browser (Chrome/Edge). You can
+                  still type your answer.
                 </p>
               )}
 
-              <div className="mt-3 text-center">
-                <p className="text-[13px] text-muted-foreground">
-                  {questionNumber === 5
-                    ? "Take your time — honest detail here changes what you see at the end."
-                    : "Answer in your own words — you can continue whenever you are ready."}
-                </p>
-              </div>
+              <p className="mt-5 text-center font-serif-italic text-[15px] leading-snug text-foreground/75">
+                {questionNumber === 5
+                  ? "Take your time — honest detail here changes what surfaces at the end."
+                  : "Answer in your own words — continue when you are ready."}
+              </p>
 
-              <div className="mt-3 flex items-center justify-center gap-1.5 text-muted-foreground/60">
-                <Shield className="w-3.5 h-3.5" />
-                <p className="text-[12px]">
-                  Private and secure. Your answers are never shared. No card required.
-                </p>
-              </div>
+              <p className="mt-3 flex items-center justify-center gap-2 text-[11px] uppercase tracking-[0.22em] text-foreground/55">
+                <Shield className="h-3 w-3" strokeWidth={1.5} aria-hidden />
+                Private and secure · Never shared
+              </p>
             </div>
 
-            {/* RIGHT COLUMN — image + quote + hint. Renders first on mobile
-                so the visual narrative still opens with the image. */}
-            <div className="order-first md:order-none flex flex-col gap-4">
-              <div className="relative w-full aspect-video rounded-2xl overflow-hidden neu-border neu-shadow-md group animate-fade-in-up">
-                <Image
-                  src={backgroundImage}
-                  alt="Question illustration"
-                  fill
-                  className="object-cover transition-transform duration-700 group-hover:scale-[1.03]"
-                  priority
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
-                <div className="absolute bottom-3 left-3 bg-primary text-primary-foreground text-[11px] font-black px-3 py-1.5 rounded-lg neu-shadow-xs">
-                  Stage {questionNumber}/5
+            {/* RIGHT — image + quote + hint */}
+            <div className="order-first flex flex-col gap-5 md:order-none">
+              <figure className="relative">
+                <div className="img-hover-zoom relative aspect-video w-full overflow-hidden rounded-md">
+                  <Image
+                    src={backgroundImage}
+                    alt={`Question ${questionNumber} illustration`}
+                    fill
+                    className="animate-ken-burns object-cover"
+                    priority
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-ink/30 to-transparent" />
                 </div>
-              </div>
+                <figcaption className="mt-3 flex items-center gap-3">
+                  <span className="h-px w-8 bg-foreground/40" aria-hidden />
+                  <span className="eyebrow text-foreground/65">
+                    Question {questionNumber} · 5
+                  </span>
+                </figcaption>
+              </figure>
 
-              <div className="bg-card px-5 py-4 rounded-xl neu-card-static relative animate-fade-in-up delay-100">
-                <span className="absolute -top-3 left-4 text-3xl text-primary/40 font-serif select-none leading-none" aria-hidden>&ldquo;</span>
-                <p className="text-[15px] text-muted-foreground italic leading-relaxed pl-3">
-                  {quoteZone}
+              <blockquote className="border-l border-foreground/30 pl-5">
+                <p className="font-serif-italic text-[18px] leading-snug text-ink">
+                  &ldquo;{quoteZone}&rdquo;
                 </p>
-                <span className="absolute -bottom-2 right-5 text-2xl text-primary/25 font-serif select-none leading-none" aria-hidden>&rdquo;</span>
-              </div>
+              </blockquote>
 
-              <div className="bg-secondary/60 px-5 py-4 rounded-xl neu-border-primary flex items-start gap-3 animate-fade-in-right delay-200">
-                <span className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
-                  <Lightbulb className="w-3.5 h-3.5 text-primary" aria-hidden />
-                </span>
-                <p className="font-sans text-[15px] text-muted-foreground leading-[1.65]">
-                  {hintBox}
-                </p>
-              </div>
+              <aside className="rounded-md border border-border bg-secondary/50 p-5">
+                <div className="flex items-start gap-3">
+                  <span className="mt-0.5 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-ink/10 text-ink">
+                    <Lightbulb className="h-3.5 w-3.5" strokeWidth={1.6} aria-hidden />
+                  </span>
+                  <p className="text-[14.5px] leading-[1.75] text-foreground/85">
+                    {hintBox}
+                  </p>
+                </div>
+              </aside>
             </div>
           </div>
         </div>
       </main>
 
-      {/* Navigation Footer */}
-      <footer className="sticky bottom-0 px-5 sm:px-8 py-4 bg-background/80 backdrop-blur-xl border-t-2 border-foreground/10 animate-fade-in-up delay-500">
-        <div className="max-w-5xl mx-auto flex gap-3">
-          <Button
+      {/* Navigation footer — single sticky band, calm hairline divider */}
+      <footer className="sticky bottom-0 border-t border-border bg-background/85 px-5 py-4 backdrop-blur-xl sm:px-8 animate-fade-in-up">
+        <div className="mx-auto flex max-w-5xl items-center gap-3">
+          <button
             type="button"
-            variant="outline"
             onClick={handleBack}
-            className="h-14 px-5 rounded-xl border-2 border-foreground/20 text-muted-foreground shrink-0 flex items-center gap-2 transition-all duration-200 hover:border-primary/30 hover:text-primary neu-btn-press active:scale-[0.97]"
+            className="s-btn-ghost group h-12 px-5"
+            aria-label="Back to previous step"
           >
-            <ArrowLeft className="w-5 h-5" />
+            <ArrowLeft
+              className="h-3.5 w-3.5 transition-transform duration-500 group-hover:-translate-x-1"
+              strokeWidth={1.6}
+            />
             Back
-          </Button>
+          </button>
 
-          <Button
+          <button
             type="button"
             onClick={handleNext}
             disabled={isNavigating || !answer.trim()}
-            aria-label={questionNumber === 5 ? "Complete the challenge" : "Continue to next question"}
-            className="group flex-1 h-14 rounded-xl font-extrabold text-lg transition-all duration-300 active:scale-[0.98] bg-primary text-primary-foreground disabled:opacity-50 disabled:cursor-not-allowed neu-border-primary neu-shadow-primary-sm neu-btn-press"
+            aria-label={
+              questionNumber === 5
+                ? "Complete the reading"
+                : "Continue to next question"
+            }
+            className="s-btn group h-12 flex-1 justify-center"
           >
             {isNavigating ? (
-              <span className="flex items-center gap-2">
-                <span className="animate-spin rounded-full h-5 w-5 border-2 border-white/30 border-t-white" />
-              </span>
+              <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border border-current border-t-transparent" />
             ) : (
-              <span className="flex items-center gap-2">
-                {questionNumber === 5 ? "Complete the challenge" : "Continue"}
-                <ArrowRight className="w-5 h-5 transition-transform duration-300 group-hover:translate-x-1" />
-              </span>
+              <>
+                {questionNumber === 5 ? "Complete the reading" : "Continue"}
+                <ArrowRight
+                  className="h-3.5 w-3.5 transition-transform duration-500 group-hover:translate-x-1"
+                  strokeWidth={1.6}
+                />
+              </>
             )}
-          </Button>
+          </button>
         </div>
       </footer>
     </div>
@@ -470,8 +611,7 @@ export function QuestionScreen({
 }
 
 // Web Speech API — minimal type declarations (the DOM lib does not ship these
-// because the spec is still experimental). Constructor + event signatures
-// cover everything this component uses.
+// because the spec is still experimental).
 interface SpeechRecognitionResultLike {
   readonly isFinal: boolean
   readonly [index: number]: { readonly transcript: string }
@@ -490,6 +630,7 @@ interface SpeechRecognitionInstance extends EventTarget {
   lang: string
   start: () => void
   stop: () => void
+  abort: () => void
   onstart: ((event: Event) => void) | null
   onresult: ((event: SpeechRecognitionEvent) => void) | null
   onerror: ((event: Event) => void) | null

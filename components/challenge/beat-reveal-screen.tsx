@@ -4,14 +4,11 @@ import { useState, useEffect, useMemo } from "react"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
 import { ArrowRight, ArrowLeft, Check } from "lucide-react"
-import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { useChallenge, type Audience, type ChallengeState } from "@/context/challenge-context"
 import { submitToGoogleSheet } from "@/lib/submit-to-google-sheet"
 import { ChallengeNavHome } from "@/components/challenge/challenge-nav-home"
-import {
-  ChallengeMenuButton,
-} from "@/components/challenge/challenge-funnel-header-actions"
+import { ChallengeMenuButton } from "@/components/challenge/challenge-funnel-header-actions"
 
 interface BeatRevealScreenProps {
   audience: Audience
@@ -55,9 +52,9 @@ export function BeatRevealScreen({
 
   const PARTLY_ID = "Partly — close enough"
   const feedbackOptions = [
-    { id: "Yes — that is exactly it", label: "Yes — that is exactly it", emoji: "✓" },
-    { id: PARTLY_ID, label: "Partly — close enough", emoji: "≈" },
-    { id: "Not quite, but I am curious", label: "Not quite, but I am curious", emoji: "→" },
+    { id: "Yes — that is exactly it", label: "Yes — that is exactly it", glyph: "✓" },
+    { id: PARTLY_ID, label: "Partly — close enough", glyph: "≈" },
+    { id: "Not quite, but I am curious", label: "Not quite, but I am curious", glyph: "→" },
   ]
 
   useEffect(() => {
@@ -67,8 +64,8 @@ export function BeatRevealScreen({
     setPendingPartly(false)
     setPartlyReason("")
     setIsRevealed(false)
-    const revealTimer = setTimeout(() => setIsRevealed(true), 300)
-    return () => clearTimeout(revealTimer)
+    const t = setTimeout(() => setIsRevealed(true), 300)
+    return () => clearTimeout(t)
   }, [beatContent])
 
   useEffect(() => {
@@ -88,9 +85,7 @@ export function BeatRevealScreen({
   const submitFeedback = (option: string, reason?: string) => {
     setFeedback(option)
     if (state.email?.trim() && state.serialNumber) {
-      const combined = reason?.trim()
-        ? `${option} | ${reason.trim()}`
-        : option
+      const combined = reason?.trim() ? `${option} | ${reason.trim()}` : option
       void submitToGoogleSheet({
         action: "feedback",
         firstName: state.firstName,
@@ -119,132 +114,123 @@ export function BeatRevealScreen({
     submitFeedback(PARTLY_ID, partlyReason)
   }
 
-  const handleBack = () => {
-    router.push(prevRoute)
-  }
+  const handleBack = () => router.push(prevRoute)
 
   const progressDots = [1, 2, 3, 4, 5]
-
-  // Progress of reveal used to hide the "this usually takes..." line near completion
   const revealFraction = tokens.length > 0 ? visibleTokenCount / tokens.length : 0
   const showTimeHint = tokens.length === 0 || revealFraction < 0.75
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      {/* Fixed Top Nav */}
-      <header className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-xl h-14 flex items-center px-5 sm:px-8 border-b-2 border-foreground/10 transition-all duration-300">
-        <div className="flex-1 flex items-center gap-1 min-w-0">
+    <div className="flex min-h-screen flex-col">
+      {/* Editorial nav with progress reading */}
+      <header className="fixed inset-x-0 top-0 z-40 flex h-14 items-center border-b border-border bg-background/85 px-5 backdrop-blur-xl sm:px-8">
+        <div className="flex min-w-0 flex-1 items-center gap-3">
           <ChallengeMenuButton />
-          <Image
-            src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Colored%20%28Transparent%29-bv50Oy3VWMzhtF45BmSeOwOLdZcNoM.png"
-            alt="Logo"
-            width={100}
-            height={28}
-            className="h-6 w-auto"
-          />
+          <span className="pulse-dot ml-1" aria-hidden />
         </div>
 
-        {/* Progress Dots — strictly display-only */}
         <div
-          className="flex items-center gap-1 sm:gap-1.5 pointer-events-none select-none"
+          className="flex items-center gap-1.5 sm:gap-2 select-none pointer-events-none"
           aria-label={`Reflection ${beatNumber} of 5`}
         >
           {progressDots.map((dot, idx) => (
-            <div key={dot} className="flex items-center gap-1 sm:gap-1.5">
+            <div key={dot} className="flex items-center gap-1.5 sm:gap-2">
               {dot < beatNumber ? (
-                <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center transition-all duration-500" aria-hidden>
-                  <Check className="w-3 h-3 text-primary-foreground" />
-                </div>
+                <span
+                  className="flex h-5 w-5 items-center justify-center rounded-full bg-ink text-background"
+                  aria-hidden
+                >
+                  <Check className="h-2.5 w-2.5" strokeWidth={2.5} />
+                </span>
               ) : dot === beatNumber ? (
-                <div className="w-7 h-7 rounded-full bg-primary ring-4 ring-primary/20 flex items-center justify-center transition-all duration-500" aria-hidden>
-                  <span className="text-[11px] font-black text-primary-foreground">{dot}</span>
-                </div>
+                <span
+                  className="flex h-6 w-6 items-center justify-center rounded-full bg-ink font-serif text-[10px] text-background ring-4 ring-ink/15"
+                  aria-hidden
+                >
+                  {dot}
+                </span>
               ) : (
-                <div className="w-5 h-5 rounded-full border-2 border-border bg-background flex items-center justify-center transition-all duration-500" aria-hidden>
-                  <span className="w-1.5 h-1.5 rounded-full bg-border" />
-                </div>
+                <span
+                  className="flex h-5 w-5 items-center justify-center rounded-full border border-border"
+                  aria-hidden
+                >
+                  <span className="h-1 w-1 rounded-full bg-foreground/40" />
+                </span>
               )}
               {idx < progressDots.length - 1 && (
-                <div className={`hidden sm:block w-4 h-0.5 rounded-full transition-all duration-500 ${
-                  dot < beatNumber ? "bg-primary" : "bg-border"
-                }`} aria-hidden />
+                <span
+                  className={`hidden h-px w-4 sm:block ${
+                    dot < beatNumber ? "bg-ink" : "bg-border"
+                  }`}
+                  aria-hidden
+                />
               )}
             </div>
           ))}
         </div>
 
-        <div className="flex-1 flex flex-col items-end gap-0.5 text-right min-w-0">
-          <div className="flex items-center gap-2 flex-wrap justify-end">
-            <ChallengeNavHome />
-          </div>
-          <span className="text-[13px] text-muted-foreground">
-            Reflection {beatNumber} of 5
+        <div className="flex min-w-0 flex-1 flex-col items-end gap-0.5 text-right">
+          <ChallengeNavHome />
+          <span className="text-[10px] uppercase tracking-[0.2em] text-foreground/55">
+            Reflection {beatNumber} · 5
           </span>
         </div>
       </header>
 
-      {/* Main Content */}
-      <main className="flex-1 pt-14">
-        {/* Beat Image */}
-        <div className="px-5 sm:px-8 pt-5 animate-fade-in-up">
-          <div className="max-w-2xl mx-auto">
-            <div className="relative w-full aspect-video rounded-2xl overflow-hidden neu-border neu-shadow-md group">
-              <Image
-                src={backgroundImage}
-                alt={`Reflection ${beatNumber} illustration`}
-                fill
-                className="object-cover transition-transform duration-700 group-hover:scale-[1.03]"
-                priority
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
-              <div className="absolute bottom-3 left-3 bg-primary text-primary-foreground text-[11px] font-black px-3 py-1.5 rounded-lg neu-shadow-xs">
-                {beatNumber} of 5
+      <main className="flex-1 pt-20 sm:pt-24">
+        {/* Image — atmospheric, ken-burns slow zoom */}
+        <div className="px-5 sm:px-8 animate-fade-in-up">
+          <div className="mx-auto max-w-2xl">
+            <figure>
+              <div className="img-hover-zoom relative aspect-video w-full overflow-hidden rounded-md">
+                <Image
+                  src={backgroundImage}
+                  alt={`Reflection ${beatNumber} illustration`}
+                  fill
+                  className="animate-ken-burns object-cover"
+                  priority
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-ink/30 to-transparent" />
               </div>
-            </div>
+              <figcaption className="mt-3 flex items-center gap-3">
+                <span className="h-px w-8 bg-foreground/40" aria-hidden />
+                <span className="eyebrow text-foreground/65">
+                  Reflection {beatNumber} · 5
+                </span>
+              </figcaption>
+            </figure>
           </div>
         </div>
 
-        {/* Position hint — replaces internal label pill (bug 7) */}
-        <div className="px-5 sm:px-8 mt-5 animate-fade-in-up delay-200">
-          <div className="max-w-2xl mx-auto flex flex-col items-center gap-3">
-            <span className="inline-flex items-center gap-2 bg-primary text-primary-foreground text-[13px] font-black uppercase tracking-[0.08em] px-5 py-2 rounded-xl neu-border-primary-thick neu-shadow-primary-sm">
-              <span className="w-6 h-6 rounded-full bg-primary-foreground/20 flex items-center justify-center text-[11px] font-black">
-                {beatNumber}
-              </span>
-              {`Reflection ${beatNumber} of 5`}
-            </span>
-            <div className="h-10 w-0.5 bg-gradient-to-b from-primary to-primary/10 rounded-full animate-in fade-in duration-700" aria-hidden />
-          </div>
-        </div>
-
-        {/* Beat Content Card — AI text first, then header/sub-header (task 4 flip) */}
-        <div className="px-5 sm:px-8 py-6 animate-curtain-rise delay-300">
-          <div className={`max-w-2xl mx-auto bg-card rounded-2xl p-6 sm:p-8 transition-all duration-700 ${
-            isComplete ? "neu-card-primary" : "border-2 border-border/60"
-          }`}>
-            {/* Title */}
+        {/* Reflection card */}
+        <div className="px-5 sm:px-8 py-10 animate-curtain-rise">
+          <div
+            className={`mx-auto max-w-2xl rounded-md p-7 transition-all duration-700 sm:p-8 ${
+              isComplete ? "border border-ink bg-card" : "s-card-static"
+            }`}
+          >
             <div
-              className={`mb-2 transition-all duration-500 ${
-                isRevealed ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
+              className={`mb-3 transition-all duration-500 ${
+                isRevealed ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"
               }`}
             >
-              <h1 className="font-black tracking-tighter text-[24px] sm:text-[28px] text-foreground leading-[1.3]">
+              <h1 className="font-serif text-[26px] leading-[1.2] text-ink sm:text-[30px]">
                 {title}
               </h1>
             </div>
 
-            {/* AI body — word-by-word reveal (now the lead) */}
+            {/* Body — typewriter reveal */}
             <div className="min-h-16">
-              <p className="font-sans text-[17px] leading-[1.8] text-foreground whitespace-pre-wrap transition-opacity duration-300">
+              <p className="font-sans text-[16.5px] leading-[1.85] text-foreground/90 whitespace-pre-wrap">
                 {tokens.length === 0 ? (
-                  <span className="text-muted-foreground flex flex-col gap-1">
+                  <span className="flex flex-col gap-1 font-serif-italic text-foreground/65">
                     <span className="flex items-center gap-2">
-                      <span className="w-1.5 h-1.5 rounded-full bg-primary/40 animate-pulse" />
-                      Composing your reflection...
+                      <span className="pulse-dot" aria-hidden />
+                      Composing your reflection…
                     </span>
                     {showTimeHint && (
-                      <span className="text-[13px] text-muted-foreground/70 pl-3.5 transition-opacity duration-500">
-                        This usually takes 20–40 seconds.
+                      <span className="ml-4 text-[13px] not-italic uppercase tracking-[0.18em] text-foreground/55">
+                        Usually 20–40 seconds
                       </span>
                     )}
                   </span>
@@ -253,7 +239,7 @@ export function BeatRevealScreen({
                     {tokens.slice(0, visibleTokenCount).join("")}
                     {visibleTokenCount > 0 && visibleTokenCount < tokens.length ? (
                       <span
-                        className="inline-block w-[2px] h-[1.1em] bg-primary ml-0.5 align-middle typewriter-cursor rounded-full"
+                        className="typewriter-cursor ml-0.5 inline-block h-[1.1em] w-px align-middle bg-ink"
                         aria-hidden
                       />
                     ) : null}
@@ -262,41 +248,37 @@ export function BeatRevealScreen({
               </p>
             </div>
 
-            {/* Reveal state indicator — softened language */}
-            <div className="mt-4">
+            <div className="mt-5">
               {tokens.length > 0 && !isComplete && (
-                <span className="flex flex-col gap-0.5 text-xs text-primary/70">
+                <span className="flex flex-col gap-0.5 text-[12px] uppercase tracking-[0.18em] text-foreground/65">
                   <span className="flex items-center gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-primary/50 animate-pulse" />
-                    Composing your reflection...
+                    <span className="pulse-dot" aria-hidden />
+                    Composing
                   </span>
                   {showTimeHint && (
-                    <span className="text-[11px] text-muted-foreground/60 pl-3.5">
-                      This usually takes 20–40 seconds.
+                    <span className="ml-4 text-foreground/45">
+                      Usually 20–40 seconds
                     </span>
                   )}
                 </span>
               )}
               {isComplete && (
-                <span className="flex items-center gap-2 text-xs text-primary animate-in fade-in duration-500">
-                  <Check className="w-3.5 h-3.5" />
+                <span className="flex items-center gap-2 text-[12px] uppercase tracking-[0.22em] text-ink animate-in fade-in duration-500">
+                  <Check className="h-3 w-3" strokeWidth={2} />
                   Your reflection
                 </span>
               )}
             </div>
 
-            {/* Reveal: title + subtitle land AFTER the body (task 4) */}
+            {/* Subtitle reveals after body lands */}
             {isComplete && (
               <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
-                <div className="flex items-center gap-3 my-6" aria-hidden>
-                  <span className="flex-1 h-0.5 bg-primary/15 rounded-full" />
-                  <span className="w-2 h-2 rounded-full bg-primary/30" />
-                  <span className="flex-1 h-0.5 bg-primary/15 rounded-full" />
+                <div className="my-7 flex items-center gap-3" aria-hidden>
+                  <span className="h-px flex-1 bg-foreground/15" />
+                  <span className="h-1 w-1 rounded-full bg-foreground/30" />
+                  <span className="h-px flex-1 bg-foreground/15" />
                 </div>
-                <h1 className="font-black tracking-tighter text-[24px] sm:text-[28px] text-foreground leading-[1.3] mb-2">
-                  {title}
-                </h1>
-                <p className="text-muted-foreground font-sans text-[15px]">
+                <p className="font-serif-italic text-[18px] leading-snug text-foreground/85">
                   {subtitle}
                 </p>
               </div>
@@ -304,21 +286,20 @@ export function BeatRevealScreen({
           </div>
         </div>
 
-        {/* Feedback Section */}
+        {/* Feedback — three editorial choices */}
         {isComplete && (
-          <div className="px-5 sm:px-8 pb-6">
-            <div className="max-w-2xl mx-auto transition-all duration-500 animate-in fade-in slide-in-from-bottom-4">
-              <div className="flex items-center gap-4 mb-8">
-                <span className="flex-1 h-0.5 bg-primary/20 rounded-full" />
-                <span className="px-3 py-1 rounded-full bg-secondary text-primary text-xs font-bold uppercase tracking-wider border-2 border-primary/30">
-                  Your response
-                </span>
-                <span className="flex-1 h-0.5 bg-primary/20 rounded-full" />
+          <div className="px-5 sm:px-8 pb-10">
+            <div className="mx-auto max-w-2xl animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <div className="mb-7 flex items-center gap-4">
+                <span className="h-px flex-1 bg-border" />
+                <span className="eyebrow text-foreground/70">Your response</span>
+                <span className="h-px flex-1 bg-border" />
               </div>
 
-              <h2 className="font-black tracking-tighter text-[20px] sm:text-[22px] text-foreground leading-[1.3] mb-5">
+              <h2 className="mb-6 font-serif text-[22px] leading-snug text-ink sm:text-[24px]">
                 {feedbackQuestion}
               </h2>
+
               <div className="flex flex-col gap-3">
                 {feedbackOptions.map((option) => {
                   const isSelected = feedback === option.id
@@ -330,28 +311,41 @@ export function BeatRevealScreen({
                         type="button"
                         onClick={() => handleFeedback(option.id)}
                         disabled={!!feedback || isTransitioning}
-                        className={`w-full text-left px-5 py-4 rounded-xl transition-all duration-300 flex items-center justify-between group focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-primary/25 focus-visible:ring-offset-2 ${
+                        className={`group flex w-full items-center justify-between rounded-md px-5 py-4 text-left transition-all duration-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background ${
                           highlight
-                            ? "bg-primary text-primary-foreground neu-border-primary-thick neu-shadow-primary-sm"
-                            : "bg-card neu-card neu-btn-press"
+                            ? "border border-ink bg-ink text-background"
+                            : "s-card hover:-translate-y-0.5"
                         }`}
                       >
-                        <span className="flex items-center gap-3">
-                          <span className={`flex items-center justify-center w-9 h-9 rounded-full text-sm font-medium transition-all duration-300 ${
-                            highlight
-                              ? "bg-primary-foreground/20 text-primary-foreground scale-110"
-                              : "bg-secondary text-primary group-hover:bg-primary/15"
-                          }`}>
-                            {option.emoji}
+                        <span className="flex items-center gap-4">
+                          <span
+                            className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full font-serif text-[15px] transition-all duration-500 ${
+                              highlight
+                                ? "bg-background/20 text-background"
+                                : "bg-secondary text-ink group-hover:bg-ink group-hover:text-background"
+                            }`}
+                          >
+                            {option.glyph}
                           </span>
-                          <span className={`font-sans text-[16px] transition-colors duration-200 ${highlight ? "font-medium" : "text-foreground group-hover:text-primary"}`}>
+                          <span
+                            className={`font-serif text-[16px] transition-colors duration-500 ${
+                              highlight ? "text-background" : "text-ink"
+                            }`}
+                          >
                             {option.label}
                           </span>
                         </span>
-                        <ArrowRight className={`w-4 h-4 transition-all duration-300 ${highlight ? "translate-x-0 opacity-100" : "text-muted-foreground -translate-x-2 opacity-0 group-hover:translate-x-0 group-hover:opacity-60"}`} />
+                        <ArrowRight
+                          className={`h-3.5 w-3.5 transition-all duration-500 ${
+                            highlight
+                              ? "translate-x-0 opacity-100"
+                              : "-translate-x-2 opacity-0 group-hover:translate-x-0 group-hover:opacity-70"
+                          }`}
+                          strokeWidth={1.6}
+                        />
                       </button>
 
-                      {/* Conditional input for "Partly — close enough" (task 6) */}
+                      {/* Optional note for "Partly" */}
                       {isPartlyPending && !feedback && (
                         <div className="mt-3 ml-1 animate-in fade-in slide-in-from-top-1 duration-300">
                           <Textarea
@@ -359,22 +353,25 @@ export function BeatRevealScreen({
                             onChange={(e) => setPartlyReason(e.target.value)}
                             placeholder="What part didn't land?"
                             rows={2}
-                            className="border-2 border-primary/30 rounded-xl bg-card focus:border-primary resize-none"
+                            className="s-input resize-none"
                             aria-label="What part of the reflection didn't land for you? (optional)"
                           />
-                          <div className="flex items-center justify-between mt-2">
-                            <span className="text-[12px] text-muted-foreground">
-                              Optional — leave blank if you want.
+                          <div className="mt-2 flex items-center justify-between">
+                            <span className="text-[11px] uppercase tracking-[0.2em] text-foreground/55">
+                              Optional
                             </span>
-                            <Button
+                            <button
                               type="button"
                               onClick={handlePartlyContinue}
                               disabled={isTransitioning}
-                              className="h-10 px-4 rounded-xl font-bold neu-border-primary neu-shadow-primary-xs neu-btn-press"
+                              className="s-btn group h-10 px-5"
                             >
                               Continue anyway
-                              <ArrowRight className="w-4 h-4 ml-1" />
-                            </Button>
+                              <ArrowRight
+                                className="h-3.5 w-3.5 transition-transform duration-500 group-hover:translate-x-1"
+                                strokeWidth={1.6}
+                              />
+                            </button>
                           </div>
                         </div>
                       )}
@@ -387,37 +384,39 @@ export function BeatRevealScreen({
         )}
       </main>
 
-      {/* Transition overlay between reflections (task 10) */}
+      {/* Transition overlay between reflections */}
       {isTransitioning && beatNumber < 5 && (
         <div
-          className="fixed inset-0 z-[60] bg-background/95 backdrop-blur-sm flex flex-col items-center justify-center animate-in fade-in duration-500"
+          className="fixed inset-0 z-[60] flex flex-col items-center justify-center bg-background/95 backdrop-blur-sm animate-in fade-in duration-500"
           role="status"
           aria-live="polite"
         >
           <div className="text-center animate-in fade-in slide-in-from-bottom-2 duration-700">
-            <p className="text-xs font-black uppercase tracking-[0.18em] text-primary mb-4">
-              Continuing
-            </p>
-            <p className="font-black tracking-tighter text-[32px] sm:text-[40px] text-foreground leading-[1.2]">
+            <p className="eyebrow mb-5 text-foreground/70">Continuing</p>
+            <p className="font-serif text-[36px] leading-tight text-ink sm:text-[44px]">
               Reflection {beatNumber + 1}
-              <span className="text-muted-foreground font-black"> / 5</span>
+              <span className="font-serif-italic text-foreground/55"> · 5</span>
             </p>
-            <div className="mt-6 h-0.5 w-24 mx-auto bg-gradient-to-r from-transparent via-primary to-transparent rounded-full" />
+            <div className="mx-auto mt-7 h-px w-24 bg-gradient-to-r from-transparent via-ink to-transparent" />
           </div>
         </div>
       )}
 
-      {/* Navigation Footer */}
-      <footer className="sticky bottom-0 px-5 sm:px-8 py-4 bg-background/80 backdrop-blur-xl border-t-2 border-foreground/10">
-        <div className="max-w-2xl mx-auto">
-          <Button
+      {/* Footer — calm hairline + ghost back button */}
+      <footer className="sticky bottom-0 border-t border-border bg-background/85 px-5 py-4 backdrop-blur-xl sm:px-8">
+        <div className="mx-auto max-w-2xl">
+          <button
             type="button"
-            variant="outline"
             onClick={handleBack}
-            className="h-14 px-5 rounded-xl border-2 border-foreground/20 text-muted-foreground transition-all duration-200 hover:border-primary/30 hover:text-primary neu-btn-press active:scale-[0.97]"
+            className="s-btn-ghost group h-12 px-5"
+            aria-label="Back to previous step"
           >
-            <ArrowLeft className="w-5 h-5" />
-          </Button>
+            <ArrowLeft
+              className="h-3.5 w-3.5 transition-transform duration-500 group-hover:-translate-x-1"
+              strokeWidth={1.6}
+            />
+            Back
+          </button>
         </div>
       </footer>
     </div>

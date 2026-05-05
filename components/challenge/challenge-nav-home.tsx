@@ -18,8 +18,8 @@ type Variant = "light" | "dark"
 
 /**
  * Routes where clicking "Back to home" mid-flow should show an exit-intent
- * confirmation (task 8). The challenge experience is stateful and users who
- * click out lose context; confirm before abandoning.
+ * confirmation. The challenge experience is stateful and users who click
+ * out lose context; confirm before abandoning.
  */
 const GUARDED_PATTERNS = [
   /^\/challenge\/(individual|team)\/question-/,
@@ -39,20 +39,20 @@ export function ChallengeNavHome({
   const pathname = usePathname() || ""
   const [open, setOpen] = useState(false)
 
+  // The Marine palette already pairs ink/background with high contrast, so
+  // the "dark" variant is now just a light-on-background tint shift.
   const styles =
     variant === "dark"
-      ? "text-white/65 hover:text-white/95 underline-offset-2 hover:underline decoration-white/35"
-      : "text-primary hover:text-primary/80 underline-offset-2 hover:underline decoration-primary/40"
+      ? "text-foreground/65 hover:text-ink"
+      : "text-foreground/65 hover:text-ink"
 
   const isGuarded = GUARDED_PATTERNS.some((p) => p.test(pathname))
 
+  const linkClass = `text-[11px] uppercase tracking-[0.22em] shrink-0 transition-colors duration-300 ${styles} ${className}`
+
   if (!isGuarded) {
     return (
-      <Link
-        href="/"
-        prefetch={false}
-        className={`text-[12px] font-medium shrink-0 ${styles} ${className}`}
-      >
+      <Link href="/" prefetch={false} className={linkClass}>
         Back to home
       </Link>
     )
@@ -60,30 +60,25 @@ export function ChallengeNavHome({
 
   return (
     <>
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className={`text-[12px] font-medium shrink-0 cursor-pointer ${styles} ${className}`}
-      >
+      <button type="button" onClick={() => setOpen(true)} className={linkClass}>
         Back to home
       </button>
       <AlertDialog open={open} onOpenChange={setOpen}>
-        <AlertDialogContent className="rounded-2xl border-2 border-foreground/15 neu-shadow-md">
+        <AlertDialogContent className="rounded-md border border-border bg-card">
           <AlertDialogHeader>
-            <AlertDialogTitle className="font-black tracking-tight text-[20px]">
+            <AlertDialogTitle className="font-serif text-[22px] text-ink">
               Are you sure?
             </AlertDialogTitle>
-            <AlertDialogDescription className="text-[15px] leading-relaxed">
-              Your progress won&apos;t be saved. You&apos;ll need to restart the challenge from the beginning.
+            <AlertDialogDescription className="text-[15px] leading-[1.75] text-foreground/80">
+              Your progress won&apos;t be saved. You&apos;ll need to begin the reading
+              from the start.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="rounded-xl font-bold neu-btn-press">
-              Cancel
-            </AlertDialogCancel>
+            <AlertDialogCancel className="s-btn-ghost">Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => router.push("/")}
-              className="rounded-xl font-bold neu-border-primary neu-shadow-primary-xs neu-btn-press"
+              className="s-btn"
             >
               Confirm
             </AlertDialogAction>

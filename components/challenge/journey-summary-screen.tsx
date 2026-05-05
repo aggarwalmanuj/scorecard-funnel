@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useMemo } from "react"
 import { useRouter } from "next/navigation"
-import { ArrowRight, Sparkles, Volume2, Square, Loader2, Download } from "lucide-react"
+import { ArrowRight, Volume2, Square, Loader2, Download } from "lucide-react"
 import { useChallenge, type Audience } from "@/context/challenge-context"
 import { isAbortErrorLike } from "@/lib/stream-beat-client"
 import {
@@ -25,11 +25,9 @@ type LlmScoreResponse = {
   nsState?: string
 }
 
-/** Calls /api/challenge/score — used only as a fallback when no score was
- *  pre-generated during processing. */
 async function fetchClarityScoreFresh(
   body: { firstName: string; responses: Record<string, string> },
-  signal?: AbortSignal
+  signal?: AbortSignal,
 ): Promise<LlmScoreResponse | null> {
   try {
     const res = await fetch("/api/challenge/score", {
@@ -66,11 +64,10 @@ async function fetchClarityScoreFresh(
   }
 }
 
-/** Streams the SSE summary from /api/challenge/summary */
 async function streamSummary(
   body: { firstName: string; beats: Record<string, string> },
   onDelta: (fullText: string) => void,
-  signal?: AbortSignal
+  signal?: AbortSignal,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   let res: Response
   try {
@@ -122,12 +119,13 @@ async function streamSummary(
             full += j.c
             onDelta(full)
           }
-        } catch { /* ignore */ }
+        } catch {
+          /* ignore */
+        }
       }
     }
   }
 
-  // Flush trailing buffer
   const trailing = carry.trim()
   if (trailing) {
     for (const line of trailing.split("\n")) {
@@ -140,7 +138,9 @@ async function streamSummary(
           full += j.c
           onDelta(full)
         }
-      } catch { /* ignore */ }
+      } catch {
+        /* ignore */
+      }
     }
   }
 
@@ -157,21 +157,16 @@ export function JourneySummaryScreen({ audience }: { audience: Audience }) {
   const [hasFailed, setHasFailed] = useState(false)
   const [isVisible, setIsVisible] = useState(false)
   const [ctaVisible, setCtaVisible] = useState(false)
-  // Gates the scorecard details + the footer CTA. TODO: replace with a real
-  // entitlement check once payment is wired up.
   const [unlocked, setUnlocked] = useState(false)
 
-  // Audio playback — mirrors beat-reveal-screen pattern
   const [isPlaying, setIsPlaying] = useState(false)
   const [isLoadingAudio, setIsLoadingAudio] = useState(false)
   const [isDownloadingAudio, setIsDownloadingAudio] = useState(false)
   const audioCtxRef = useRef<AudioContext | null>(null)
   const audioSourceRef = useRef<AudioBufferSourceNode | null>(null)
-  // Cache the raw TTS bytes so play + download share one network fetch.
   const audioBytesRef = useRef<ArrayBuffer | null>(null)
   const autoPlayedRef = useRef(false)
 
-  // Cleanup Web Audio on unmount
   useEffect(() => {
     return () => {
       audioSourceRef.current?.stop()
@@ -179,10 +174,6 @@ export function JourneySummaryScreen({ audience }: { audience: Audience }) {
     }
   }, [])
 
-  // Fetch TTS bytes for the current summary text. Reads from the in-memory
-  // cache populated by the /processing screen first — when that pre-fetch
-  // landed in time, playback starts with zero network latency. Falls back to
-  // a live fetch otherwise.
   const fetchAudioBytes = async (): Promise<ArrayBuffer | null> => {
     if (audioBytesRef.current) return audioBytesRef.current
     if (!summaryText.trim()) return null
@@ -211,8 +202,6 @@ export function JourneySummaryScreen({ audience }: { audience: Audience }) {
       }
       const ctx = audioCtxRef.current
       if (ctx.state === "suspended") await ctx.resume()
-      // decodeAudioData consumes the buffer in some implementations; clone it
-      // so the cached bytes remain usable for download.
       const audioBuffer = await ctx.decodeAudioData(buffer.slice(0))
       const source = ctx.createBufferSource()
       source.buffer = audioBuffer
@@ -241,17 +230,17 @@ export function JourneySummaryScreen({ audience }: { audience: Audience }) {
       const blob = new Blob([buffer.slice(0)], { type: "audio/mpeg" })
       const url = URL.createObjectURL(blob)
       const a = document.createElement("a")
-      const safeName = (state.firstName || "your")
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, "-")
-        .replace(/^-|-$/g, "")
-        .slice(0, 30) || "your"
+      const safeName =
+        (state.firstName || "your")
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, "-")
+          .replace(/^-|-$/g, "")
+          .slice(0, 30) || "your"
       a.href = url
       a.download = `${safeName}-clarity-summary.mp3`
       document.body.appendChild(a)
       a.click()
       a.remove()
-      // Revoke after a tick so the browser has time to start the download.
       setTimeout(() => URL.revokeObjectURL(url), 1000)
     } catch (error) {
       console.error("Audio download error:", error instanceof Error ? error.message : String(error))
@@ -260,18 +249,15 @@ export function JourneySummaryScreen({ audience }: { audience: Audience }) {
     }
   }
 
-  // Entrance animation
   useEffect(() => {
     const t = setTimeout(() => setIsVisible(true), 80)
     return () => clearTimeout(t)
   }, [])
 
-  // Token-by-token display state (we stream directly by characters)
   const [visibleChars, setVisibleChars] = useState(0)
   const fullTextRef = useRef("")
   const charTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
-  // Start char-reveal ticking
   const startReveal = () => {
     if (charTimerRef.current) return
     charTimerRef.current = setInterval(() => {
@@ -282,24 +268,11 @@ export function JourneySummaryScreen({ audience }: { audience: Audience }) {
           charTimerRef.current = null
           return prev
         }
-        return prev + 3 // reveal 3 chars per tick for a smooth feel
+        return prev + 3
       })
     }, 18)
   }
 
-  // Stream from API — but only if we don't already have a cached summary
-  // pre-generated during /processing.  When the cache is present (the
-  // common case after the new wait-for-everything processing flow), we
-  // feed the typewriter from the cached text instead of opening a fresh
-  // streaming connection.  This makes the summary page render
-  // instantly AND removes the ECONNRESET noise that came from aborting an
-  // in-flight upstream stream when the user navigated away.
-  //
-  // We MUST wait for `isHydrated` before deciding which path to take —
-  // otherwise on a page refresh this effect runs before localStorage
-  // rehydration finishes, observes an empty `state.summaryText`, and
-  // wrongly falls through to the streaming path (regenerating the summary
-  // and producing the ECONNRESET noise the cache was designed to avoid).
   useEffect(() => {
     if (!isHydrated) return
 
@@ -307,7 +280,6 @@ export function JourneySummaryScreen({ audience }: { audience: Audience }) {
     setVisibleChars(0)
 
     if (state.summaryText && state.summaryText.trim()) {
-      // Fast path — replay typewriter from cache, no network call.
       fullTextRef.current = state.summaryText
       setSummaryText(state.summaryText)
       setIsStreaming(false)
@@ -316,9 +288,6 @@ export function JourneySummaryScreen({ audience }: { audience: Audience }) {
       return
     }
 
-    // Fallback path — original live-streaming behavior, used only if the
-    // background pre-generation didn't land (slow upstream or user
-    // bypassed the processing screen somehow).
     const abort = new AbortController()
     setIsStreaming(true)
 
@@ -338,7 +307,7 @@ export function JourneySummaryScreen({ audience }: { audience: Audience }) {
         setSummaryText(full)
         startReveal()
       },
-      abort.signal
+      abort.signal,
     ).then((result) => {
       setIsStreaming(false)
       if (result.ok) {
@@ -356,7 +325,6 @@ export function JourneySummaryScreen({ audience }: { audience: Audience }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isHydrated])
 
-  // Show the CTA when streaming done AND text is fully displayed
   useEffect(() => {
     if (!isComplete) return
     const delay = hasFailed ? 200 : 800
@@ -364,51 +332,41 @@ export function JourneySummaryScreen({ audience }: { audience: Audience }) {
     return () => clearTimeout(t)
   }, [isComplete, hasFailed])
 
-  // Auto-play the summary audio once streaming is complete and text is ready.
-  // Browser autoplay policy may suppress this; the manual button still works.
   useEffect(() => {
     if (autoPlayedRef.current) return
     if (!isComplete || hasFailed) return
     if (!summaryText.trim()) return
     autoPlayedRef.current = true
     const t = setTimeout(() => {
-      void handlePlayAudio().catch(() => {
-        /* autoplay blocked — user can still tap the button */
-      })
+      void handlePlayAudio().catch(() => {})
     }, 400)
     return () => clearTimeout(t)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isComplete, hasFailed, summaryText])
 
-  // Displayed text — only up to visibleChars
   const displayedText = useMemo(
     () => summaryText.slice(0, visibleChars),
-    [summaryText, visibleChars]
+    [summaryText, visibleChars],
   )
 
-  // Split into lines/paragraphs for display
   const paragraphs = useMemo(
     () =>
       displayedText
         .split(/\n+/)
         .map((p) => p.trim())
         .filter((p) => p.length > 0),
-    [displayedText]
+    [displayedText],
   )
 
   const isCursorVisible = isStreaming || visibleChars < summaryText.length
 
-  // ── Clarity Readiness score ───────────────────────────────────────────
-  // Prefer the snapshot pre-generated during the processing screen — that
-  // is the same one the report uses, so numbers stay consistent. If for
-  // some reason it's not in context yet, fall back to a fresh API call.
+  // ── Clarity Readiness score ─────────────────────────────────────────
   const [clarity, setClarity] = useState<ClarityScore | null>(null)
   const [scoreSource, setScoreSourceState] = useState<ScoreSource>("pending")
   const [scoreReasons, setScoreReasons] = useState<ScoreReasons>({})
   const [nsState, setNsState] = useState<string | undefined>(undefined)
 
   useEffect(() => {
-    // Cached snapshot — instant render, no LLM call.
     if (state.clarityScore) {
       setClarity(buildClarityScoreFromSubscores(state.clarityScore.subscores))
       setScoreReasons(state.clarityScore.reasons)
@@ -417,8 +375,6 @@ export function JourneySummaryScreen({ audience }: { audience: Audience }) {
       return
     }
 
-    // Fallback path — only used if processing's background fetch hasn't
-    // landed yet. Fires one fresh /api/challenge/score and caches it.
     const abort = new AbortController()
     let cancelled = false
     setScoreSourceState("pending")
@@ -434,7 +390,7 @@ export function JourneySummaryScreen({ audience }: { audience: Audience }) {
           question5: state.responses.question5,
         },
       },
-      abort.signal
+      abort.signal,
     ).then((result) => {
       if (cancelled) return
       if (result) {
@@ -464,43 +420,47 @@ export function JourneySummaryScreen({ audience }: { audience: Audience }) {
 
   return (
     <div
-      className="fixed inset-0 z-50 overflow-y-auto overscroll-contain"
+      className="fixed inset-0 z-40 overflow-y-auto overscroll-contain"
       style={{
-        background: "linear-gradient(160deg, #13102a 0%, #0a0718 60%, #10091f 100%)",
         scrollbarWidth: "thin",
-        scrollbarColor: "rgba(139,124,246,0.3) transparent",
+        scrollbarColor: "color-mix(in srgb, var(--signal) 40%, transparent) transparent",
       }}
     >
-      {/* Atmospheric particles */}
+      {/* Atmospheric layers — palette-driven */}
       <div className="pointer-events-none fixed inset-0 overflow-hidden" aria-hidden>
-        <div className="absolute top-[12%] left-[8%] w-1 h-1 rounded-full bg-[#8b7cf6]/40 animate-float" style={{ animationDelay: "0.2s" }} />
-        <div className="absolute top-[25%] right-[12%] w-1.5 h-1.5 rounded-full bg-[#8b7cf6]/25 animate-float" style={{ animationDelay: "0.7s" }} />
-        <div className="absolute bottom-[20%] left-[15%] w-1 h-1 rounded-full bg-[#8b7cf6]/30 animate-float" style={{ animationDelay: "1.1s" }} />
-        <div className="absolute top-[60%] right-[20%] w-1 h-1 rounded-full bg-white/15 animate-float" style={{ animationDelay: "0.4s" }} />
-        <div className="absolute bottom-[35%] left-[45%] w-2 h-2 rounded-full bg-[#8b7cf6]/15 animate-float" style={{ animationDelay: "0.9s" }} />
-        {/* Blurred orbs */}
-        <div className="absolute -top-16 left-1/4 w-72 h-72 rounded-full bg-[#8b7cf6]/6 blur-3xl animate-glow-pulse" />
-        <div className="absolute -bottom-20 right-1/4 w-80 h-80 rounded-full bg-[#2d1b9e]/10 blur-3xl animate-glow-pulse" style={{ animationDelay: "2s" }} />
+        <div
+          className="absolute -top-16 left-1/4 h-72 w-72 rounded-full opacity-[0.18] blur-3xl animate-glow-pulse"
+          style={{ background: "rgba(var(--glow), 0.5)" }}
+        />
+        <div
+          className="absolute -bottom-20 right-1/4 h-80 w-80 rounded-full opacity-[0.12] blur-3xl animate-glow-pulse"
+          style={{ background: "rgba(var(--glow), 0.4)", animationDelay: "2s" }}
+        />
+        <div
+          className="absolute top-[28%] right-[14%] h-1.5 w-1.5 rounded-full opacity-50 animate-float"
+          style={{ background: "var(--signal)", animationDelay: "0.6s" }}
+        />
       </div>
 
-      {/* Top accent bar */}
+      {/* Top accent line — palette signal */}
       <div
-        className="sticky top-0 z-20 h-0.5 w-full"
+        className="sticky top-0 z-20 h-px w-full"
         style={{
-          background: "linear-gradient(90deg, transparent, #8b7cf6, #2d1b9e, #8b7cf6, transparent)",
+          background:
+            "linear-gradient(90deg, transparent, var(--signal), transparent)",
         }}
       />
 
-      {/* Full-page content */}
       <div
-        className="relative min-h-screen flex flex-col"
+        className="relative flex min-h-screen flex-col"
         style={{
-          transition: "opacity 0.8s cubic-bezier(0.16,1,0.3,1), transform 0.8s cubic-bezier(0.16,1,0.3,1)",
+          transition:
+            "opacity 0.8s cubic-bezier(0.22,1,0.36,1), transform 0.8s cubic-bezier(0.22,1,0.36,1)",
           opacity: isVisible ? 1 : 0,
           transform: isVisible ? "translateY(0)" : "translateY(24px)",
         }}
       >
-        <div className="flex-1 w-full max-w-none w-full px-5 sm:px-10 pt-10 sm:pt-14 pb-10">
+        <div className="w-full flex-1 px-5 pb-12 pt-12 sm:px-10 sm:pt-16">
           {/* Header */}
           <div
             style={{
@@ -509,48 +469,35 @@ export function JourneySummaryScreen({ audience }: { audience: Audience }) {
               transform: isVisible ? "translateY(0)" : "translateY(16px)",
             }}
           >
-            <div className="flex items-center gap-3 mb-3">
-              <div
-                className="flex items-center justify-center w-9 h-9 rounded-xl"
-                style={{ background: "rgba(139,124,246,0.15)", border: "1px solid rgba(139,124,246,0.3)" }}
-              >
-                <Sparkles className="w-4 h-4 text-[#8b7cf6]" />
-              </div>
-              <span
-                className="text-xs font-black uppercase tracking-[0.12em]"
-                style={{ color: "rgba(139,124,246,0.8)" }}
-              >
-                Your Journey, Reflected
-              </span>
-            </div>
+            <p className="eyebrow mb-5 text-foreground/70">
+              <span className="pulse-dot mr-3" aria-hidden />
+              Your journey, reflected
+            </p>
 
-            <h1
-              className="font-black tracking-tighter leading-tight mb-2"
-              style={{
-                fontSize: "clamp(24px, 4vw, 36px)",
-                color: "#fafaf9",
-              }}
-            >
-              {state.firstName ? `${state.firstName}, here is what surfaced.` : "Here is what surfaced."}
+            <h1 className="font-serif text-[32px] leading-[1.05] text-ink sm:text-[44px] md:text-[52px]">
+              {state.firstName ? `${state.firstName}, here is what` : "Here is what"}
+              <span className="block font-serif-italic text-foreground">
+                surfaced.
+              </span>
             </h1>
 
             <div
-              className="h-px w-16 mb-8 rounded-full"
+              className="mt-7 h-px w-16"
               style={{
-                background: "linear-gradient(90deg, #8b7cf6, transparent)",
+                background:
+                  "linear-gradient(90deg, var(--signal), transparent)",
                 transition: "opacity 0.5s 0.6s",
                 opacity: isVisible ? 1 : 0,
               }}
             />
           </div>
 
-          {/* 1. Clarity Readiness Index — scorecard FIRST. Reveals on initial
-                mount (with glass morphism overlay) so it is visible
-                immediately on reload, not after streaming completes. */}
+          {/* 1. Clarity Readiness Index */}
           <div
+            className="mt-12"
             style={{
               transition:
-                "opacity 0.8s cubic-bezier(0.16,1,0.3,1), transform 0.8s cubic-bezier(0.16,1,0.3,1)",
+                "opacity 0.8s cubic-bezier(0.22,1,0.36,1), transform 0.8s cubic-bezier(0.22,1,0.36,1)",
               opacity: isVisible ? 1 : 0,
               transform: isVisible ? "translateY(0)" : "translateY(14px)",
             }}
@@ -569,7 +516,7 @@ export function JourneySummaryScreen({ audience }: { audience: Audience }) {
             )}
           </div>
 
-          {/* 2. Big bold "Click here to listen" button */}
+          {/* 2. Listen button */}
           {summaryText && (
             <div className="mt-10 flex flex-col items-center gap-3">
               <button
@@ -578,32 +525,26 @@ export function JourneySummaryScreen({ audience }: { audience: Audience }) {
                 onClick={handlePlayAudio}
                 disabled={isLoadingAudio}
                 aria-label={isPlaying ? "Stop audio" : "Click here to listen"}
-                className="group relative w-full flex items-center justify-center gap-3 px-8 py-5 sm:py-6 rounded-2xl font-black uppercase tracking-[0.14em] text-white transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-60 disabled:hover:scale-100"
+                className="s-btn group w-full justify-center disabled:opacity-60"
                 style={{
-                  fontSize: "clamp(16px, 2.2vw, 20px)",
-                  background: "linear-gradient(135deg, #8b7cf6 0%, #6b5ee0 100%)",
-                  border: "1px solid rgba(255,255,255,0.2)",
-                  boxShadow:
-                    "0 18px 40px rgba(139,124,246,0.35), inset 0 1px 0 rgba(255,255,255,0.25)",
-                  animation: !isPlaying && !isLoadingAudio
-                    ? "attention-pulse 2.5s ease-out infinite"
-                    : "none",
+                  paddingTop: "1.05rem",
+                  paddingBottom: "1.05rem",
                 }}
               >
                 {isLoadingAudio ? (
                   <>
-                    <Loader2 className="w-6 h-6 animate-spin" />
-                    <span>Loading audio…</span>
+                    <Loader2 className="h-4 w-4 animate-spin" strokeWidth={1.6} />
+                    Loading audio…
                   </>
                 ) : isPlaying ? (
                   <>
-                    <Square className="w-5 h-5 fill-current" />
-                    <span>Stop Listening</span>
+                    <Square className="h-3.5 w-3.5 fill-current" strokeWidth={1.6} />
+                    Stop listening
                   </>
                 ) : (
                   <>
-                    <Volume2 className="w-6 h-6" />
-                    <span>Click Here to Listen</span>
+                    <Volume2 className="h-4 w-4" strokeWidth={1.6} />
+                    Click here to listen
                   </>
                 )}
               </button>
@@ -614,70 +555,50 @@ export function JourneySummaryScreen({ audience }: { audience: Audience }) {
                 onClick={handleDownloadAudio}
                 disabled={isDownloadingAudio}
                 aria-label="Download audio summary"
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-black uppercase tracking-[0.14em] transition-all duration-300 hover:scale-[1.03] disabled:opacity-50 disabled:hover:scale-100"
-                style={{
-                  background: "rgba(139,124,246,0.12)",
-                  border: "1px solid rgba(139,124,246,0.3)",
-                  color: "#b5a8ff",
-                }}
+                className="inline-flex items-center gap-2 rounded-full border border-border px-4 py-1.5 text-[10px] uppercase tracking-[0.22em] text-foreground/75 transition-colors duration-300 hover:border-ink hover:text-ink disabled:opacity-50"
               >
                 {isDownloadingAudio ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <Loader2 className="h-3 w-3 animate-spin" strokeWidth={1.6} />
                 ) : (
-                  <Download className="w-4 h-4" />
+                  <Download className="h-3 w-3" strokeWidth={1.6} />
                 )}
-                <span>Download Audio</span>
+                Download audio
               </button>
             </div>
           )}
 
-          {/* 3. Summary text — last */}
-          <div className="mt-12 min-h-[120px]">
+          {/* 3. Summary text */}
+          <div className="mt-14 min-h-[120px]">
             {!summaryText && isStreaming && (
-              <div className="flex items-center gap-3 mt-4">
-                <span className="flex gap-1">
-                  {[0, 1, 2].map((i) => (
-                    <span
-                      key={i}
-                      className="w-1.5 h-1.5 rounded-full bg-[#8b7cf6]"
-                      style={{
-                        animation: "pulse 1.2s ease-in-out infinite",
-                        animationDelay: `${i * 0.2}s`,
-                      }}
-                    />
-                  ))}
-                </span>
-                <span
-                  className="text-sm font-sans"
-                  style={{ color: "rgba(250,250,249,0.4)" }}
-                >
-                  Reading everything you shared...
+              <div className="mt-2 flex items-center gap-3">
+                <span className="pulse-dot" aria-hidden />
+                <span className="font-serif-italic text-[15px] text-foreground/65">
+                  Reading everything you shared…
                 </span>
               </div>
             )}
 
             {hasFailed && !summaryText && (
-              <p className="text-sm" style={{ color: "rgba(250,250,249,0.5)" }}>
-                Something went wrong generating your summary. Please proceed to see your full results.
+              <p className="text-[15px] font-serif-italic text-foreground/70">
+                Something went wrong generating your summary. Please proceed to
+                see your full results.
               </p>
             )}
 
-            <div className="space-y-5">
+            <div className="space-y-5 max-w-3xl">
               {paragraphs.map((para, idx) => (
                 <p
                   key={idx}
-                  className="font-sans leading-[1.85] text-base sm:text-[17px]"
+                  className="font-serif text-[17px] leading-[1.85] text-foreground/90 sm:text-[18px]"
                   style={{
-                    color: "rgba(250,250,249,0.88)",
-                    animation: "fade-in-up 0.5s cubic-bezier(0.16,1,0.3,1) both",
+                    animation: "fade-in-up 0.5s cubic-bezier(0.22,1,0.36,1) both",
                     animationDelay: `${idx * 80}ms`,
                   }}
                 >
                   {para}
-                  {/* Cursor only on last paragraph while streaming */}
                   {idx === paragraphs.length - 1 && isCursorVisible && (
                     <span
-                      className="inline-block w-[2px] h-[1.1em] bg-[#8b7cf6] ml-0.5 align-middle rounded-full typewriter-cursor"
+                      className="typewriter-cursor ml-0.5 inline-block h-[1.1em] w-px align-middle bg-ink"
                       aria-hidden
                     />
                   )}
@@ -687,26 +608,19 @@ export function JourneySummaryScreen({ audience }: { audience: Audience }) {
           </div>
         </div>
 
-        {/* Footer CTA — sticks to bottom of the page */}
+        {/* Footer CTA */}
         <div
-          className="sticky bottom-0 z-10 w-full border-t"
+          className="sticky bottom-0 z-10 w-full border-t border-border bg-background/85 backdrop-blur-xl"
           style={{
-            borderColor: "rgba(139,124,246,0.15)",
-            background: "rgba(10,7,24,0.85)",
-            backdropFilter: "blur(10px)",
-            WebkitBackdropFilter: "blur(10px)",
             transition: "opacity 0.7s, transform 0.7s",
             opacity: ctaVisible ? 1 : 0,
             transform: ctaVisible ? "translateY(0)" : "translateY(12px)",
             pointerEvents: ctaVisible ? "auto" : "none",
           }}
         >
-          <div className="w-full max-w-none w-full px-5 sm:px-10 py-5 flex flex-col sm:flex-row items-center justify-between gap-4">
-            <p
-              className="text-sm font-sans text-center sm:text-left"
-              style={{ color: "rgba(250,250,249,0.45)" }}
-            >
-              Five beats. One thread. The signal is clear.
+          <div className="flex w-full flex-col items-center justify-between gap-4 px-5 py-5 sm:flex-row sm:px-10">
+            <p className="font-serif-italic text-[14px] text-foreground/70 sm:text-left">
+              Five reflections. One thread. The signal is clear.
             </p>
 
             <button
@@ -717,21 +631,13 @@ export function JourneySummaryScreen({ audience }: { audience: Audience }) {
                   ? router.push(`/challenge/${audience}/offer`)
                   : router.push("/")
               }
-              className="group relative flex items-center gap-2.5 px-7 py-3.5 rounded-xl font-black text-[15px] text-white transition-all duration-300 hover:scale-[1.03] active:scale-[0.98]"
-              style={{
-                background: unlocked
-                  ? "linear-gradient(135deg, #8b7cf6 0%, #6b5ee0 100%)"
-                  : "linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.04))",
-                border: "1px solid rgba(255,255,255,0.18)",
-                boxShadow: "0 0 0 0 rgba(139,124,246,0.4)",
-                animation:
-                  ctaVisible && unlocked
-                    ? "attention-pulse 2.5s ease-out infinite"
-                    : "none",
-              }}
+              className={unlocked ? "s-btn group" : "s-btn-ghost group"}
             >
-              <span>{unlocked ? "See What Comes Next" : "Exit"}</span>
-              <ArrowRight className="w-4 h-4 transition-transform duration-300 group-hover:translate-x-1" />
+              {unlocked ? "See what comes next" : "Exit"}
+              <ArrowRight
+                className="h-3.5 w-3.5 transition-transform duration-500 group-hover:translate-x-1"
+                strokeWidth={1.6}
+              />
             </button>
           </div>
         </div>
@@ -746,19 +652,11 @@ function ClarityScorePending() {
   return (
     <section
       aria-label="Clarity Readiness Index — scoring"
-      className="rounded-2xl overflow-hidden"
-      style={{
-        background:
-          "linear-gradient(165deg, rgba(139,124,246,0.07) 0%, rgba(139,124,246,0.02) 70%)",
-        border: "1px solid rgba(139,124,246,0.2)",
-      }}
+      className="s-card-static overflow-hidden"
     >
-      <div className="px-5 sm:px-7 py-8 flex items-center gap-3">
-        <Loader2 className="w-4 h-4 animate-spin text-[#8b7cf6]" />
-        <span
-          className="text-xs font-black uppercase tracking-[0.14em]"
-          style={{ color: "rgba(139,124,246,0.85)" }}
-        >
+      <div className="flex items-center gap-3 px-6 py-9 sm:px-8">
+        <Loader2 className="h-3.5 w-3.5 animate-spin text-ink" strokeWidth={1.6} />
+        <span className="eyebrow text-foreground/70">
           Scoring your Clarity Readiness Index…
         </span>
       </div>
@@ -786,39 +684,20 @@ function ClarityScoreCard({
   return (
     <section
       aria-label="Clarity Readiness Index"
-      className="rounded-2xl overflow-hidden"
-      style={{
-        background:
-          "linear-gradient(165deg, rgba(139,124,246,0.07) 0%, rgba(139,124,246,0.02) 70%)",
-        border: "1px solid rgba(139,124,246,0.2)",
-      }}
+      className="overflow-hidden rounded-md border border-border bg-card"
     >
-      {/* Header */}
-      <div
-        className="px-5 sm:px-7 pt-5 pb-4 border-b"
-        style={{ borderColor: "rgba(139,124,246,0.15)" }}
-      >
-        <div className="flex items-center justify-between gap-2 mb-1">
-          <div className="flex items-center gap-2">
+      <div className="border-b border-border px-6 pb-5 pt-6 sm:px-8">
+        <div className="mb-2 flex items-center justify-between gap-2">
+          <p className="eyebrow flex items-center gap-2 text-foreground/70">
             <span
-              className="w-1.5 h-1.5 rounded-full"
+              className="h-1.5 w-1.5 rounded-full"
               style={{ background: bandColor }}
             />
-            <span
-              className="text-[10px] font-black uppercase tracking-[0.16em]"
-              style={{ color: "rgba(139,124,246,0.85)" }}
-            >
-              Clarity Readiness Index
-            </span>
-          </div>
+            Clarity Readiness Index
+          </p>
           {nsState && nsState !== "UNKNOWN" ? (
             <span
-              className="text-[9.5px] font-black uppercase tracking-[0.14em] px-2 py-0.5 rounded-full"
-              style={{
-                background: "rgba(139,124,246,0.1)",
-                border: "1px solid rgba(139,124,246,0.25)",
-                color: "rgba(199,188,255,0.85)",
-              }}
+              className="rounded-full border border-border px-3 py-0.5 text-[10px] uppercase tracking-[0.2em] text-foreground/75"
               title="Nervous-system state evidenced across your answers"
             >
               {nsState}
@@ -826,33 +705,22 @@ function ClarityScoreCard({
           ) : null}
         </div>
 
-        <div className="flex items-end justify-between gap-4 flex-wrap">
+        <div className="flex flex-wrap items-end justify-between gap-4">
           <div className="flex items-baseline gap-2">
             <span
-              className="font-black tracking-tighter leading-none"
-              style={{
-                fontSize: "clamp(44px, 7vw, 64px)",
-                color: "#fafaf9",
-              }}
+              className="font-serif leading-none tabular-nums text-ink"
+              style={{ fontSize: "clamp(48px, 7vw, 72px)" }}
             >
               {clarity.overall}
             </span>
-            <span
-              className="font-sans font-semibold tracking-tight"
-              style={{
-                fontSize: "clamp(14px, 1.6vw, 16px)",
-                color: "rgba(250,250,249,0.35)",
-              }}
-            >
-              / 100
-            </span>
+            <span className="font-serif-italic text-foreground/55">/ 100</span>
           </div>
 
           <div
-            className="px-3 py-1.5 rounded-full text-xs font-black uppercase tracking-[0.1em]"
+            className="rounded-full px-3 py-1.5 text-[11px] uppercase tracking-[0.18em]"
             style={{
-              background: `${bandColor}22`,
-              border: `1px solid ${bandColor}55`,
+              background: `color-mix(in srgb, ${bandColor} 18%, transparent)`,
+              border: `1px solid color-mix(in srgb, ${bandColor} 55%, transparent)`,
               color: bandColor,
             }}
           >
@@ -860,31 +728,22 @@ function ClarityScoreCard({
           </div>
         </div>
 
-        <p
-          className="mt-3 text-sm font-sans leading-relaxed"
-          style={{ color: "rgba(250,250,249,0.75)" }}
-        >
+        <p className="mt-4 font-serif-italic text-[16px] leading-[1.7] text-foreground/85">
           {clarity.bandMessage}
         </p>
       </div>
 
-      {/* Details (subscores + benchmark) — hidden behind a frosted glass overlay until unlocked.
-          The blur is applied directly to the content container via `filter: blur()` (not
-          `backdrop-filter`) so it is part of the element's first paint — no flash on reload. */}
       <div className="relative">
-        {/* Blurred content. `filter` is applied atomically with the element's
-            first paint, so the children never appear sharp before the blur lands. */}
         <div
           aria-hidden={!unlocked}
           style={{
             filter: !unlocked ? "blur(14px) saturate(120%)" : "none",
-            transition: "filter 0.4s cubic-bezier(0.16,1,0.3,1)",
+            transition: "filter 0.5s cubic-bezier(0.22,1,0.36,1)",
             pointerEvents: !unlocked ? "none" : "auto",
             userSelect: !unlocked ? "none" : "auto",
           }}
         >
-          {/* Subscores */}
-          <div className="px-5 sm:px-7 py-5 space-y-4">
+          <div className="space-y-5 px-6 py-6 sm:px-8">
             {clarity.subscoreDetails.map((s) => (
               <SubscoreRow
                 key={s.key}
@@ -896,69 +755,35 @@ function ClarityScoreCard({
             ))}
           </div>
 
-          {/* Benchmark footer */}
-          <div
-            className="px-5 sm:px-7 py-4 border-t"
-            style={{
-              borderColor: "rgba(139,124,246,0.15)",
-              background: "rgba(10,7,24,0.35)",
-            }}
-          >
-        <div className="flex items-center justify-between gap-3 mb-1.5">
-          <span
-            className="text-[10px] font-black uppercase tracking-[0.14em]"
-            style={{ color: "rgba(250,250,249,0.4)" }}
-          >
-            Peer benchmark
-          </span>
-          <span
-            className="text-[11px] font-sans"
-            style={{ color: "rgba(250,250,249,0.35)" }}
-          >
-            Estimated for leaders carrying unresolved clarity gaps
-          </span>
-        </div>
-        <BenchmarkBar overall={clarity.overall} mean={clarity.benchmarkMean} />
-        <p
-          className="mt-6 text-sm font-sans leading-relaxed"
-          style={{ color: "rgba(250,250,249,0.72)" }}
-        >
-          {clarity.comparisonLabel}
-        </p>
-        {source === "fallback" ? (
-          <p
-            className="mt-2 text-[11px] font-sans"
-            style={{ color: "rgba(250,250,249,0.32)" }}
-          >
-            Offline estimate — full model scoring was unavailable.
-          </p>
-        ) : null}
+          <div className="border-t border-border bg-secondary/40 px-6 py-5 sm:px-8">
+            <div className="mb-2 flex items-center justify-between gap-3">
+              <span className="eyebrow text-foreground/65">Peer benchmark</span>
+              <span className="font-serif-italic text-[13px] text-foreground/65">
+                Estimated for leaders carrying unresolved clarity gaps
+              </span>
+            </div>
+            <BenchmarkBar overall={clarity.overall} mean={clarity.benchmarkMean} />
+            <p className="mt-7 font-serif text-[15px] leading-[1.7] text-foreground/85">
+              {clarity.comparisonLabel}
+            </p>
+            {source === "fallback" ? (
+              <p className="mt-2 text-[11px] uppercase tracking-[0.2em] text-foreground/45">
+                Offline estimate · full model scoring unavailable
+              </p>
+            ) : null}
           </div>
         </div>
 
-        {/* Unlock overlay — sits on top of the (already-blurred) content with
-            a soft glass tint and the Unlock button. */}
         {!unlocked ? (
           <div
             className="absolute inset-0 z-10 flex items-center justify-center"
             style={{
               background:
-                "linear-gradient(180deg, rgba(13,7,30,0.25) 0%, rgba(13,7,30,0.35) 100%)",
-              borderTop: "1px solid rgba(255,255,255,0.06)",
+                "linear-gradient(180deg, color-mix(in srgb, var(--background) 40%, transparent) 0%, color-mix(in srgb, var(--background) 60%, transparent) 100%)",
+              borderTop: "1px solid var(--border)",
             }}
           >
-            <button
-              type="button"
-              onClick={onUnlock}
-              className="px-6 py-3 rounded-full text-sm font-black uppercase tracking-[0.16em] transition-transform hover:scale-[1.03] active:scale-[0.98]"
-              style={{
-                background: "linear-gradient(135deg, #8b7cf6, #6b5ee0)",
-                color: "#fafaf9",
-                border: "1px solid rgba(255,255,255,0.18)",
-                boxShadow:
-                  "0 10px 30px rgba(139,124,246,0.35), inset 0 1px 0 rgba(255,255,255,0.25)",
-              }}
-            >
+            <button type="button" onClick={onUnlock} className="s-btn">
               Unlock
             </button>
           </div>
@@ -982,46 +807,37 @@ function SubscoreRow({
   const barColor = subscoreColor(value)
   return (
     <div>
-      <div className="flex items-baseline justify-between gap-3 mb-1.5">
-        <div className="flex items-baseline gap-2 min-w-0">
-          <span
-            className="font-sans font-bold text-[13px] sm:text-sm truncate"
-            style={{ color: "rgba(250,250,249,0.92)" }}
-          >
+      <div className="mb-1.5 flex items-baseline justify-between gap-3">
+        <div className="flex min-w-0 items-baseline gap-3">
+          <span className="truncate font-serif text-[15px] text-ink">
             {label}
           </span>
-          <span
-            className="text-[10px] font-sans uppercase tracking-[0.12em]"
-            style={{ color: "rgba(250,250,249,0.35)" }}
-          >
+          <span className="text-[10px] uppercase tracking-[0.22em] text-foreground/55">
             {pillar}
           </span>
         </div>
         <span
-          className="font-black tabular-nums text-sm"
+          className="tabular-nums font-serif text-[15px]"
           style={{ color: barColor }}
         >
           {value}
         </span>
       </div>
       <div
-        className="relative h-1.5 rounded-full overflow-hidden"
-        style={{ background: "rgba(139,124,246,0.08)" }}
+        className="relative h-1 overflow-hidden rounded-full"
+        style={{ background: "color-mix(in srgb, var(--foreground) 8%, transparent)" }}
       >
         <div
           className="absolute inset-y-0 left-0 rounded-full"
           style={{
             width: `${Math.max(2, Math.min(100, value))}%`,
-            background: `linear-gradient(90deg, ${barColor}cc, ${barColor})`,
-            transition: "width 1.2s cubic-bezier(0.16,1,0.3,1)",
+            background: barColor,
+            transition: "width 1.2s cubic-bezier(0.22,1,0.36,1)",
           }}
         />
       </div>
       {reason ? (
-        <p
-          className="mt-2 text-[12.5px] font-sans leading-snug"
-          style={{ color: "rgba(250,250,249,0.55)" }}
-        >
+        <p className="mt-2 text-[13px] leading-snug text-foreground/75">
           {reason}
         </p>
       ) : null}
@@ -1032,31 +848,30 @@ function SubscoreRow({
 function BenchmarkBar({ overall, mean }: { overall: number; mean: number }) {
   return (
     <div
-      className="relative h-2 rounded-full overflow-visible"
-      style={{ background: "rgba(139,124,246,0.1)" }}
+      className="relative h-1.5 overflow-visible rounded-full"
+      style={{ background: "color-mix(in srgb, var(--foreground) 8%, transparent)" }}
     >
       <div
         className="absolute inset-y-0 left-0 rounded-full"
         style={{
           width: `${Math.max(2, Math.min(100, overall))}%`,
-          background: "linear-gradient(90deg, #8b7cf6, #b5a8ff)",
-          transition: "width 1.2s cubic-bezier(0.16,1,0.3,1)",
+          background: "var(--signal)",
+          transition: "width 1.2s cubic-bezier(0.22,1,0.36,1)",
         }}
       />
       <div
-        className="absolute top-1/2 -translate-y-1/2 h-4 w-0.5 rounded-full"
+        className="absolute top-1/2 h-3 w-px -translate-y-1/2"
         style={{
           left: `${mean}%`,
-          background: "rgba(250,250,249,0.55)",
+          background: "var(--ink)",
         }}
         aria-label={`Peer average: ${mean}`}
       />
       <div
-        className="absolute -bottom-4 text-[9px] font-sans uppercase tracking-[0.1em] whitespace-nowrap"
+        className="absolute -bottom-5 whitespace-nowrap text-[10px] uppercase tracking-[0.18em] text-foreground/55"
         style={{
           left: `${mean}%`,
           transform: "translateX(-50%)",
-          color: "rgba(250,250,249,0.4)",
         }}
       >
         avg {mean}
@@ -1070,20 +885,19 @@ function bandAccent(band: ClarityScore["band"]): string {
     case "high":
       return "#7cf6a8"
     case "good":
-      return "#8b7cf6"
+      return "#5fc5d4"
     case "moderate":
-      return "#c6a4f6"
+      return "#9bc8d8"
     case "significant-gaps":
-      return "#f6b37c"
+      return "#f6c07c"
     case "deep-stuck":
       return "#f68b8b"
   }
 }
 
 function subscoreColor(value: number): string {
-  if (value >= 65) return "#8b7cf6"
-  if (value >= 45) return "#c6a4f6"
-  if (value >= 30) return "#f6b37c"
+  if (value >= 65) return "#5fc5d4"
+  if (value >= 45) return "#9bc8d8"
+  if (value >= 30) return "#f6c07c"
   return "#f68b8b"
 }
-

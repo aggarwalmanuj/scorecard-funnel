@@ -6,11 +6,6 @@ import Link from "next/link"
 import { useChallenge } from "@/context/challenge-context"
 import type { ClarityScore } from "@/lib/scoring"
 
-// Brand logo — same asset used on the offer page header. Dark mark on
-// transparent background, intended for the white report surface.
-const AIMERGE_LOGO_URL =
-  "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Colored%20%28Transparent%29-i3BIGX38o1jOu8WEN9AsCy09XzplWy.png"
-
 type Pillar = {
   key:
     | "directionClarity"
@@ -254,18 +249,21 @@ export function ClarityReport() {
     )
 
   return (
-    <div className="report-root">
+    <div className="report-root" data-palette="marine">
       <ReportStyles />
 
-      {/* Top toolbar — hidden in print */}
+      {/* Top toolbar — hidden in print. Wordmark is omitted until the new
+          logo arrives; the eyebrow on each page carries the section title. */}
       <div className="toolbar">
         <Link href="/challenge/offer" className="back">
           <ArrowLeft size={14} />
           Back to offer
         </Link>
         <div className="toolbar-title">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={AIMERGE_LOGO_URL} alt="AIMerge" className="brand-img" />
+          <span className="brand-mark brand-mark-sm" aria-hidden />
+          <span style={{ fontFamily: "var(--font-serif)", fontWeight: 400, letterSpacing: "0.18em", textTransform: "uppercase", fontSize: 11, color: "var(--ink-soft)" }}>
+            Clarity Readiness Report
+          </span>
         </div>
         <button
           type="button"
@@ -529,8 +527,13 @@ function ReportHeader({
 }) {
   return (
     <header className="head">
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={AIMERGE_LOGO_URL} alt="AIMerge" className="brand-img" />
+      {/* Logo slot — kept blank until the matching wordmark is supplied. The
+          dot+rule pairing carries the brand placeholder consistently with
+          the rest of the funnel. */}
+      <div className="logo">
+        <span className="dot" aria-hidden />
+        <span>Clarity Readiness Report</span>
+      </div>
       {compact ? (
         <div className="meta">
           <b>{name || "Your report"}</b> · {formatDate(today)}
@@ -581,8 +584,8 @@ function ScoreDonut({ value }: { value: number }) {
     >
       <defs>
         <linearGradient id="ringGrad" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="#8b7cf6" />
-          <stop offset="100%" stopColor="#6b5ee0" />
+          <stop offset="0%" stopColor="#2a8f9e" />
+          <stop offset="100%" stopColor="#1f6b78" />
         </linearGradient>
       </defs>
       <circle className="ring-bg" cx="60" cy="60" r={r} />
@@ -772,26 +775,37 @@ function ReportStyles() {
         }
       }
 
+      /* Marine-family palette — printable cream paper with navy ink and
+         teal signal. Mirrors the rest of the funnel's Marine lock so the
+         downloaded PDF feels continuous with the on-screen experience. */
       .report-root {
-        --ink: #11071f;
-        --ink-soft: #4b3f63;
-        --muted: #8a82a0;
-        --line: #e9e4f3;
+        --ink: #0f2c3b;
+        --ink-soft: #3e5b6a;
+        --muted: #87a3b1;
+        --line: #d6e0e7;
         --bg: #ffffff;
-        --surface: #faf8ff;
-        --brand: #8b7cf6;
-        --brand-dark: #6b5ee0;
-        --brand-soft: #efeaff;
-        --green: #10b981;
-        --amber: #f59e0b;
-        --coral: #ef4444;
-        --lilac: #c6a4f6;
-        background: #ece7f7;
+        --surface: #f6f9fb;
+        --brand: #2a8f9e;
+        --brand-dark: #1f6b78;
+        --brand-soft: #e1edf1;
+        --green: #4f9e7a;
+        --amber: #c08a2a;
+        --coral: #c25c4d;
+        --lilac: #9bc8d8;
+        background: #eaf0f4;
         color: var(--ink);
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-          "Helvetica Neue", Arial, sans-serif;
+        font-family: var(--font-serif), Georgia, "Times New Roman", serif;
         -webkit-font-smoothing: antialiased;
         min-height: 100vh;
+      }
+      /* Toolbar + UI chrome stays in the modern sans so the controls don't
+         feel like part of the editorial body. */
+      .report-root .toolbar,
+      .report-root .toolbar *,
+      .report-root .status,
+      .report-root .status * {
+        font-family: var(--font-sans), -apple-system, BlinkMacSystemFont,
+          "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
       }
 
       .report-root .toolbar {
@@ -871,7 +885,7 @@ function ReportStyles() {
         padding: 36px 28px;
         background: #fff;
         border-radius: 14px;
-        box-shadow: 0 12px 40px rgba(20, 12, 40, 0.12);
+        box-shadow: 0 12px 40px rgba(15, 44, 59, 0.12);
         text-align: center;
         color: var(--ink-soft);
       }
@@ -912,7 +926,7 @@ function ReportStyles() {
         margin: 24px auto;
         padding: 22mm 20mm 20mm;
         background: var(--bg);
-        box-shadow: 0 12px 40px rgba(20, 12, 40, 0.12);
+        box-shadow: 0 12px 40px rgba(15, 44, 59, 0.12);
         position: relative;
         overflow: hidden;
         color: var(--ink);
@@ -1073,7 +1087,7 @@ function ReportStyles() {
         border-radius: 16px;
         margin: 6px 0 16px;
         box-shadow:
-          0 8px 32px rgba(139, 124, 246, 0.12),
+          0 8px 32px rgba(42, 143, 158, 0.12),
           inset 0 1px 0 rgba(255, 255, 255, 0.7);
       }
       .report-root .donut-wrap {
@@ -1087,7 +1101,7 @@ function ReportStyles() {
       }
       .report-root .donut .ring-bg {
         fill: none;
-        stroke: #ece6fb;
+        stroke: #e1edf1;
         stroke-width: 16;
       }
       .report-root .donut .ring-fg {
@@ -1121,9 +1135,9 @@ function ReportStyles() {
         font-weight: 800;
         letter-spacing: 0.12em;
         text-transform: uppercase;
-        background: rgba(139, 124, 246, 0.12);
+        background: rgba(42, 143, 158, 0.12);
         color: var(--brand-dark);
-        border: 1px solid rgba(139, 124, 246, 0.3);
+        border: 1px solid rgba(42, 143, 158, 0.3);
         align-self: flex-start;
       }
       .report-root .band-pill .led {
@@ -1182,7 +1196,7 @@ function ReportStyles() {
       }
       .report-root .sub-bar {
         height: 6px;
-        background: #f2eefb;
+        background: #e8f0f3;
         border-radius: 999px;
         overflow: hidden;
         margin-top: 4px;
@@ -1265,8 +1279,8 @@ function ReportStyles() {
         letter-spacing: 0.14em;
         text-transform: uppercase;
         color: var(--brand-dark);
-        background: rgba(139, 124, 246, 0.12);
-        border: 1px solid rgba(139, 124, 246, 0.25);
+        background: rgba(42, 143, 158, 0.12);
+        border: 1px solid rgba(42, 143, 158, 0.25);
         padding: 3px 7px;
         border-radius: 6px;
       }
@@ -1301,7 +1315,7 @@ function ReportStyles() {
       .report-root .bench-bar {
         position: relative;
         height: 14px;
-        background: #ece6fb;
+        background: #e1edf1;
         border-radius: 999px;
         overflow: visible;
       }
@@ -1485,8 +1499,8 @@ function ReportStyles() {
       }
       .report-root .urg-pill.u-purple {
         color: var(--brand-dark);
-        background: rgba(139, 124, 246, 0.14);
-        border: 1px solid rgba(139, 124, 246, 0.3);
+        background: rgba(42, 143, 158, 0.14);
+        border: 1px solid rgba(42, 143, 158, 0.3);
       }
       .report-root .urg-pill.u-green {
         color: #047857;

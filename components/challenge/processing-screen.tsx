@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, useEffect, useRef, useCallback } from "react"
-import Image from "next/image"
 import { useRouter } from "next/navigation"
 import { Check } from "lucide-react"
 import { useChallenge, type ChallengeState, type Audience } from "@/context/challenge-context"
@@ -9,9 +8,7 @@ import { streamBeatFromApi, isAbortErrorLike } from "@/lib/stream-beat-client"
 import { submitToGoogleSheet } from "@/lib/submit-to-google-sheet"
 import { preloadSummaryAudio } from "@/lib/client/summary-audio-cache"
 import { ChallengeNavHome } from "@/components/challenge/challenge-nav-home"
-import {
-  ChallengeMenuButton,
-} from "@/components/challenge/challenge-funnel-header-actions"
+import { ChallengeMenuButton } from "@/components/challenge/challenge-funnel-header-actions"
 
 const processingSteps = [
   "Reading what you shared",
@@ -24,14 +21,7 @@ const processingSteps = [
   "Setting your reading aside for you",
 ]
 
-// Each beat / score / report needs to land before we redirect.  Beat
-// content streams in chunks, so we use a small length floor as the proxy
-// for "this beat is ready to read".
 const BEAT_READY_MIN_CHARS = 40
-
-// Hard ceiling — if the upstream LLM hangs and nothing arrives, we still
-// move the user forward so they aren't stuck on the loading screen
-// indefinitely.  The downstream pages have their own fallbacks.
 const HARD_TIMEOUT_MS = 60_000
 
 function generateMockBeats(firstName: string) {
@@ -97,12 +87,9 @@ That decision is now visible.`,
   }
 }
 
-// Background pre-generation of the LLM clarity score. Cached on the
-// ChallengeContext so the summary screen and the downloadable report
-// render instantly.
 async function fetchClarityScoreInBackground(
   responses: ChallengeState["responses"],
-  firstName: string
+  firstName: string,
 ): Promise<{
   subscores: { directionClarity: number; identityAlignment: number; decisionReadiness: number; energyAlignment: number }
   reasons: { directionClarity?: string; identityAlignment?: string; decisionReadiness?: string; energyAlignment?: string }
@@ -145,11 +132,6 @@ async function fetchClarityScoreInBackground(
   }
 }
 
-// Background pre-generation of the closing AI summary text. Reads the
-// streaming SSE response from /api/challenge/summary, accumulates the
-// full text, and returns it. Cached on ChallengeContext so the summary
-// screen renders instantly without a live stream (and without the
-// ECONNRESET noise that comes from aborting an in-flight stream).
 async function streamSummaryInBackground(args: {
   firstName: string
   beats: ChallengeState["beats"]
@@ -181,7 +163,7 @@ async function streamSummaryInBackground(args: {
             if (j.done) continue
             if (typeof j.c === "string") full += j.c
           } catch {
-            /* ignore malformed SSE payload */
+            /* ignore */
           }
         }
       }
@@ -192,9 +174,6 @@ async function streamSummaryInBackground(args: {
   }
 }
 
-// Background pre-generation of the full deep report. Uses the cached score
-// (if available) to skip the report endpoint's internal scoring call,
-// guaranteeing the same numbers the user saw on the summary page.
 async function fetchReportInBackground(args: {
   firstName: string
   email: string
@@ -235,7 +214,6 @@ export function ProcessingScreen({ audience }: { audience: Audience }) {
   const [missingPrompts, setMissingPrompts] = useState(false)
   const abortRef = useRef<AbortController | null>(null)
 
-  // Stable ref for save params — avoids re-triggering the streaming effect
   const saveParamsRef = useRef({ serialNumber: state.serialNumber, email: state.email, firstName: state.firstName })
   saveParamsRef.current = { serialNumber: state.serialNumber, email: state.email, firstName: state.firstName }
 
@@ -243,8 +221,6 @@ export function ProcessingScreen({ audience }: { audience: Audience }) {
     (beatNumber: 1 | 2 | 3 | 4 | 5, output: string) => {
       const { serialNumber, email, firstName } = saveParamsRef.current
       if (!serialNumber || !email?.trim() || !output.trim()) return
-      // Fire-and-forget: the browser completes fetches even after component unmount.
-      // submitToGoogleSheet has built-in retry logic.
       void submitToGoogleSheet({
         action: "beat_output",
         firstName,
@@ -255,7 +231,7 @@ export function ProcessingScreen({ audience }: { audience: Audience }) {
         output,
       })
     },
-    [audience]
+    [audience],
   )
 
   const applyMocksRef = useRef(() => {})
@@ -301,12 +277,6 @@ export function ProcessingScreen({ audience }: { audience: Audience }) {
   useEffect(() => {
     if (!isHydrated) return
 
-    // If a previous run already produced every output, skip all generation.
-    // The user has likely refreshed /processing after finishing the funnel —
-    // regenerating would burn LLM/ElevenLabs spend AND yield slightly
-    // different content (LLMs are non-deterministic). The audio preload is
-    // still triggered so the IDB-cached bytes (or a one-time TTS call if
-    // they were ever cleared) are warmed before navigation forwards.
     const fullyCached =
       state.beats.beat1.trim().length >= BEAT_READY_MIN_CHARS &&
       state.beats.beat2.trim().length >= BEAT_READY_MIN_CHARS &&
@@ -327,19 +297,9 @@ export function ProcessingScreen({ audience }: { audience: Audience }) {
     const signal = abortRef.current.signal
     const { firstName, responses } = state
 
-    const bodyBase = {
-      firstName,
-      responses,
-    }
-
+    const bodyBase = { firstName, responses }
     let fallbackTimer: ReturnType<typeof setTimeout> | null = null
-
     const beatsLenRef = { current: state.beats.beat1.trim().length }
-
-    // Background pre-generation handles. Promise resolution intentionally
-    // happens AFTER this component unmounts (the user navigates onward to
-    // beat-1 once beat1 has streamed enough). The ChallengeProvider stays
-    // mounted, so setClarityScore / setReportData still land in localStorage.
     let scorePromise: Promise<ReturnType<typeof fetchClarityScoreInBackground> extends Promise<infer T> ? T : never> | null = null
 
     void (async () => {
@@ -360,21 +320,11 @@ export function ProcessingScreen({ audience }: { audience: Audience }) {
 
       if (!active) return
 
-      // Kick off LLM clarity-score generation in parallel with the beat
-      // streams. Don't block beat rendering — just stash the result to
-      // ChallengeContext when it arrives.
       scorePromise = fetchClarityScoreInBackground(state.responses, state.firstName)
       void scorePromise.then((score) => {
         if (score) setClarityScore(score)
       })
 
-      // Kick off the deep-report generation IMMEDIATELY (in parallel with
-      // both the score call and the beat streams). The report endpoint's
-      // prompt explicitly handles empty beats by deriving every quote and
-      // reflection from the user's raw answers — so we don't need to wait
-      // for beats to finish streaming. This is what makes the offer-page
-      // Download feel instant: by the time the user has clicked through 5
-      // beat reveals + the summary, the report has long since completed.
       void (async () => {
         const score = scorePromise ? await scorePromise : null
         const report = await fetchReportInBackground({
@@ -392,7 +342,7 @@ export function ProcessingScreen({ audience }: { audience: Audience }) {
               nsState?: string
               report: unknown
               scoreSource: "llm" | "fallback"
-            }
+            },
           )
         }
       })()
@@ -406,33 +356,20 @@ export function ProcessingScreen({ audience }: { audience: Audience }) {
 
       const finalTexts: Record<number, string> = {}
 
-      // Do NOT pass the abort signal to beat streams.
-      // When the user navigates away (component unmounts), the streams must
-      // continue in the background so that (a) all content is captured and
-      // (b) the completed output is saved to the database.  The `active`
-      // flag already prevents stale UI updates; only the initial ai-ready
-      // check uses the abort signal.
       const tasks = [1, 2, 3, 4, 5].map((n) =>
         streamBeatFromApi(
           { beatNumber: n as 1 | 2 | 3 | 4 | 5, audience, ...bodyBase },
           (text) => {
             finalTexts[n] = text
-            // Always update context — the ChallengeProvider stays mounted
-            // across page transitions, so beat reveal pages receive the
-            // full streamed content even after this component unmounts.
             setBeat(`beat${n}` as "beat1" | "beat2" | "beat3" | "beat4" | "beat5", text)
             if (n === 1) beatsLenRef.current = text.trim().length
           },
         ).then((result) => {
-          // Save to DB as long as we have content, even if the component
-          // has unmounted.  Previously, aborted streams returned ok:false
-          // and the save was skipped — this was the main cause of missing
-          // beat outputs in the database.
           if (finalTexts[n]) {
             saveOutputToSheet(n as 1 | 2 | 3 | 4 | 5, finalTexts[n])
           }
           return result
-        })
+        }),
       )
 
       const results = await Promise.all(tasks)
@@ -443,26 +380,19 @@ export function ProcessingScreen({ audience }: { audience: Audience }) {
       const keys = ["beat1", "beat2", "beat3", "beat4", "beat5"] as const
 
       if (!results[0]?.ok) {
-        // If the failure is "Prompt configuration error", surface a clear empty
-        // state instead of falling back to individual mock copy. This is
-        // critical for the team funnel — a missing team prompt must NOT be
-        // masked by individual content.
         const firstErr = "error" in results[0]! ? results[0].error : ""
         if (typeof firstErr === "string" && /Prompt configuration error/i.test(firstErr)) {
           setMissingPrompts(true)
           return
         }
-        // Whole-stream failure → fall back to mocks for everything.
         applyMocksRef.current()
-        // Use the mocks for the report payload so the offer-page Download
-        // still has content tailored to the current responses.
         for (let i = 0; i < 5; i++) finalTexts[i + 1] = m[keys[i]]
       } else {
         for (let i = 0; i < 5; i++) {
           const r = results[i]
           if (r && !r.ok) {
             if ("error" in r && r.error === "aborted") {
-              /* aborted streams: leave whatever streamed so far */
+              /* leave whatever streamed */
             } else {
               setBeat(keys[i], m[keys[i]])
               saveOutputToSheet((i + 1) as 1 | 2 | 3 | 4 | 5, m[keys[i]])
@@ -472,17 +402,6 @@ export function ProcessingScreen({ audience }: { audience: Audience }) {
         }
       }
 
-      // Note: report generation already fired above, parallel with beats.
-      // We deliberately do NOT re-fire it here with the streamed beats —
-      // the t=0 fire ensures the offer-page Download is instant for fast
-      // clickers, and the model's content remains tailored because every
-      // quote is sourced directly from the user's own writing.
-
-      // Now that beats are settled, kick off the closing AI summary
-      // generation in the background. Beats are required input for the
-      // summary prompt (it weaves the thread across them), so this one
-      // genuinely has to wait until they're here. The journey-summary
-      // screen reads from the cached text instead of streaming live.
       const finalBeats: ChallengeState["beats"] = {
         beat1: finalTexts[1] || state.beats.beat1 || "",
         beat2: finalTexts[2] || state.beats.beat2 || "",
@@ -496,8 +415,6 @@ export function ProcessingScreen({ audience }: { audience: Audience }) {
       }).then((text) => {
         if (text) {
           setSummaryText(text)
-          // Pre-fetch the TTS audio so the summary screen's "Listen"
-          // button plays instantly without a network round-trip.
           void preloadSummaryAudio(text)
         }
       })
@@ -505,19 +422,12 @@ export function ProcessingScreen({ audience }: { audience: Audience }) {
 
     return () => {
       active = false
-      // Only abort the ai-ready check, NOT the beat streams.
-      // Beat streams are left running so they complete and save to DB.
       abortRef.current?.abort()
       if (fallbackTimer) clearTimeout(fallbackTimer)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isHydrated, setBeat, state.firstName, state.responses, audience])
 
-  // Everything-ready guard — we only navigate forward once the user has
-  // (a) all 5 beat outputs streamed, (b) the clarity score cached,
-  // (c) the deep report cached, and (d) the closing AI summary cached.
-  // This makes every downstream page render instantly, at the cost of a
-  // longer wait on this screen.
   const allReady =
     state.beats.beat1.trim().length >= BEAT_READY_MIN_CHARS &&
     state.beats.beat2.trim().length >= BEAT_READY_MIN_CHARS &&
@@ -528,7 +438,6 @@ export function ProcessingScreen({ audience }: { audience: Audience }) {
     !!state.reportData &&
     state.summaryText.trim().length > 0
 
-  // Hard timeout — never strand the user if upstream hangs.
   const [timedOut, setTimedOut] = useState(false)
   useEffect(() => {
     const t = setTimeout(() => setTimedOut(true), HARD_TIMEOUT_MS)
@@ -543,25 +452,21 @@ export function ProcessingScreen({ audience }: { audience: Audience }) {
     return () => clearTimeout(t)
   }, [minElapsed, allReady, timedOut, router, audience, missingPrompts])
 
-  /* Progress percentage for the ring */
   const progressPercent = ((activeStep + 1) / processingSteps.length) * 100
 
   if (missingPrompts) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center px-5">
-        <div className="max-w-md w-full text-center bg-card rounded-2xl p-8 neu-card-primary animate-fade-in-up">
-          <h2 className="font-black tracking-tight text-[22px] text-foreground mb-2">
-            {audience === "team" ? "Team content" : "Content"} not yet configured
+      <div className="flex min-h-screen items-center justify-center px-5">
+        <div className="s-card-static animate-fade-in-up w-full max-w-md p-8 text-center">
+          <h2 className="mb-3 font-serif text-[24px] leading-snug text-ink">
+            {audience === "team" ? "Team content" : "Content"} not yet
+            <span className="block font-serif-italic">configured.</span>
           </h2>
-          <p className="text-[15px] text-muted-foreground leading-relaxed mb-6">
-            The {audience} prompts haven&apos;t been seeded in the database yet, so we
-            can&apos;t generate your reflection. Please contact the admin to seed the
-            content for this audience.
+          <p className="mb-7 text-[15px] leading-[1.75] text-foreground/85">
+            The {audience} prompts haven&apos;t been seeded yet. Please contact the
+            admin so this audience can take the diagnostic.
           </p>
-          <a
-            href="/"
-            className="inline-block rounded-xl font-bold px-5 py-3 neu-border-primary neu-shadow-primary-xs neu-btn-press bg-primary text-primary-foreground"
-          >
+          <a href="/" className="s-btn">
             Back to home
           </a>
         </div>
@@ -570,72 +475,91 @@ export function ProcessingScreen({ audience }: { audience: Audience }) {
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center px-5 relative overflow-hidden bg-[#0a0718]">
-      <div className="pointer-events-none absolute inset-0 opacity-40 processing-gradient-bg" />
-
-      {/* Atmospheric particles */}
-      <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
-        <div className="absolute top-[15%] left-[10%] w-1 h-1 rounded-full bg-[#8b7cf6]/30 animate-float delay-200" />
-        <div className="absolute top-[30%] right-[15%] w-1.5 h-1.5 rounded-full bg-[#8b7cf6]/20 animate-float delay-400" />
-        <div className="absolute bottom-[25%] left-[20%] w-1 h-1 rounded-full bg-[#8b7cf6]/25 animate-float delay-600" />
-        <div className="absolute top-[60%] right-[25%] w-1 h-1 rounded-full bg-white/10 animate-float delay-300" />
-        <div className="absolute bottom-[40%] left-[40%] w-1.5 h-1.5 rounded-full bg-[#8b7cf6]/15 animate-float delay-700" />
-        {/* Large blurred orbs */}
-        <div className="absolute top-[20%] left-[5%] w-32 h-32 rounded-full bg-[#8b7cf6]/8 blur-3xl animate-glow-pulse" />
-        <div className="absolute bottom-[15%] right-[10%] w-40 h-40 rounded-full bg-[#8b7cf6]/6 blur-3xl animate-glow-pulse delay-500" />
+    <div className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden px-5">
+      {/* Marine palette already gives us a deep navy bg + teal signal — the
+          atmospheric layers below paint with palette tokens, not hardcoded
+          colors, so they re-skin if Marine is ever changed. */}
+      <div className="pointer-events-none absolute inset-0" aria-hidden>
+        <div
+          className="absolute left-[15%] top-[20%] h-72 w-72 rounded-full opacity-[0.18] blur-3xl animate-glow-pulse"
+          style={{ background: "rgba(var(--glow), 0.6)" }}
+        />
+        <div
+          className="absolute right-[10%] bottom-[15%] h-80 w-80 rounded-full opacity-[0.12] blur-3xl animate-glow-pulse"
+          style={{ background: "rgba(var(--glow), 0.5)", animationDelay: "2s" }}
+        />
+        <div
+          className="absolute top-[30%] right-[20%] h-1.5 w-1.5 rounded-full opacity-40 animate-float"
+          style={{ background: "var(--signal)", animationDelay: "0.4s" }}
+        />
+        <div
+          className="absolute bottom-[35%] left-[25%] h-1 w-1 rounded-full opacity-50 animate-float"
+          style={{ background: "var(--signal)", animationDelay: "0.9s" }}
+        />
       </div>
 
-      <div className="absolute top-4 left-5 sm:left-8 z-20">
+      <div className="absolute left-5 top-5 z-20 sm:left-8">
         <ChallengeMenuButton variant="dark" />
       </div>
-      <div className="absolute top-4 right-5 sm:right-8 z-20 flex items-center gap-2 flex-wrap justify-end">
+      <div className="absolute right-5 top-5 z-20 sm:right-8">
         <ChallengeNavHome variant="dark" />
       </div>
 
-      <div className="relative z-10 flex flex-col items-center w-full max-w-md page-enter">
-        <div className="mb-10">
-        </div>
-
-        {/* Enhanced Progress Ring - Larger with neon glow */}
-        <div className="relative w-28 h-28 mb-8">
-          {/* Outer glow orb */}
-          <div className="absolute -inset-4 rounded-full bg-[#8b7cf6]/8 animate-glow-pulse" />
-          {/* Background ring */}
-          <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 112 112">
-            <circle cx="56" cy="56" r="50" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="4" />
+      <div className="page-enter relative z-10 flex w-full max-w-md flex-col items-center">
+        {/* Progress ring — uses signal for the active stroke */}
+        <div className="relative mb-10 h-28 w-28">
+          <div
+            className="absolute -inset-4 rounded-full opacity-[0.18] animate-glow-pulse"
+            style={{ background: "rgba(var(--glow), 0.5)" }}
+          />
+          <svg className="absolute inset-0 h-full w-full -rotate-90" viewBox="0 0 112 112">
             <circle
-              cx="56" cy="56" r="50" fill="none"
-              stroke="#8b7cf6"
-              strokeWidth="4"
+              cx="56"
+              cy="56"
+              r="50"
+              fill="none"
+              stroke="var(--border)"
+              strokeWidth="2"
+              opacity="0.4"
+            />
+            <circle
+              cx="56"
+              cy="56"
+              r="50"
+              fill="none"
+              stroke="var(--signal)"
+              strokeWidth="2"
               strokeLinecap="round"
               strokeDasharray={`${2 * Math.PI * 50}`}
               strokeDashoffset={`${2 * Math.PI * 50 * (1 - progressPercent / 100)}`}
               className="transition-all duration-700 ease-out"
-              style={{ filter: "drop-shadow(0 0 6px rgba(139,124,246,0.4))" }}
+              style={{ filter: "drop-shadow(0 0 6px rgba(var(--glow), 0.45))" }}
             />
           </svg>
-          {/* Spinning accent */}
           <div
-            className="absolute inset-2 rounded-full border-2 border-transparent border-t-[#8b7cf6]/60 border-r-[#8b7cf6]/20 animate-spin-slow"
+            className="animate-spin-slow absolute inset-3 rounded-full border-2 border-transparent"
+            style={{
+              borderTopColor: "color-mix(in srgb, var(--signal) 60%, transparent)",
+              borderRightColor: "color-mix(in srgb, var(--signal) 20%, transparent)",
+            }}
           />
-          {/* Inner glow */}
-          <div className="absolute inset-5 rounded-full bg-[#8b7cf6]/15 animate-pulse" />
-          {/* Percentage counter */}
           <div className="absolute inset-0 flex items-center justify-center">
-            <span className="font-black text-2xl text-white/80 tabular-nums">{Math.round(progressPercent)}%</span>
+            <span className="font-serif text-[28px] tabular-nums text-ink">
+              {Math.round(progressPercent)}%
+            </span>
           </div>
         </div>
 
-        <h1 className="font-black text-[28px] text-white text-center leading-tight mb-3">
-          The mirror is being built.
+        <p className="eyebrow mb-3 text-foreground/70">The mirror is being built</p>
+        <h1 className="mb-3 text-center font-serif text-[28px] leading-tight text-ink sm:text-[32px]">
+          What you shared is being read
+          <span className="block font-serif-italic text-foreground">carefully.</span>
         </h1>
-        <p className="font-sans text-base text-white/60 text-center mb-10 max-w-sm">
-          What you shared is being read carefully.
-          <br />
+        <p className="mb-10 max-w-sm text-center font-serif-italic text-[16px] leading-[1.7] text-foreground/75">
           What surfaces has always been yours.
         </p>
 
-        <ul className="w-full space-y-3 mb-8" aria-label="Processing steps">
+        <ul className="mb-8 w-full space-y-3" aria-label="Processing steps">
           {processingSteps.map((label, i) => {
             const done = i < activeStep
             const active = i === activeStep
@@ -643,28 +567,33 @@ export function ProcessingScreen({ audience }: { audience: Audience }) {
             return (
               <li
                 key={label}
-                className={`flex items-center gap-3 text-[15px] transition-all duration-500 ${
+                className={`flex items-center gap-4 text-[15px] transition-all duration-500 ${
                   visible ? "animate-stagger-in" : "opacity-0"
                 } ${
                   done
-                    ? "text-white/50"
+                    ? "text-foreground/55"
                     : active
-                      ? "text-white font-semibold"
-                      : "text-white/20"
+                      ? "font-medium text-ink"
+                      : "text-foreground/30"
                 }`}
                 style={{ animationDelay: visible ? `${i * 150}ms` : undefined }}
               >
                 {done ? (
-                  <span className="flex items-center justify-center w-8 h-8 rounded-lg bg-[#8b7cf6]/20 shrink-0">
-                    <Check className="w-4 h-4 text-[#8b7cf6]" aria-hidden />
+                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-secondary">
+                    <Check className="h-3 w-3 text-ink" strokeWidth={2} aria-hidden />
                   </span>
                 ) : active ? (
-                  <span className="w-8 h-8 shrink-0 rounded-lg bg-[#8b7cf6]/30 neu-shadow-primary-xs flex items-center justify-center">
-                    <span className="w-2 h-2 rounded-full bg-[#8b7cf6] animate-pulse" />
+                  <span
+                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full"
+                    style={{
+                      background: "color-mix(in srgb, var(--signal) 20%, transparent)",
+                    }}
+                  >
+                    <span className="pulse-dot" aria-hidden />
                   </span>
                 ) : (
-                  <span className="w-8 h-8 shrink-0 rounded-lg bg-white/5 flex items-center justify-center">
-                    <span className="w-1.5 h-1.5 rounded-full bg-white/15" />
+                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-border">
+                    <span className="h-1 w-1 rounded-full bg-foreground/30" aria-hidden />
                   </span>
                 )}
                 <span>{label}</span>
@@ -675,16 +604,23 @@ export function ProcessingScreen({ audience }: { audience: Audience }) {
 
         {showClosingLine && (
           <div className="animate-curtain-rise text-center">
-            <p className="font-black text-lg sm:text-xl text-[#8b7cf6]">
-              What you are about to see could only have been built from your words.
+            <p className="font-serif-italic text-[19px] leading-snug text-ink sm:text-[20px]">
+              What you are about to see could only have been built from your
+              words.
             </p>
-            <div className="mt-3 h-0.5 w-full bg-gradient-to-r from-transparent via-[#8b7cf6]/50 to-transparent rounded-full" />
+            <div
+              className="mx-auto mt-4 h-px w-full max-w-xs"
+              style={{
+                background:
+                  "linear-gradient(90deg, transparent, var(--signal), transparent)",
+              }}
+            />
           </div>
         )}
 
         {process.env.NODE_ENV === "development" && usedMock && (
-          <p className="mt-6 text-xs text-white/30 text-center">
-            Dev: using built-in mirror copy (add OPENROUTER_API_KEY for AI).
+          <p className="mt-6 text-[11px] uppercase tracking-[0.22em] text-foreground/40">
+            Dev · using mirror copy (add OPENROUTER_API_KEY for AI)
           </p>
         )}
       </div>

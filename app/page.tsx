@@ -1,33 +1,32 @@
-import { Header } from "@/components/header"
-import { HeroSection } from "@/components/hero-section"
-import { RootCauseSection } from "@/components/landing/root-cause-section"
-import { SevenDimensionsSection } from "@/components/landing/seven-dimensions-section"
-import { DeliverablesSection } from "@/components/landing/deliverables-section"
-import { PatternStoriesSection } from "@/components/landing/pattern-stories-section"
-import { TestimonialsSection } from "@/components/testimonials-section"
-import { TrustedBySection } from "@/components/landing/trusted-by-section"
-import { DualPathSection } from "@/components/landing/dual-path-section"
-import { FaqSection } from "@/components/faq-section"
-import { CtaBanner } from "@/components/cta-banner"
-import { Footer } from "@/components/footer"
+import { PaletteProvider } from "@/components/landing-minimal/palette-switcher"
+import { MinimalHeader } from "@/components/landing-minimal/header"
+import { MinimalHero } from "@/components/landing-minimal/hero"
+import { SanctuarySection } from "@/components/landing-minimal/sanctuary"
+import { DimensionsSection } from "@/components/landing-minimal/dimensions"
+import { TakeHomeSection } from "@/components/landing-minimal/take-home"
+import { VoicesSection } from "@/components/landing-minimal/voices"
+import { CredentialsSection } from "@/components/landing-minimal/credentials"
+import { NotesSection } from "@/components/landing-minimal/notes"
+import { ClosingSection } from "@/components/landing-minimal/closing"
+import { MinimalFooter } from "@/components/landing-minimal/footer"
 
 export default function Home() {
   return (
-    <div className="min-h-screen bg-background">
-      <Header />
-      <main>
-        <HeroSection />
-        <RootCauseSection />
-        <SevenDimensionsSection />
-        <DeliverablesSection />
-        <PatternStoriesSection />
-        <TestimonialsSection />
-        <TrustedBySection />
-        <DualPathSection />
-        <FaqSection />
-        <CtaBanner />
-      </main>
-      <Footer />
-    </div>
+    <PaletteProvider>
+      <div className="min-h-screen bg-background text-foreground font-sans">
+        <MinimalHeader />
+        <main>
+          <MinimalHero />
+          <SanctuarySection />
+          <DimensionsSection />
+          <TakeHomeSection />
+          <VoicesSection />
+          <CredentialsSection />
+          <NotesSection />
+          <ClosingSection />
+        </main>
+        <MinimalFooter />
+      </div>
+    </PaletteProvider>
   )
 }
