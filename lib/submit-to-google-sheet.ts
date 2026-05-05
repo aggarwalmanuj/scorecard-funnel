@@ -1,3 +1,5 @@
+import { identifyClarity } from "@/lib/clarity"
+
 export type Audience = "individual" | "team"
 
 type SignupPayload = {
@@ -66,7 +68,17 @@ export async function submitSignup(
       return null
     }
     const json = await res.json()
-    return typeof json.serialNumber === "number" ? json.serialNumber : null
+    const serialNumber =
+      typeof json.serialNumber === "number" ? json.serialNumber : null
+
+    // Tag the Clarity session with the user's email + first name so the
+    // recordings panel can be filtered by lead. Fire-and-forget — never
+    // block the navigation to the next funnel step on this. Every signup
+    // call site (hero form, audience page, CTA banner) now identifies for
+    // free without per-component wiring.
+    void identifyClarity(email, firstName)
+
+    return serialNumber
   } catch {
     console.warn("[submitSignup] network error")
     return null

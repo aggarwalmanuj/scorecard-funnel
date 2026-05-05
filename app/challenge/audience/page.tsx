@@ -3,9 +3,7 @@
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import Image from "next/image"
 import { ArrowLeft, ArrowRight, User, Users, Shield, Check } from "lucide-react"
-import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useChallenge, type Audience } from "@/context/challenge-context"
 import { submitSignup } from "@/lib/submit-to-google-sheet"
@@ -22,27 +20,27 @@ const cards: Array<{
 }> = [
   {
     id: "individual",
-    badge: "For You",
+    badge: "I · For you",
     title: "Individual",
     description:
-      "Unlock your personal performance. Find the hidden pattern that's been quietly limiting your results.",
+      "Unlock your personal performance. Find the specific pattern quietly limiting your results.",
     bullets: [
       "Personal Unfair Advantage Score",
       "Tuned to your private context",
-      "10 minutes, fully personalized",
+      "Ten quiet minutes",
     ],
     Icon: User,
   },
   {
     id: "team",
-    badge: "For Your Org",
+    badge: "II · For your org",
     title: "Team & Organization",
     description:
       "Optimize your leadership team. Identify the structural constraint quietly limiting collective performance.",
     bullets: [
       "Team-level Unfair Advantage Score",
-      "Lens for cross-functional patterns",
-      "Designed for senior leadership",
+      "Cross-functional pattern lens",
+      "Built for senior leadership",
     ],
     Icon: Users,
   },
@@ -64,46 +62,44 @@ export default function AudienceSelectionPage() {
     setIsVisible(true)
   }, [])
 
-  // Audience selection survives back-navigation, but name + email do NOT.
-  // Each fresh visit to this page starts with empty input fields so the
-  // user is never confronted with a previously-typed value. Browser-level
-  // autofill is also disabled on the inputs below.
+  // Audience selection survives back-navigation; name + email do not. Each
+  // fresh visit starts blank so the user is never confronted with a stale
+  // value, and browser autofill is suppressed on the inputs below.
   useEffect(() => {
     if (!isHydrated) return
     if (state.audience) setSelected(state.audience)
   }, [isHydrated, state.audience])
 
+  // Pre-fill from query params if the landing form passed them in. The
+  // landing reservation form posts `?first=…&email=…` here; reading those
+  // saves the user from re-entering values they already typed.
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    const params = new URLSearchParams(window.location.search)
+    const f = params.get("first")
+    const e = params.get("email")
+    if (f) setFirstNameValue(f)
+    if (e) setEmailValue(e)
+  }, [])
+
   const handleContinue = async () => {
     if (isNavigating) return
-
-    // Validate in order, surfacing the first issue.
     const trimmedName = firstNameValue.trim()
     const trimmedEmail = emailValue.trim()
-    if (!trimmedName) {
-      setError("Please enter your first name.")
-      return
-    }
-    if (!trimmedEmail || !trimmedEmail.includes("@")) {
-      setError("Please enter a valid email address.")
-      return
-    }
-    if (!selected) {
-      setError("Pick a path: Individual or Team.")
-      return
-    }
+    if (!trimmedName) return setError("Please enter your first name.")
+    if (!trimmedEmail || !trimmedEmail.includes("@"))
+      return setError("Please enter a valid email address.")
+    if (!selected) return setError("Pick a path: Individual or Team.")
 
     setError("")
     setIsNavigating(true)
 
-    // Wipe any stale state from a prior run, then commit fresh values.
     reset()
     setFirstName(trimmedName)
     setEmail(trimmedEmail)
     setAudience(selected)
 
-    // Create the user document with audience attached. Fire-and-forget the
-    // serial assignment — UI proceeds even if the request fails (the funnel
-    // is resilient to a missing serialNumber).
+    // Fire-and-forget: the funnel is resilient to a missing serialNumber.
     const sno = await submitSignup(trimmedName, trimmedEmail, selected)
     if (sno !== null) setSerialNumber(sno)
 
@@ -114,229 +110,215 @@ export default function AudienceSelectionPage() {
     !firstNameValue.trim() || !emailValue.trim() || !emailValue.includes("@") || !selected
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      {/* Top nav */}
-      <header className="sticky top-0 z-50 bg-background/85 backdrop-blur-xl border-b-2 border-foreground/10">
-        <div className="mx-auto max-w-5xl px-5 sm:px-8 h-16 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <ChallengeMenuButton />
-            <Image
-              src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Colored%20%28Transparent%29-bv50Oy3VWMzhtF45BmSeOwOLdZcNoM.png"
-              alt="Your Unfair Advantage"
-              width={100}
-              height={28}
-              className="h-6 w-auto"
-            />
-          </div>
+    <div className="flex min-h-screen flex-col">
+      {/* Editorial sticky nav — hairline border, no logo (per request). */}
+      <header className="sticky top-0 z-40 border-b border-border bg-background/85 backdrop-blur-xl">
+        <div className="mx-auto flex h-16 max-w-5xl items-center justify-between gap-4 px-5 sm:px-8">
+          <ChallengeMenuButton />
+          <Link href="/" aria-label="Home" className="inline-flex items-center">
+            <span className="brand-mark brand-mark-sm" aria-hidden />
+          </Link>
           <ChallengeNavHome />
         </div>
       </header>
 
-      <main className="flex-1 flex items-center justify-center px-5 py-12 sm:py-16">
+      <main className="flex flex-1 items-start justify-center px-5 py-16 sm:py-20">
         <div className="w-full max-w-4xl">
-          {/* Eyebrow */}
           <div
-            className={`text-center mb-10 ${isVisible ? "animate-fade-in-up" : "opacity-0"}`}
+            className={`mb-12 text-center ${
+              isVisible ? "animate-fade-in-up" : "opacity-0"
+            }`}
           >
-            <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-lg text-xs font-black uppercase tracking-widest text-primary bg-secondary neu-border-primary mb-5">
-              <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-              Get your score
-            </span>
-            <h1 className="font-black tracking-tighter text-[32px] sm:text-[44px] md:text-[52px] text-foreground leading-[1.05] max-w-2xl mx-auto">
-              Tell us who&apos;s taking it.
+            <p className="eyebrow mb-6 text-foreground/70">
+              <span className="pulse-dot mr-3" aria-hidden />
+              I · The arrival
+            </p>
+            <h1 className="font-serif text-[2.4rem] leading-[1.04] text-ink sm:text-[3rem] md:text-[3.5rem]">
+              Tell us who is
+              <span className="block font-serif-italic text-foreground">
+                taking the reading.
+              </span>
             </h1>
-            <p className="mt-4 text-base sm:text-lg text-muted-foreground max-w-xl mx-auto leading-relaxed">
-              The diagnostic adapts to the level of the system you&apos;re trying to unlock.
-              We&apos;ll send your score and report to the email you provide.
+            <p className="mx-auto mt-6 max-w-xl text-[15px] leading-[1.8] text-foreground/85 sm:text-base">
+              The diagnostic adapts to the level of the system you are trying
+              to unlock. Your score and report are sent to the email you
+              provide.
             </p>
           </div>
 
-          {/* Form — name + email */}
-          <div
-            className={`max-w-xl mx-auto mb-10 ${
+          {/* Form — name + email, calm two-column, editorial inputs */}
+          <form
+            onSubmit={(e) => {
+              e.preventDefault()
+              void handleContinue()
+            }}
+            className={`mx-auto mb-12 grid max-w-2xl grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 ${
               isVisible ? "animate-fade-in-up delay-100" : "opacity-0"
             }`}
+            autoComplete="off"
           >
-            <form
-              onSubmit={(e) => {
-                e.preventDefault()
-                void handleContinue()
-              }}
-              className="grid grid-cols-1 sm:grid-cols-2 gap-3"
-              autoComplete="off"
-            >
-              <div>
-                <label
-                  htmlFor="firstName"
-                  className="block text-[11px] font-black uppercase tracking-[0.14em] text-muted-foreground mb-1.5"
-                >
-                  First name
-                </label>
-                <Input
-                  id="firstName"
-                  // Random unrecognized value — bypasses Chrome/Edge's
-                  // habit of ignoring autoComplete="off" on name fields.
-                  name="firstName-no-autofill"
-                  placeholder="e.g. Alex"
-                  type="text"
-                  autoComplete="off"
-                  data-lpignore="true"
-                  data-form-type="other"
-                  value={firstNameValue}
-                  onChange={(e) => {
-                    setFirstNameValue(e.target.value)
-                    if (error) setError("")
-                  }}
-                  className="h-12 sm:h-13 text-base bg-card border-2 border-foreground/15 focus:border-primary rounded-xl px-4 font-medium placeholder:text-muted-foreground/60"
-                />
-              </div>
-              <div>
-                <label
-                  htmlFor="email"
-                  className="block text-[11px] font-black uppercase tracking-[0.14em] text-muted-foreground mb-1.5"
-                >
-                  Email
-                </label>
-                <Input
-                  id="email"
-                  name="email-no-autofill"
-                  placeholder="you@company.com"
-                  type="email"
-                  autoComplete="off"
-                  data-lpignore="true"
-                  data-form-type="other"
-                  value={emailValue}
-                  onChange={(e) => {
-                    setEmailValue(e.target.value)
-                    if (error) setError("")
-                  }}
-                  className="h-12 sm:h-13 text-base bg-card border-2 border-foreground/15 focus:border-primary rounded-xl px-4 font-medium placeholder:text-muted-foreground/60"
-                />
-              </div>
-            </form>
-          </div>
+            <label className="block">
+              <span className="eyebrow mb-2 block text-foreground/70">
+                First name
+              </span>
+              <Input
+                id="firstName"
+                name="firstName-no-autofill"
+                placeholder="As you would like to be addressed"
+                type="text"
+                autoComplete="off"
+                data-lpignore="true"
+                data-form-type="other"
+                value={firstNameValue}
+                onChange={(e) => {
+                  setFirstNameValue(e.target.value)
+                  if (error) setError("")
+                }}
+                className="s-input h-12"
+              />
+            </label>
+            <label className="block">
+              <span className="eyebrow mb-2 block text-foreground/70">
+                Email
+              </span>
+              <Input
+                id="email"
+                name="email-no-autofill"
+                placeholder="name@email.com"
+                type="email"
+                autoComplete="off"
+                data-lpignore="true"
+                data-form-type="other"
+                value={emailValue}
+                onChange={(e) => {
+                  setEmailValue(e.target.value)
+                  if (error) setError("")
+                }}
+                className="s-input h-12"
+              />
+            </label>
+          </form>
 
-          {/* Audience cards */}
-          <div className="mb-2 max-w-xl mx-auto sm:max-w-none">
-            <span className="block text-[11px] font-black uppercase tracking-[0.14em] text-muted-foreground mb-2 sm:text-center">
-              Pick your path
-            </span>
-          </div>
+          {/* Pick path — eyebrow + two editorial cards */}
+          <div className="mx-auto max-w-3xl">
+            <p className="eyebrow mb-5 text-center text-foreground/70">
+              II · Pick your path
+            </p>
 
-          <div className="grid sm:grid-cols-2 gap-4 sm:gap-5">
-            {cards.map((card, idx) => {
-              const isActive = selected === card.id
-              const Icon = card.Icon
-              return (
-                <button
-                  key={card.id}
-                  type="button"
-                  onClick={() => {
-                    setSelected(card.id)
-                    if (error) setError("")
-                  }}
-                  aria-pressed={isActive ? "true" : "false"}
-                  className={`group relative text-left p-7 sm:p-8 rounded-2xl bg-card transition-all duration-300 active:scale-[0.99] focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-primary/30 focus-visible:ring-offset-2 ${
-                    isActive
-                      ? "neu-card-primary -translate-y-0.5"
-                      : "neu-card hover:-translate-y-0.5"
-                  } ${isVisible ? "animate-fade-in-up" : "opacity-0"}`}
-                  style={{ animationDelay: `${200 + idx * 80}ms` }}
-                >
-                  {isActive && (
-                    <span className="absolute top-4 right-4 w-7 h-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center neu-shadow-primary-xs animate-in fade-in zoom-in duration-200">
-                      <Check className="w-3.5 h-3.5" />
-                    </span>
-                  )}
-
-                  <span
-                    className={`inline-flex items-center justify-center w-12 h-12 rounded-xl mb-5 transition-all duration-300 ${
+            <div className="grid gap-4 sm:grid-cols-2 sm:gap-5">
+              {cards.map((card, idx) => {
+                const isActive = selected === card.id
+                const Icon = card.Icon
+                return (
+                  <button
+                    key={card.id}
+                    type="button"
+                    onClick={() => {
+                      setSelected(card.id)
+                      if (error) setError("")
+                    }}
+                    aria-pressed={isActive}
+                    className={`group relative rounded-md p-7 text-left transition-all duration-500 sm:p-8 ${
                       isActive
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground"
-                    }`}
+                        ? "border border-ink bg-card -translate-y-0.5 shadow-[0_18px_40px_-28px_rgba(var(--shadow-ink),0.45)]"
+                        : "s-card hover:-translate-y-0.5"
+                    } ${isVisible ? "animate-fade-in-up" : "opacity-0"}`}
+                    style={{ animationDelay: `${200 + idx * 80}ms` }}
                   >
-                    <Icon className="w-6 h-6" />
-                  </span>
+                    {isActive && (
+                      <span className="absolute right-5 top-5 inline-flex h-7 w-7 items-center justify-center rounded-full bg-ink text-background">
+                        <Check className="h-3.5 w-3.5" strokeWidth={2} />
+                      </span>
+                    )}
 
-                  <span className="block text-[10px] font-black uppercase tracking-[0.14em] text-primary/80 mb-2">
-                    {card.badge}
-                  </span>
+                    <span
+                      className={`mb-6 inline-flex h-12 w-12 items-center justify-center rounded-full transition-all duration-500 ${
+                        isActive
+                          ? "bg-ink text-background"
+                          : "bg-secondary text-ink group-hover:bg-ink group-hover:text-background"
+                      }`}
+                    >
+                      <Icon className="h-5 w-5" strokeWidth={1.5} />
+                    </span>
 
-                  <h2 className="font-black tracking-tight text-[22px] sm:text-[24px] text-foreground leading-tight mb-2">
-                    {card.title}
-                  </h2>
+                    <p className="eyebrow mb-3 text-foreground/70">
+                      {card.badge}
+                    </p>
+                    <h2 className="font-serif text-[24px] leading-tight text-ink sm:text-[28px]">
+                      {card.title}
+                    </h2>
+                    <p className="mt-3 text-[15px] leading-[1.75] text-foreground/85">
+                      {card.description}
+                    </p>
 
-                  <p className="text-[15px] text-muted-foreground leading-relaxed mb-5">
-                    {card.description}
-                  </p>
-
-                  <ul className="space-y-1.5">
-                    {card.bullets.map((b) => (
-                      <li
-                        key={b}
-                        className="flex items-start gap-2 text-[13px] text-foreground/80"
-                      >
-                        <span
-                          className={`mt-1 w-1.5 h-1.5 rounded-full shrink-0 ${
-                            isActive ? "bg-primary" : "bg-primary/40"
-                          }`}
-                        />
-                        {b}
-                      </li>
-                    ))}
-                  </ul>
-                </button>
-              )
-            })}
+                    <ul className="mt-5 space-y-2.5">
+                      {card.bullets.map((b) => (
+                        <li
+                          key={b}
+                          className="flex items-baseline gap-3 text-[14px] text-foreground/80"
+                        >
+                          <span
+                            className={`h-px w-4 shrink-0 transition-colors duration-300 ${
+                              isActive ? "bg-ink" : "bg-foreground/40 group-hover:bg-ink"
+                            }`}
+                            aria-hidden
+                          />
+                          {b}
+                        </li>
+                      ))}
+                    </ul>
+                  </button>
+                )
+              })}
+            </div>
           </div>
 
-          {/* Inline error */}
           {error && (
             <div
               role="alert"
               aria-live="polite"
-              className="mt-6 text-center text-sm font-medium text-destructive"
+              className="mt-7 text-center font-serif-italic text-[15px] text-foreground/85"
             >
               {error}
             </div>
           )}
 
-          {/* Continue */}
           <div
-            className={`mt-8 flex flex-col sm:flex-row items-center justify-between gap-4 ${
+            className={`mt-12 flex flex-col items-center justify-between gap-5 sm:flex-row ${
               isVisible ? "animate-fade-in-up delay-400" : "opacity-0"
             }`}
           >
             <Link
               href="/"
-              className="inline-flex items-center gap-1.5 text-[13px] font-medium text-muted-foreground hover:text-foreground transition-colors"
+              className="inline-flex items-center gap-1.5 text-[12px] uppercase tracking-[0.22em] text-foreground/65 transition-colors hover:text-ink"
             >
-              <ArrowLeft className="w-3.5 h-3.5" /> Back to home
+              <ArrowLeft className="h-3.5 w-3.5" strokeWidth={1.5} />
+              Back to home
             </Link>
 
-            <Button
+            <button
               type="button"
               onClick={handleContinue}
               disabled={formInvalid || isNavigating}
-              className="group h-13 sm:h-14 px-7 rounded-xl font-extrabold text-base sm:text-lg neu-border-primary neu-shadow-primary-sm neu-btn-press disabled:opacity-50 disabled:cursor-not-allowed"
+              className="s-btn group min-w-44 justify-center"
             >
               {isNavigating ? (
-                <span className="flex items-center gap-2">
-                  <span className="animate-spin rounded-full h-4 w-4 border-2 border-white/40 border-t-white" />
-                </span>
+                <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border border-current border-t-transparent" />
               ) : (
-                <span className="flex items-center gap-2">
-                  Begin diagnostic
-                  <ArrowRight className="w-5 h-5 transition-transform duration-300 group-hover:translate-x-1" />
-                </span>
+                <>
+                  Begin the reading
+                  <ArrowRight
+                    className="h-3.5 w-3.5 transition-transform duration-500 group-hover:translate-x-1"
+                    strokeWidth={1.6}
+                  />
+                </>
               )}
-            </Button>
+            </button>
           </div>
 
-          <p className="mt-5 text-center text-[13px] text-muted-foreground flex items-center justify-center gap-2 font-medium">
-            <Shield className="h-3.5 w-3.5 text-primary/60" />
-            Private and secure. Your data is never shared.
+          <p className="mt-8 flex items-center justify-center gap-2 text-[12px] uppercase tracking-[0.22em] text-foreground/55">
+            <Shield className="h-3 w-3" strokeWidth={1.5} />
+            Private and secure · Never shared
           </p>
         </div>
       </main>
