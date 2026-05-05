@@ -92,7 +92,7 @@ export function MinimalHero() {
                 <ParallaxImage amount={28}>
                   <div className="img-hover-zoom relative overflow-hidden rounded-sm">
                     <Image
-                      src="/images/landscape-golden.jpg"
+                      src="/images/hero-leader.jpg"
                       alt="A wide horizon at first light — the quiet a reading is meant to compose"
                       width={1500}
                       height={2000}

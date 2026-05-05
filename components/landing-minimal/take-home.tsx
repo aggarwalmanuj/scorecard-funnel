@@ -62,7 +62,7 @@ export function TakeHomeSection() {
             <ParallaxImage amount={20}>
               <div className="img-hover-zoom relative overflow-hidden rounded-sm">
                 <Image
-                  src="/images/beat-bridge.jpg"
+                  src="/images/landscape-golden.jpg"
                   alt="A view of the road taken slowly — what the reading composes"
                   width={960}
                   height={1280}

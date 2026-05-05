@@ -61,7 +61,7 @@ export function SanctuarySection() {
               <ParallaxImage amount={20}>
                 <div className="img-hover-zoom relative overflow-hidden rounded-sm">
                   <Image
-                    src="/images/beat-mirror.jpg"
+                    src="/images/q2-horizon.jpg"
                     alt="A still composed by morning light — the pattern, brought into the room"
                     width={960}
                     height={720}
