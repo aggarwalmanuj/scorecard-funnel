@@ -194,41 +194,11 @@ export function JourneySummaryScreen({ audience }: { audience: Audience }) {
     return buffer
   }
 
+  // Stub play handler — TTS is temporarily disabled; the button just
+  // toggles a "running" state for visual feedback. No network calls,
+  // no audio playback. Replace with handleRealPlayAudio when ready.
   const handlePlayAudio = async () => {
-    if (isPlaying) {
-      audioSourceRef.current?.stop()
-      audioSourceRef.current = null
-      setIsPlaying(false)
-      return
-    }
-    if (!summaryText) return
-    try {
-      setIsLoadingAudio(true)
-      const buffer = await fetchAudioBytes()
-      if (!buffer) return
-      if (!audioCtxRef.current || audioCtxRef.current.state === "closed") {
-        audioCtxRef.current = new AudioContext()
-      }
-      const ctx = audioCtxRef.current
-      if (ctx.state === "suspended") await ctx.resume()
-      // decodeAudioData consumes the buffer in some implementations; clone it
-      // so the cached bytes remain usable for download.
-      const audioBuffer = await ctx.decodeAudioData(buffer.slice(0))
-      const source = ctx.createBufferSource()
-      source.buffer = audioBuffer
-      source.connect(ctx.destination)
-      source.onended = () => {
-        setIsPlaying(false)
-        audioSourceRef.current = null
-      }
-      source.start(0)
-      audioSourceRef.current = source
-      setIsPlaying(true)
-    } catch (error) {
-      console.error("Audio playback error:", error instanceof Error ? error.message : String(error))
-    } finally {
-      setIsLoadingAudio(false)
-    }
+    setIsPlaying((prev) => !prev)
   }
 
   const handleDownloadAudio = async () => {
@@ -364,21 +334,8 @@ export function JourneySummaryScreen({ audience }: { audience: Audience }) {
     return () => clearTimeout(t)
   }, [isComplete, hasFailed])
 
-  // Auto-play the summary audio once streaming is complete and text is ready.
-  // Browser autoplay policy may suppress this; the manual button still works.
-  useEffect(() => {
-    if (autoPlayedRef.current) return
-    if (!isComplete || hasFailed) return
-    if (!summaryText.trim()) return
-    autoPlayedRef.current = true
-    const t = setTimeout(() => {
-      void handlePlayAudio().catch(() => {
-        /* autoplay blocked — user can still tap the button */
-      })
-    }, 400)
-    return () => clearTimeout(t)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isComplete, hasFailed, summaryText])
+  // Auto-play disabled while TTS is stubbed — the button toggles a
+  // visual "playing" state only. Re-enable when real audio comes back.
 
   // Displayed text — only up to visibleChars
   const displayedText = useMemo(
@@ -576,26 +533,21 @@ export function JourneySummaryScreen({ audience }: { audience: Audience }) {
                 type="button"
                 id="summary-audio-btn"
                 onClick={handlePlayAudio}
-                disabled={isLoadingAudio}
                 aria-label={isPlaying ? "Stop audio" : "Click here to listen"}
-                className="group relative w-full flex items-center justify-center gap-3 px-8 py-5 sm:py-6 rounded-2xl font-black uppercase tracking-[0.14em] text-white transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-60 disabled:hover:scale-100"
+                className="group relative w-full max-w-md flex items-center justify-center gap-3 px-8 py-4 sm:py-5 rounded-2xl font-black uppercase tracking-[0.14em] transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
                 style={{
                   fontSize: "clamp(16px, 2.2vw, 20px)",
-                  background: "linear-gradient(135deg, #8b7cf6 0%, #6b5ee0 100%)",
-                  border: "1px solid rgba(255,255,255,0.2)",
+                  background: "linear-gradient(135deg, #fde047 0%, #f59e0b 100%)",
+                  color: "#1a1306",
+                  border: "1px solid rgba(255,255,255,0.35)",
                   boxShadow:
-                    "0 18px 40px rgba(139,124,246,0.35), inset 0 1px 0 rgba(255,255,255,0.25)",
-                  animation: !isPlaying && !isLoadingAudio
+                    "0 18px 40px rgba(245,158,11,0.4), inset 0 1px 0 rgba(255,255,255,0.45)",
+                  animation: !isPlaying
                     ? "attention-pulse 2.5s ease-out infinite"
                     : "none",
                 }}
               >
-                {isLoadingAudio ? (
-                  <>
-                    <Loader2 className="w-6 h-6 animate-spin" />
-                    <span>Loading audio…</span>
-                  </>
-                ) : isPlaying ? (
+                {isPlaying ? (
                   <>
                     <Square className="w-5 h-5 fill-current" />
                     <span>Stop Listening</span>
