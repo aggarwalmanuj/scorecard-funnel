@@ -26,19 +26,19 @@ const VOICES: Voice[] = Array.from({ length: 12 }, (_, i) => {
  * autoplay, full controls, page-wide backdrop blur, and body scroll lock.
  *
  * Architectural decisions to NOT simplify away:
- *   - Static poster thumbnails (not <video preload="metadata">) — 12
+ *   - Static poster thumbnails (not <video preload="metadata">) - 12
  *     concurrent metadata fetches saturate the 6-connection-per-host limit.
- *   - createPortal(modal, document.body) — ancestors with CSS transform
+ *   - createPortal(modal, document.body) - ancestors with CSS transform
  *     (any fade/slide animation) break position: fixed and confine
  *     backdrop-filter to the parent stacking context.
- *   - position: fixed + top: -<scrollY>px on body during lock — plain
+ *   - position: fixed + top: -<scrollY>px on body during lock - plain
  *     overflow: hidden is unreliable on iOS Safari.
- *   - Disable scroll-behavior: smooth before scrollTo on close — otherwise
+ *   - Disable scroll-behavior: smooth before scrollTo on close - otherwise
  *     closing animates a smooth scroll from top down to the section.
- *   - Hardcoded bg-[#0b1226] card fallback — Marine flips ink/background
+ *   - Hardcoded bg-[#0b1226] card fallback - Marine flips ink/background
  *     between dark/light variants, so a token would risk white-on-white
  *     error states.
- *   - bg-transparent on <video> — letterboxing on non-9:16 clips reveals
+ *   - bg-transparent on <video> - letterboxing on non-9:16 clips reveals
  *     the blurred page directly, so the video appears to float without
  *     a containing rectangle.
  */
@@ -94,7 +94,7 @@ export function VideoTestimonialsWall() {
 
   return (
     <div ref={wrapperRef} data-revealed={revealed ? "true" : "false"}>
-      {/* Arrow controls — aligned with the section's content gutter so they
+      {/* Arrow controls - aligned with the section's content gutter so they
           line up with surrounding text/headers. The arrow icon nudges on
           hover to telegraph direction. The state pair (atStart/atEnd) also
           drives the edge fade gradients on the row below. */}
@@ -132,7 +132,7 @@ export function VideoTestimonialsWall() {
           overlays at the left/right edges. Each gradient fades out when
           the row reaches that side (atStart hides the left fade, atEnd
           hides the right fade) so the affordance reads as "more content
-          this direction" — Netflix / Apple Store row pattern. */}
+          this direction" - Netflix / Apple Store row pattern. */}
       <div className="voice-wall relative">
         <div
           aria-hidden
@@ -209,7 +209,7 @@ function VoiceCard({
   // .voice-card-rise CSS (defined in globals.css) this produces a smooth
   // editorial cascade as the wall scrolls into view. We can't use the
   // shared `.reveal` class here because the wall is a horizontal flex
-  // row — we want the cards to enter together, not on per-card scroll
+  // row - we want the cards to enter together, not on per-card scroll
   // intersect (which would never fire for off-screen cards in the row).
   const style: CSSProperties = {
     transitionDelay: `${index * 60}ms`,
@@ -232,7 +232,7 @@ function VoiceCard({
         className="object-cover transition-transform duration-[680ms] ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:scale-[1.05]"
       />
 
-      {/* Bottom gradient — only enough lift to seat the index counter.
+      {/* Bottom gradient - only enough lift to seat the index counter.
           Subtly intensifies on hover so the play affordance feels alive. */}
       <div className="absolute inset-x-0 bottom-0 h-2/5 bg-linear-to-t from-black/75 via-black/15 to-transparent pointer-events-none transition-opacity duration-500 group-hover:opacity-90" />
 
@@ -246,7 +246,7 @@ function VoiceCard({
         </span>
       </div>
 
-      {/* Play affordance — soft pulsing ring on hover, scale + slight
+      {/* Play affordance - soft pulsing ring on hover, scale + slight
           lift on the icon itself. Sits behind a transparent click target. */}
       <div className="pointer-events-none absolute inset-0 flex items-center justify-center transition-opacity duration-500">
         <span className="absolute inline-flex h-14 w-14 rounded-full bg-white/30 opacity-0 transition-all duration-700 group-hover:h-20 group-hover:w-20 group-hover:opacity-100" />
@@ -281,7 +281,7 @@ function VideoModal({
   const [loading, setLoading] = useState(true)
   const [errored, setErrored] = useState(false)
 
-  // Mount marker for portal — guards against SSR/hydration mismatch.
+  // Mount marker for portal - guards against SSR/hydration mismatch.
   useEffect(() => {
     setMounted(true)
   }, [])

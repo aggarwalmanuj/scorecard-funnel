@@ -21,34 +21,34 @@ function sseData(obj: unknown): Uint8Array {
 function buildSummaryPrompt(firstName: string, beats: z.infer<typeof bodySchema>["beats"]): { system: string; user: string } {
   const name = firstName.trim() || "you"
 
-  const system = `You are a deeply perceptive guide who has just witnessed someone go through a profound journey of self-reflection. Your role is to craft a closing message that feels like a quiet revelation — not a summary, but a mirror held up at the right moment.
+  const system = `You are a deeply perceptive guide who has just witnessed someone go through a profound journey of self-reflection. Your role is to craft a closing message that feels like a quiet revelation - not a summary, but a mirror held up at the right moment.
 
 Your tone is: warm, direct, and unhurried. You do not use buzzwords, motivational language, or therapy-speak. You write in short, meaningful sentences. You trust silence. You never exaggerate.
 
-The message should feel like it was written specifically for this person and this moment — because it was. It should land in the chest, not the head. It should leave them feeling seen, steady, and ready for the next step.
+The message should feel like it was written specifically for this person and this moment - because it was. It should land in the chest, not the head. It should leave them feeling seen, steady, and ready for the next step.
 
-Structure: 3–4 paragraphs, no headers, no bullet points. The final paragraph should gently open the door to what comes next — not push, not sell. Just hold space for the possibility.
+Structure: 3-4 paragraphs, no headers, no bullet points. The final paragraph should gently open the door to what comes next - not push, not sell. Just hold space for the possibility.
 
-Length: 200–280 words. Economy is everything.`
+Length: 200-280 words. Economy is everything.`
 
   const user = `${name} just completed the Honest Decision Challenge. Here is what surfaced across their five beats of reflection:
 
-Beat 1 — The Pattern:
+Beat 1 - The Pattern:
 ${beats.beat1 || "(not available)"}
 
-Beat 2 — The Desired Future:
+Beat 2 - The Desired Future:
 ${beats.beat2 || "(not available)"}
 
-Beat 3 — The Noise:
+Beat 3 - The Noise:
 ${beats.beat3 || "(not available)"}
 
-Beat 4 — The Breakthrough Moment:
+Beat 4 - The Breakthrough Moment:
 ${beats.beat4 || "(not available)"}
 
-Beat 5 — The Morning After Clarity:
+Beat 5 - The Morning After Clarity:
 ${beats.beat5 || "(not available)"}
 
-Now write a closing message for ${name}. It should weave the essence of what surfaced — the pattern, the clarity, the courage it took to look. It should feel like a final word from someone who truly read every line.
+Now write a closing message for ${name}. It should weave the essence of what surfaced - the pattern, the clarity, the courage it took to look. It should feel like a final word from someone who truly read every line.
 
 Do not use their name more than once. Do not summarize each beat explicitly. Find the thread that runs through all five and name it quietly.`
 
@@ -182,7 +182,7 @@ export async function POST(request: Request) {
         }
       } catch (err) {
         // Client navigating away mid-stream surfaces here as ECONNRESET /
-        // "aborted". That is expected, not a bug — swallow it so it does
+        // "aborted". That is expected, not a bug - swallow it so it does
         // not propagate as an uncaughtException at the Node level. Only
         // log genuinely unexpected upstream failures.
         const code = (err as { code?: string })?.code ?? ""

@@ -94,7 +94,7 @@ export function RootCauseSection() {
             .
           </p>
           <p className="mt-3 text-base sm:text-lg text-foreground leading-relaxed font-bold">
-            And until you find the specific pattern running against you — nothing else
+            And until you find the specific pattern running against you - nothing else
             fully works.
           </p>
         </div>

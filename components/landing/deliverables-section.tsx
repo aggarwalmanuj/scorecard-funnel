@@ -10,13 +10,13 @@ const items = [
     icon: Gauge,
     title: "Your Unfair Advantage Score",
     description:
-      "A precise score across all 7 dimensions — showing exactly where your hidden pattern lives.",
+      "A precise score across all 7 dimensions - showing exactly where your hidden pattern lives.",
   },
   {
     icon: Volume2,
     title: "Personalized Audio Explanation",
     description:
-      "A custom audio summary of your results — explaining what your score means and what’s behind it.",
+      "A custom audio summary of your results - explaining what your score means and what’s behind it.",
   },
   {
     icon: FileText,
@@ -62,7 +62,7 @@ export function DeliverablesSection() {
             What you get
           </span>
           <h2 className="text-3xl sm:text-4xl md:text-5xl font-black tracking-tighter text-foreground leading-[1.05]">
-            Four artifacts —
+            Four artifacts -
             <span className="block text-primary mt-1">built around your inputs.</span>
           </h2>
         </div>

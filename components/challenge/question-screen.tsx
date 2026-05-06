@@ -3,12 +3,13 @@
 import { useState, useEffect, useRef, useCallback } from "react"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
-import { ArrowRight, ArrowLeft, Mic, MicOff, Lightbulb, Check, Shield } from "lucide-react"
+import { ArrowRight, ArrowLeft, Mic, MicOff, Lightbulb, Check } from "lucide-react"
 import { Textarea } from "@/components/ui/textarea"
 import { useChallenge, type Audience, type ChallengeState } from "@/context/challenge-context"
 import { submitToGoogleSheet } from "@/lib/submit-to-google-sheet"
 import { ChallengeNavHome } from "@/components/challenge/challenge-nav-home"
 import { ChallengeMenuButton } from "@/components/challenge/challenge-funnel-header-actions"
+import { PrivacyNotice } from "@/components/privacy-notice"
 
 interface QuestionScreenProps {
   audience: Audience
@@ -56,7 +57,7 @@ export function QuestionScreen({
   const recognitionRef = useRef<SpeechRecognitionInstance | null>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
-  // Voice-input state refs — required to fix three independent Android Chrome
+  // Voice-input state refs - required to fix three independent Android Chrome
   // bugs documented at the bottom of this file. See `buildRecognition` for
   // why each ref exists; do not collapse into local state.
   const baseTextRef = useRef("")           // textarea contents before mic was tapped
@@ -100,10 +101,10 @@ export function QuestionScreen({
    * Build a fresh SpeechRecognition instance. We MUST construct a new
    * instance on every cycle (initial start AND every onend auto-restart)
    * because Android Chrome's `event.results` array does not reliably
-   * reset across `start()` calls on the same instance — previous-cycle
+   * reset across `start()` calls on the same instance - previous-cycle
    * finals leak in and accumulate. See Bug 2 below.
    *
-   * Inferred return type by design — adding an explicit annotation forces
+   * Inferred return type by design - adding an explicit annotation forces
    * a reference to the project's pre-existing tolerated `SpeechRecognition`
    * Window declaration and produces a new TS error.
    */
@@ -143,7 +144,7 @@ export function QuestionScreen({
           lastTrimmed &&
           (trimmed.startsWith(lastTrimmed) || lastTrimmed.startsWith(trimmed))
         ) {
-          // Same utterance refining itself — keep the longer.
+          // Same utterance refining itself - keep the longer.
           dedupedFinals[dedupedFinals.length - 1] =
             trimmed.length >= lastTrimmed.length ? transcript : last
         } else {
@@ -156,7 +157,7 @@ export function QuestionScreen({
       for (const t of dedupedFinals) cycleFinal += t.trim() + " "
       cycleFinalRef.current = cycleFinal
 
-      // Build the answer absolutely — base + session + cycle. NEVER append
+      // Build the answer absolutely - base + session + cycle. NEVER append
       // (`prev => prev + final`); appending was the original bug because
       // Android Chrome's prefix-cascade gets concatenated multiple times.
       const base = baseTextRef.current
@@ -177,7 +178,7 @@ export function QuestionScreen({
         code === "service-not-allowed" ||
         code === "audio-capture"
       ) {
-        // Permission denied / mic busy — stop trying. User has to clear
+        // Permission denied / mic busy - stop trying. User has to clear
         // the denial in browser settings; there's no programmatic re-prompt.
         wantListeningRef.current = false
       }
@@ -187,7 +188,7 @@ export function QuestionScreen({
 
     recognition.onend = () => {
       // Commit this cycle's final transcript to the session aggregate
-      // before discarding the instance — otherwise the next cycle starts
+      // before discarding the instance - otherwise the next cycle starts
       // fresh and we lose what was just transcribed.
       sessionFinalRef.current += cycleFinalRef.current
       cycleFinalRef.current = ""
@@ -199,7 +200,7 @@ export function QuestionScreen({
       }
 
       // Bug 1 + Bug 2 fix: `continuous = true` is silently ignored on
-      // mobile Chrome — the engine ends after ~10s of silence even though
+      // mobile Chrome - the engine ends after ~10s of silence even though
       // we asked for continuous. Auto-restart by building a fresh instance
       // (never re-call start() on the same object). The 100ms delay lets
       // the engine fully tear down before a new start, preventing
@@ -259,7 +260,7 @@ export function QuestionScreen({
     setIsListening(false)
   }, [])
 
-  // Cleanup — abort any in-flight recognition if the user navigates away
+  // Cleanup - abort any in-flight recognition if the user navigates away
   // mid-recording. Without this the mic stays hot in the background.
   useEffect(() => {
     return () => {
@@ -408,7 +409,7 @@ export function QuestionScreen({
       <main className="flex-1 pt-20 sm:pt-24">
         <div className="px-5 sm:px-8 pb-8">
           <div className="mx-auto grid max-w-5xl grid-cols-1 items-start gap-8 md:grid-cols-[1.1fr_1fr] md:gap-14">
-            {/* LEFT — question + textarea + mic */}
+            {/* LEFT - question + textarea + mic */}
             <div className="animate-fade-in-up md:sticky md:top-24 md:self-start">
               <p className="eyebrow mb-5 flex items-center gap-3 text-foreground/70">
                 <span className="h-px w-6 bg-foreground/40" aria-hidden />
@@ -513,17 +514,15 @@ export function QuestionScreen({
 
               <p className="mt-5 text-center font-serif-italic text-[15px] leading-snug text-foreground/75">
                 {questionNumber === 5
-                  ? "Take your time — honest detail here changes what surfaces at the end."
-                  : "Answer in your own words — continue when you are ready."}
+                  ? "Take your time - honest detail here changes what surfaces at the end."
+                  : "Answer in your own words - continue when you are ready."}
               </p>
 
-              <p className="mt-3 flex items-center justify-center gap-2 text-[11px] uppercase tracking-[0.22em] text-foreground/55">
-                <Shield className="h-3 w-3" strokeWidth={1.5} aria-hidden />
-                Private and secure · Never shared
-              </p>
+              <PrivacyNotice className="mx-auto mt-3 max-w-md justify-center text-center" />
+
             </div>
 
-            {/* RIGHT — image + quote + hint */}
+            {/* RIGHT - image + quote + hint */}
             <div className="order-first flex flex-col gap-5 md:order-none">
               <figure className="relative">
                 <div className="img-hover-zoom relative aspect-video w-full overflow-hidden rounded-md">
@@ -565,7 +564,7 @@ export function QuestionScreen({
         </div>
       </main>
 
-      {/* Navigation footer — single sticky band, calm hairline divider */}
+      {/* Navigation footer - single sticky band, calm hairline divider */}
       <footer className="sticky bottom-0 border-t border-border bg-background/85 px-5 py-4 backdrop-blur-xl sm:px-8 animate-fade-in-up">
         <div className="mx-auto flex max-w-5xl items-center gap-3">
           <button
@@ -610,7 +609,7 @@ export function QuestionScreen({
   )
 }
 
-// Web Speech API — minimal type declarations (the DOM lib does not ship these
+// Web Speech API - minimal type declarations (the DOM lib does not ship these
 // because the spec is still experimental).
 interface SpeechRecognitionResultLike {
   readonly isFinal: boolean

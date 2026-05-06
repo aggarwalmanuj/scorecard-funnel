@@ -11,7 +11,7 @@ export async function OPTIONS(request: Request) {
  * GET /api/admin/question-prompts?audience=individual|team
  *
  * Returns the question + beat-display data for the requested audience.
- * No fallback to the other audience — when keys are missing the response
+ * No fallback to the other audience - when keys are missing the response
  * is `{ ok: true, questions: null, beats: null }` so the UI can show an
  * empty state.
  */

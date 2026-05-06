@@ -11,15 +11,15 @@ import { Reveal } from "./motion"
 const faqs = [
   {
     q: "Is this a personality test?",
-    a: "No. There are no labels and no archetypes. Your reading is a precise diagnostic across seven dimensions of life and work — naming the specific pattern quietly limiting your results.",
+    a: "No. There are no labels and no archetypes. Your reading is a precise diagnostic across seven dimensions of life and work - naming the specific pattern quietly limiting your results.",
   },
   {
     q: "I have tried coaching and retreats. How is this different?",
-    a: "Most approaches deliver information or general insight. The reading names the specific pattern running against you — so precisely you recognise it the moment it surfaces. Built on a framework peer-reviewed in the Mensa Research Journal.",
+    a: "Most approaches deliver information or general insight. The reading names the specific pattern running against you - so precisely you recognise it the moment it surfaces. Built on a framework peer-reviewed in the Mensa Research Journal.",
   },
   {
     q: "Will I be sold something at the end?",
-    a: "There is nothing to buy during the reading. The full PDF report is delivered after your assessment. If you wish to go deeper, an option is offered — only when relevant to what surfaced.",
+    a: "There is nothing to buy during the reading. The full PDF report is delivered after your assessment. If you wish to go deeper, an option is offered - only when relevant to what surfaced.",
   },
   {
     q: "How long does it actually take?",
@@ -27,7 +27,7 @@ const faqs = [
   },
   {
     q: "Is my data safe?",
-    a: "Yes. Your data belongs to you, always. Nothing is shared, sold, or templated. Your score and report are composed specifically around your inputs — not a generic algorithm.",
+    a: "Yes. Your data belongs to you, always. Nothing is shared, sold, or templated. Your score and report are composed specifically around your inputs - not a generic algorithm.",
   },
 ] as const
 
@@ -46,7 +46,7 @@ export function NotesSection() {
             </h2>
             <p className="mt-6 max-w-md text-[15px] leading-[1.8] text-foreground/80">
               Answered in the spirit we hope you will bring to the reading
-              itself — plainly, and without hurry.
+              itself - plainly, and without hurry.
             </p>
           </div>
 

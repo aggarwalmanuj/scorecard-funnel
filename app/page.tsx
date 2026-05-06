@@ -12,7 +12,7 @@ import { MinimalFooter } from "@/components/landing-minimal/footer"
 /**
  * Landing page is locked to the Marine palette to match the rest of the
  * funnel. The previous PaletteProvider + floating switcher widget have
- * been removed now that the brand has settled on a single mood — they
+ * been removed now that the brand has settled on a single mood - they
  * live in git history if a future moodboard pass needs them again.
  */
 export default function Home() {

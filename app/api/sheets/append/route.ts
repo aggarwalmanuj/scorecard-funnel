@@ -18,7 +18,7 @@ const bodySchema = z.object({
   questionNumber: z.number().int().min(1).max(5).optional(),
   answer: z.string().max(50000).optional(),
   // Snapshot of the prompt text shown to the user. Capped to keep documents
-  // well under Cosmos's 2 MB item ceiling — admin question copy is short.
+  // well under Cosmos's 2 MB item ceiling - admin question copy is short.
   questionText: z.preprocess(
     (v) => (v == null ? undefined : String(v)),
     z.string().max(4000).optional()

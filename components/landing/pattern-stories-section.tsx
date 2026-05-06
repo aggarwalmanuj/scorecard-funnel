@@ -13,7 +13,7 @@ const stories = [
   {
     role: "Founder",
     body:
-      "A founder spent 13 years building a fashion brand helping women feel beautiful — while unable to feel it herself. One session surfaced the root.",
+      "A founder spent 13 years building a fashion brand helping women feel beautiful - while unable to feel it herself. One session surfaced the root.",
     pull: "I am starting to believe I am beautiful.",
     metric: "On camera, same day",
   },

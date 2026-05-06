@@ -25,7 +25,7 @@ const dimensions = [
   },
   {
     name: "Creativity",
-    question: "Are you operating at your growth edge — or playing it safe?",
+    question: "Are you operating at your growth edge - or playing it safe?",
   },
   {
     name: "Time",
@@ -71,7 +71,7 @@ export function DimensionsSection() {
           <div className="hairline-anim hairline" />
         </Reveal>
 
-        {/* Editorial numbered list — generous, hairline-divided. Each row
+        {/* Editorial numbered list - generous, hairline-divided. Each row
             has a hover state: the number shifts right, a small mark draws
             in beside it, and the row itself indents slightly. */}
         <ol className="grid grid-cols-1">

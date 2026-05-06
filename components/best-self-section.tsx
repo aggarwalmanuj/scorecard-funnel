@@ -131,14 +131,14 @@ export function BestSelfSection() {
             <div className="p-7 sm:p-8 rounded-2xl bg-card neu-card-primary">
               <h3 className="text-xl sm:text-2xl font-black text-foreground">The problem is not finding it.</h3>
               <p className="mt-4 text-muted-foreground leading-relaxed">
-                Most leaders at your level have found it — in retreats, in rare moments, in the right conversations.
+                Most leaders at your level have found it - in retreats, in rare moments, in the right conversations.
               </p>
               <p className="mt-3 text-muted-foreground leading-relaxed">
                 The problem is <span className="text-foreground font-extrabold underline decoration-primary decoration-2 underline-offset-4">making it stay.</span>
               </p>
               <div className="mt-6 pt-6 border-t-2 border-primary/15">
                 <p className="text-foreground leading-relaxed">
-                  And when you make the decisions that come from that place — not from pressure, not from urgency, but from complete clarity — something else shifts too.
+                  And when you make the decisions that come from that place - not from pressure, not from urgency, but from complete clarity - something else shifts too.
                 </p>
                 <p className="text-primary font-black mt-4 text-xl">
                   Not just the work. You.

@@ -6,7 +6,7 @@ import { useEffect, useRef, useState } from "react"
 const outcomes = [
   {
     icon: Target,
-    text: "What is actually creating the gap — named precisely",
+    text: "What is actually creating the gap - named precisely",
   },
   {
     icon: Eye,
@@ -27,7 +27,7 @@ const steps = [
     number: "01",
     icon: Clock,
     title: "Ten minutes. Five questions.",
-    description: "In ten minutes — through five honest questions — the mirror clears. No lengthy assessments. No complex frameworks.",
+    description: "In ten minutes - through five honest questions - the mirror clears. No lengthy assessments. No complex frameworks.",
   },
   {
     number: "02",
@@ -39,7 +39,7 @@ const steps = [
     number: "03",
     icon: Sparkles,
     title: "Precise clarity.",
-    description: "The more honest your answers — the sharper the reflection. What you receive is uniquely yours.",
+    description: "The more honest your answers - the sharper the reflection. What you receive is uniquely yours.",
   },
 ]
 

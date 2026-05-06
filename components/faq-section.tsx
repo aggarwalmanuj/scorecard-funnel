@@ -12,22 +12,22 @@ const faqs = [
   {
     question: "Is this a personality test?",
     answer:
-      "No. This is not an assessment that gives you a label or a type. Your Unfair Advantage Score is a precise read across 7 dimensions of life and work — it identifies the specific hidden pattern limiting your results. No types, no archetypes. Just clarity.",
+      "No. This is not an assessment that gives you a label or a type. Your Unfair Advantage Score is a precise read across 7 dimensions of life and work - it identifies the specific hidden pattern limiting your results. No types, no archetypes. Just clarity.",
   },
   {
     question: "What’s the difference between the Individual and Team paths?",
     answer:
-      "Same diagnostic framework, different lens. Individual surfaces the personal pattern quietly limiting your results. Team & Organization surfaces the structural pattern limiting collective performance — built for senior leaders looking at the whole system.",
+      "Same diagnostic framework, different lens. Individual surfaces the personal pattern quietly limiting your results. Team & Organization surfaces the structural pattern limiting collective performance - built for senior leaders looking at the whole system.",
   },
   {
     question: "I’ve tried coaching, retreats, and assessments. How is this different?",
     answer:
-      "Most approaches deliver information or general insight. Your Unfair Advantage Score names the specific pattern running against you — so precisely that you recognize it the moment it surfaces. Built on the AI Merge framework, peer-reviewed in the Mensa Research Journal.",
+      "Most approaches deliver information or general insight. Your Unfair Advantage Score names the specific pattern running against you - so precisely that you recognize it the moment it surfaces. Built on the AI Merge framework, peer-reviewed in the Mensa Research Journal.",
   },
   {
     question: "Will I be sold something at the end?",
     answer:
-      "There’s nothing to buy during the diagnostic. The full PDF report is available after your assessment, and you may be offered an option to go deeper — only if it’s relevant to what surfaced.",
+      "There’s nothing to buy during the diagnostic. The full PDF report is available after your assessment, and you may be offered an option to go deeper - only if it’s relevant to what surfaced.",
   },
   {
     question: "How long does it actually take?",
@@ -37,7 +37,7 @@ const faqs = [
   {
     question: "Is my data safe?",
     answer:
-      "Yes. Your data belongs to you. Always. Nothing is shared, sold, or templated. Your score and report are built specifically around your inputs — not a generic algorithm.",
+      "Yes. Your data belongs to you. Always. Nothing is shared, sold, or templated. Your score and report are built specifically around your inputs - not a generic algorithm.",
   },
 ]
 

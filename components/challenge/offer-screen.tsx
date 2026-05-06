@@ -25,7 +25,7 @@ export function OfferScreen({ audience }: { audience: Audience }) {
   const [showCalendly, setShowCalendly] = useState(false)
   const [calendlyUrl, setCalendlyUrl] = useState("")
 
-  /* Calendly scheduling URL — read from server-side env via /api route */
+  /* Calendly scheduling URL - read from server-side env via /api route */
   useEffect(() => {
     fetch("/api/calendly/event-types")
       .then((r) => {
@@ -43,7 +43,7 @@ export function OfferScreen({ audience }: { audience: Audience }) {
       .catch((err) => console.error("[calendly] fetch error:", err))
   }, [])
 
-  /* Calendly widget script — single load */
+  /* Calendly widget script - single load */
   useEffect(() => {
     if (document.querySelector('script[src*="calendly.com/assets/external/widget"]')) return
     const script = document.createElement("script")
@@ -107,7 +107,7 @@ export function OfferScreen({ audience }: { audience: Audience }) {
   const includedItems = [
     { icon: FileText, text: "Complete review of your reading before we meet" },
     { icon: Calendar, text: "60 minutes of focused, structured decision work" },
-    { icon: Check, text: "The one decision — named, framed, ready to move" },
+    { icon: Check, text: "The one decision - named, framed, ready to move" },
     { icon: FileText, text: "A written summary of what surfaced and what to do next" },
     { icon: Mail, text: "One follow-up email within 7 days to check what moved" },
   ]
@@ -131,7 +131,7 @@ export function OfferScreen({ audience }: { audience: Audience }) {
         </div>
       </header>
 
-      {/* Hero — atmospheric photo + bridge copy */}
+      {/* Hero - atmospheric photo + bridge copy */}
       <section className="px-5 pb-10 pt-10 sm:px-8 md:pt-14">
         <div className="mx-auto mb-6 max-w-2xl">
           <Link
@@ -181,13 +181,13 @@ export function OfferScreen({ audience }: { audience: Audience }) {
           <div className="mb-10 max-w-xl space-y-5 text-[16px] leading-[1.8] text-foreground/85">
             <p>
               What you shared in this reading revealed something most leaders at
-              your level never see clearly — the structural pattern underneath
+              your level never see clearly - the structural pattern underneath
               the surface problem.
             </p>
             <p className="text-foreground/75">
               The question is no longer whether to move.
               <br />
-              The question is whether you want to move it alone — or with
+              The question is whether you want to move it alone - or with
               someone who has already read your file.
             </p>
           </div>
@@ -206,7 +206,7 @@ export function OfferScreen({ audience }: { audience: Audience }) {
                   Download your Clarity Readiness Report
                 </h3>
                 <p className="mb-5 text-[14.5px] leading-[1.7] text-foreground/85">
-                  A four-page personalised PDF — your scores across four
+                  A four-page personalised PDF - your scores across four
                   pillars, the threads we pulled from your answers, and the
                   specific moves we&apos;d suggest. Yours to keep.
                 </p>
@@ -233,7 +233,7 @@ export function OfferScreen({ audience }: { audience: Audience }) {
         </div>
       </section>
 
-      {/* Voices wall — sits between the report-download hero and the
+      {/* Voices wall - sits between the report-download hero and the
           offer pricing band. Full-bleed by design; the component manages
           its own internal max-w wrappers for header/arrows so the cards
           extend to viewport edges Netflix-style. */}
@@ -259,7 +259,7 @@ export function OfferScreen({ audience }: { audience: Audience }) {
         <VideoTestimonialsWall />
       </section>
 
-      {/* The Offer — slightly lifted Marine surface (var(--card) sits one
+      {/* The Offer - slightly lifted Marine surface (var(--card) sits one
           tone above var(--background) on the deep-navy palette). Previously
           this band inverted to var(--ink) which read as a stark cream
           insert against the rest of the funnel. The lift keeps the page
@@ -312,7 +312,7 @@ export function OfferScreen({ audience }: { audience: Audience }) {
             </p>
             <p className="text-foreground/75">
               Not coaching. Not consulting. A structured decision session with
-              someone who has already read your responses — and can see what
+              someone who has already read your responses - and can see what
               you might still be missing.
             </p>
           </div>
@@ -415,7 +415,7 @@ export function OfferScreen({ audience }: { audience: Audience }) {
             />
             <p className="font-serif text-[15px] leading-[1.7] text-foreground/90">
               <span className="text-ink">
-                If you don&apos;t leave with a clear next move — you don&apos;t
+                If you don&apos;t leave with a clear next move - you don&apos;t
                 pay.
               </span>{" "}
               <span className="font-serif-italic text-foreground/75">
@@ -424,7 +424,7 @@ export function OfferScreen({ audience }: { audience: Audience }) {
             </p>
           </div>
 
-          {/* CTA — Marine signal teal on the lifted card. The same s-btn
+          {/* CTA - Marine signal teal on the lifted card. The same s-btn
               style as elsewhere in the funnel; no stand-alone styling here. */}
           <button
             type="button"
@@ -523,7 +523,7 @@ export function OfferScreen({ audience }: { audience: Audience }) {
           <div className="mb-7 max-w-xl space-y-5 text-[16px] leading-[1.8] text-foreground/85">
             <p>What surfaced is not going anywhere.</p>
             <p className="text-foreground/75">
-              The pattern you saw is now visible — and that visibility alone
+              The pattern you saw is now visible - and that visibility alone
               changes how you move.
             </p>
             <p className="text-foreground/75">

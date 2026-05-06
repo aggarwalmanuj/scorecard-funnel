@@ -9,7 +9,7 @@ export async function OPTIONS(request: Request) {
 }
 
 /**
- * GET /api/admin/responses/search — Search user responses with filters.
+ * GET /api/admin/responses/search - Search user responses with filters.
  * Query params: q (text search), dateFrom, dateTo, completed (true/false)
  */
 export async function GET(request: Request) {

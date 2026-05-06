@@ -185,7 +185,7 @@ export function JourneySummaryScreen({ audience }: { audience: Audience }) {
     return buffer
   }
 
-  // Stub play handler — TTS is temporarily disabled; the button just
+  // Stub play handler - TTS is temporarily disabled; the button just
   // toggles a "running" state for visual feedback. No network calls,
   // no audio playback. Replace with handleRealPlayAudio when ready.
   const handlePlayAudio = async () => {
@@ -304,7 +304,7 @@ export function JourneySummaryScreen({ audience }: { audience: Audience }) {
     return () => clearTimeout(t)
   }, [isComplete, hasFailed])
 
-  // Auto-play disabled while TTS is stubbed — the button toggles a
+  // Auto-play disabled while TTS is stubbed - the button toggles a
   // visual "playing" state only. Re-enable when real audio comes back.
 
   const displayedText = useMemo(
@@ -389,7 +389,7 @@ export function JourneySummaryScreen({ audience }: { audience: Audience }) {
         scrollbarColor: "color-mix(in srgb, var(--signal) 40%, transparent) transparent",
       }}
     >
-      {/* Atmospheric layers — palette-driven */}
+      {/* Atmospheric layers - palette-driven */}
       <div className="pointer-events-none fixed inset-0 overflow-hidden" aria-hidden>
         <div
           className="absolute -top-16 left-1/4 h-72 w-72 rounded-full opacity-[0.18] blur-3xl animate-glow-pulse"
@@ -405,7 +405,7 @@ export function JourneySummaryScreen({ audience }: { audience: Audience }) {
         />
       </div>
 
-      {/* Top accent line — palette signal */}
+      {/* Top accent line - palette signal */}
       <div
         className="sticky top-0 z-20 h-px w-full"
         style={{
@@ -615,7 +615,7 @@ export function JourneySummaryScreen({ audience }: { audience: Audience }) {
 function ClarityScorePending() {
   return (
     <section
-      aria-label="Clarity Readiness Index — scoring"
+      aria-label="Clarity Readiness Index - scoring"
       className="s-card-static overflow-hidden"
     >
       <div className="flex items-center gap-3 px-6 py-9 sm:px-8">

@@ -50,10 +50,10 @@ export function BeatRevealScreen({
     return beatContent.split(/(\s+)/).filter((t) => t.length > 0)
   }, [beatContent])
 
-  const PARTLY_ID = "Partly — close enough"
+  const PARTLY_ID = "Partly - close enough"
   const feedbackOptions = [
-    { id: "Yes — that is exactly it", label: "Yes — that is exactly it", glyph: "✓" },
-    { id: PARTLY_ID, label: "Partly — close enough", glyph: "≈" },
+    { id: "Yes - that is exactly it", label: "Yes - that is exactly it", glyph: "✓" },
+    { id: PARTLY_ID, label: "Partly - close enough", glyph: "≈" },
     { id: "Not quite, but I am curious", label: "Not quite, but I am curious", glyph: "→" },
   ]
 
@@ -178,7 +178,7 @@ export function BeatRevealScreen({
       </header>
 
       <main className="flex-1 pt-20 sm:pt-24">
-        {/* Image — atmospheric, ken-burns slow zoom */}
+        {/* Image - atmospheric, ken-burns slow zoom */}
         <div className="px-5 sm:px-8 animate-fade-in-up">
           <div className="mx-auto max-w-2xl">
             <figure>
@@ -219,7 +219,7 @@ export function BeatRevealScreen({
               </h1>
             </div>
 
-            {/* Body — typewriter reveal */}
+            {/* Body - typewriter reveal */}
             <div className="min-h-16">
               <p className="font-sans text-[16.5px] leading-[1.85] text-foreground/90 whitespace-pre-wrap">
                 {tokens.length === 0 ? (
@@ -230,7 +230,7 @@ export function BeatRevealScreen({
                     </span>
                     {showTimeHint && (
                       <span className="ml-4 text-[13px] not-italic uppercase tracking-[0.18em] text-foreground/55">
-                        Usually 20–40 seconds
+                        Usually 20-40 seconds
                       </span>
                     )}
                   </span>
@@ -257,7 +257,7 @@ export function BeatRevealScreen({
                   </span>
                   {showTimeHint && (
                     <span className="ml-4 text-foreground/45">
-                      Usually 20–40 seconds
+                      Usually 20-40 seconds
                     </span>
                   )}
                 </span>
@@ -286,7 +286,7 @@ export function BeatRevealScreen({
           </div>
         </div>
 
-        {/* Feedback — three editorial choices */}
+        {/* Feedback - three editorial choices */}
         {isComplete && (
           <div className="px-5 sm:px-8 pb-10">
             <div className="mx-auto max-w-2xl animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -402,7 +402,7 @@ export function BeatRevealScreen({
         </div>
       )}
 
-      {/* Footer — calm hairline + ghost back button */}
+      {/* Footer - calm hairline + ghost back button */}
       <footer className="sticky bottom-0 border-t border-border bg-background/85 px-5 py-4 backdrop-blur-xl sm:px-8">
         <div className="mx-auto max-w-2xl">
           <button

@@ -80,7 +80,7 @@ function formatDate(d: Date): string {
 }
 
 function reportId(seed: string): string {
-  // Stable-ish short ID derived from name + date — display only.
+  // Stable-ish short ID derived from name + date - display only.
   let h = 0
   for (let i = 0; i < seed.length; i++) {
     h = (h * 31 + seed.charCodeAt(i)) | 0
@@ -103,7 +103,7 @@ export function ClarityReport() {
 
     // Fast path: the processing screen pre-generates the report in the
     // background, so by the time the user clicks "Download report" the
-    // payload is already in localStorage. Render it immediately — zero
+    // payload is already in localStorage. Render it immediately - zero
     // network wait.
     if (state.reportData) {
       setData(state.reportData as unknown as ApiResponse)
@@ -112,7 +112,7 @@ export function ClarityReport() {
       return
     }
 
-    // Fallback path — only hit if the user reached the report page before
+    // Fallback path - only hit if the user reached the report page before
     // the background generation finished, or if the background call failed.
     const abort = new AbortController()
     setLoading(true)
@@ -158,14 +158,14 @@ export function ClarityReport() {
   const [isDownloading, setIsDownloading] = useState(false)
 
   // Generate the PDF entirely client-side and trigger a real file download
-  // — no print dialog, no second click. Each .page element on screen is
+  // - no print dialog, no second click. Each .page element on screen is
   // captured and added as one A4 page in the resulting PDF.
   const handleDownload = async () => {
     if (loading || error || !data) return
     if (isDownloading) return
     setIsDownloading(true)
     try {
-      // Lazy-load the PDF libs — they're ~400KB combined and we only
+      // Lazy-load the PDF libs - they're ~400KB combined and we only
       // need them on this single click path.
       const [{ default: jsPDF }, html2canvasModule] = await Promise.all([
         import("jspdf"),
@@ -200,7 +200,7 @@ export function ClarityReport() {
         if (i > 0) pdf.addPage()
 
         // Fit to page width, preserve aspect ratio. If a page somehow
-        // exceeds the A4 height, clip — our layout is tuned to fit.
+        // exceeds the A4 height, clip - our layout is tuned to fit.
         const imgHeightMm = (canvas.height / canvas.width) * pageWidthMm
         const finalHeight = Math.min(imgHeightMm, pageHeightMm)
         pdf.addImage(imgData, "JPEG", 0, 0, pageWidthMm, finalHeight)
@@ -238,7 +238,7 @@ export function ClarityReport() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loading, error, data])
 
-  // Empty-state guard — no data captured locally.
+  // Empty-state guard - no data captured locally.
   const hasContent =
     isHydrated &&
     !!(
@@ -252,7 +252,7 @@ export function ClarityReport() {
     <div className="report-root" data-palette="marine">
       <ReportStyles />
 
-      {/* Top toolbar — hidden in print. Wordmark is omitted until the new
+      {/* Top toolbar - hidden in print. Wordmark is omitted until the new
           logo arrives; the eyebrow on each page carries the section title. */}
       <div className="toolbar">
         <Link href="/challenge/offer" className="back">
@@ -292,7 +292,7 @@ export function ClarityReport() {
           <p className="status-title">Building your tailored report…</p>
           <p className="status-sub">
             Reading your five answers and five beats, scoring across the four
-            pillars, and writing the synthesis. Usually 15–25 seconds.
+            pillars, and writing the synthesis. Usually 15-25 seconds.
           </p>
         </div>
       )}
@@ -308,13 +308,13 @@ export function ClarityReport() {
         </div>
       )}
 
-      {/* Empty state — user hit /challenge/report without going through the journey */}
+      {/* Empty state - user hit /challenge/report without going through the journey */}
       {!loading && !error && !hasContent && (
         <div className="status">
           <AlertCircle size={28} />
           <p className="status-title">Nothing to report on yet.</p>
           <p className="status-sub">
-            Complete the Honest Decision Challenge first — your report is built
+            Complete the Honest Decision Challenge first - your report is built
             from your answers.
           </p>
           <Link href="/" className="status-link">
@@ -366,7 +366,7 @@ function ReportPages({
 
   return (
     <>
-      {/* Page 1 — Cover + scores */}
+      {/* Page 1 - Cover + scores */}
       <section className="page">
         <ReportHeader name={name} today={today} rid={rid} />
 
@@ -408,7 +408,7 @@ function ReportPages({
         <ReportFooter page={1} of={4} name={name} />
       </section>
 
-      {/* Page 2 — Per-pillar deep dive */}
+      {/* Page 2 - Per-pillar deep dive */}
       <section className="page">
         <ReportHeader name={name} today={today} rid={rid} compact />
 
@@ -436,7 +436,7 @@ function ReportPages({
         <ReportFooter page={2} of={4} name={name} />
       </section>
 
-      {/* Page 3 — Benchmark + themes + beats */}
+      {/* Page 3 - Benchmark + themes + beats */}
       <section className="page">
         <ReportHeader name={name} today={today} rid={rid} compact />
 
@@ -478,14 +478,14 @@ function ReportPages({
         <ReportFooter page={3} of={4} name={name} />
       </section>
 
-      {/* Page 4 — Takeaways + 30-day */}
+      {/* Page 4 - Takeaways + 30-day */}
       <section className="page">
         <ReportHeader name={name} today={today} rid={rid} compact />
 
         <div className="eyebrow">What now</div>
         <h1 className="title small">Concrete moves, ordered by urgency</h1>
         <p className="lede" style={{ marginBottom: 14 }}>
-          Each move is specific to what you wrote — not generic advice. Pick
+          Each move is specific to what you wrote - not generic advice. Pick
           one. Doing one well beats doing four halfway.
         </p>
 
@@ -527,7 +527,7 @@ function ReportHeader({
 }) {
   return (
     <header className="head">
-      {/* Logo slot — kept blank until the matching wordmark is supplied. The
+      {/* Logo slot - kept blank until the matching wordmark is supplied. The
           dot+rule pairing carries the brand placeholder consistently with
           the rest of the funnel. */}
       <div className="logo">
@@ -775,7 +775,7 @@ function ReportStyles() {
         }
       }
 
-      /* Marine-family palette — printable cream paper with navy ink and
+      /* Marine-family palette - printable cream paper with navy ink and
          teal signal. Mirrors the rest of the funnel's Marine lock so the
          downloaded PDF feels continuous with the on-screen experience. */
       .report-root {

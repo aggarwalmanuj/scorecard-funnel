@@ -18,7 +18,7 @@ export function MinimalHeader() {
   const [mobileOpen, setMobileOpen] = useState(false)
   const lastY = useRef(0)
 
-  // Auto-hide on scroll-down (mobile only — desktop overrides), reveal on
+  // Auto-hide on scroll-down (mobile only - desktop overrides), reveal on
   // scroll-up. Header is always visible near the top of the page.
   useEffect(() => {
     const onScroll = () => {
@@ -47,7 +47,7 @@ export function MinimalHeader() {
     }
   }, [mobileOpen])
 
-  // Esc closes the sheet — paired with focus trap pattern (the sheet itself
+  // Esc closes the sheet - paired with focus trap pattern (the sheet itself
   // captures interactive elements, so we just need an escape hatch).
   useEffect(() => {
     if (!mobileOpen) return
@@ -70,7 +70,7 @@ export function MinimalHeader() {
         }`}
       >
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-3 px-5 sm:h-20 sm:gap-4 sm:px-10 lg:px-16">
-          {/* Logo — sized at the wordmark's true 7.12:1 aspect so neither
+          {/* Logo - sized at the wordmark's true 7.12:1 aspect so neither
               the "AI" prefix nor the "MERGE" tail clip on small screens.
               Mobile uses brand-mark-sm (110px), desktop bumps to default
               (140px). Hover lift is wired in globals.css. */}
@@ -82,7 +82,7 @@ export function MinimalHeader() {
             <span className="brand-mark brand-mark-sm sm:!w-[140px]" aria-hidden />
           </Link>
 
-          {/* Desktop nav — animated underline draw on hover. */}
+          {/* Desktop nav - animated underline draw on hover. */}
           <nav className="hidden items-center gap-9 lg:flex">
             {navLinks.map((link) => (
               <Link
@@ -104,7 +104,7 @@ export function MinimalHeader() {
               Begin the reading
             </Link>
 
-            {/* Hamburger — animated to morph into an X when opened. The
+            {/* Hamburger - animated to morph into an X when opened. The
                 three lines tween via individual transforms on the spans. */}
             <button
               type="button"
@@ -139,11 +139,11 @@ export function MinimalHeader() {
         </div>
       </header>
 
-      {/* Mobile sheet — full-screen serif menu with stagger reveal. The
+      {/* Mobile sheet - full-screen serif menu with stagger reveal. The
           Marine palette stays on this subtree (it inherits from the page
           wrapper, but we re-declare data-palette so the sheet doesn't
           go off-brand if a parent ever lifts the wrapper). The backdrop
-          fades while the panel slides down from above — feels like the
+          fades while the panel slides down from above - feels like the
           sheet is descending, not rising from the bottom of the viewport. */}
       {mobileOpen && (
         <div

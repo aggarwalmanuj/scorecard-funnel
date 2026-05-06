@@ -7,9 +7,10 @@ import { Analytics } from "@vercel/analytics/next"
 import { ChallengeProvider } from "@/context/challenge-context"
 import FacebookPixelTracker from "@/components/facebook-pixel"
 import ClarityInit from "@/components/clarity-init"
+import { CookieConsent } from "@/components/cookie-consent"
 import "./globals.css"
 
-// Server-only env read — the project ID is threaded down as a prop so it
+// Server-only env read - the project ID is threaded down as a prop so it
 // never appears in the bundle as a NEXT_PUBLIC_* variable. The ID itself
 // isn't strictly secret (Clarity's loader script exposes it client-side
 // once init runs), but server-only reads stay consistent with our other
@@ -24,14 +25,14 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 })
 
-// Inter — clean modern sans for body copy on the minimal landing.
+// Inter - clean modern sans for body copy on the minimal landing.
 const inter = Inter({
   subsets: ["latin"],
   display: "swap",
   variable: "--font-inter",
 })
 
-// Fraunces — variable serif for editorial display + italic emphasis.
+// Fraunces - variable serif for editorial display + italic emphasis.
 // Loaded with optical sizing for tighter headlines.
 const fraunces = Fraunces({
   subsets: ["latin"],
@@ -49,10 +50,10 @@ const FB_PIXEL_ID =
 export const metadata: Metadata = {
   title: "Your Unfair Advantage Score | Find what's quietly limiting you",
   description:
-    "Discover what's quietly limiting your performance. A 10-minute diagnostic across 7 dimensions, built on the AI Merge framework — peer-reviewed in the Mensa Research Journal.",
+    "Discover what's quietly limiting your performance. A 10-minute diagnostic across 7 dimensions, built on the AI Merge framework - peer-reviewed in the Mensa Research Journal.",
   icons: {
     // White-on-transparent favicon. Browsers render it on their own toolbar
-    // background, which is universally light or dark — the white mark stays
+    // background, which is universally light or dark - the white mark stays
     // legible on either, so no separate dark/light variant is shipped.
     icon: "/newui/favicon.png",
     apple: "/newui/favicon.png",
@@ -60,7 +61,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Your Unfair Advantage Score",
     description:
-      "Find the hidden pattern quietly limiting your performance — across 7 dimensions of life and work.",
+      "Find the hidden pattern quietly limiting your performance - across 7 dimensions of life and work.",
     type: "website",
   },
 }
@@ -133,6 +134,7 @@ fbq('track', 'PageView');
           </>
         ) : null}
         <ChallengeProvider>{children}</ChallengeProvider>
+        <CookieConsent />
         <Analytics />
       </body>
     </html>

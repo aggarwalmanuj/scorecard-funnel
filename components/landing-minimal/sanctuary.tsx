@@ -9,7 +9,7 @@ const tried = [
   { label: "Strategy", value: "Helped a little. Something remained." },
   { label: "Coaching", value: "Insight, not resolution." },
   { label: "Better sleep", value: "Better mornings. Same ceiling." },
-  { label: "Therapy", value: "Words for the surface — not the source." },
+  { label: "Therapy", value: "Words for the surface - not the source." },
 ] as const
 
 export function SanctuarySection() {
@@ -31,7 +31,7 @@ export function SanctuarySection() {
           </div>
           <div className="lg:col-span-7 lg:pt-10">
             <p className="max-w-xl text-lg leading-[1.8] text-foreground/85">
-              Strategy. Coaching. Better sleep. Maybe therapy. They helped — and
+              Strategy. Coaching. Better sleep. Maybe therapy. They helped - and
               still, something remains.
             </p>
           </div>
@@ -51,8 +51,8 @@ export function SanctuarySection() {
                 underneath.
               </p>
               <p>
-                There is a specific pattern in your nervous system — installed
-                by experience, running silently — quietly recreating the same
+                There is a specific pattern in your nervous system - installed
+                by experience, running silently - quietly recreating the same
                 stress, the same friction, the same feeling that something is
                 slightly off.
               </p>
@@ -63,7 +63,7 @@ export function SanctuarySection() {
                 <div className="img-hover-zoom relative overflow-hidden rounded-sm">
                   <Image
                     src="/images/q2-horizon.jpg"
-                    alt="A still composed by morning light — the pattern, brought into the room"
+                    alt="A still composed by morning light - the pattern, brought into the room"
                     width={960}
                     height={720}
                     sizes="(max-width: 1024px) 100vw, 42vw"
@@ -82,7 +82,7 @@ export function SanctuarySection() {
             <div className="space-y-6 text-[1.05rem] leading-[1.85] text-foreground/85">
               <p>
                 Most never find it. The pattern is older than the stress it now
-                causes. It cannot be willed away — only met, named, and allowed
+                causes. It cannot be willed away - only met, named, and allowed
                 to resolve.
               </p>
 
@@ -141,7 +141,7 @@ export function SanctuarySection() {
                 </p>
                 <p>
                   The difference is the difference between carrying something
-                  lighter — and putting it down permanently.
+                  lighter - and putting it down permanently.
                 </p>
                 <div className="my-6 h-px w-16 bg-foreground/30" />
                 <p>

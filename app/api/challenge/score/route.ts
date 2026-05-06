@@ -2,7 +2,7 @@ import { redactError } from "@/lib/security"
 import { z } from "zod"
 
 /**
- * Clarity Readiness scoring — LLM-backed.
+ * Clarity Readiness scoring - LLM-backed.
  *
  * Given the user's five raw responses, asks the model to score them against
  * the rubric from the scoring spec and return strict JSON:
@@ -13,7 +13,7 @@ import { z } from "zod"
  *     nsState:   "REGULATED" | "ACTIVATED" | "COLLAPSED" | "IDENTITY-ROOT" | "PURPOSE-ROOT" | "UNKNOWN"
  *   }
  *
- * Each subscore is 0–100 (normal direction — higher = better). The reasons
+ * Each subscore is 0-100 (normal direction - higher = better). The reasons
  * are one short sentence each, grounded in the user's actual language.
  */
 
@@ -30,11 +30,11 @@ const bodySchema = z.object({
 
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 
-const SYSTEM_PROMPT = `You are the scoring engine for the Clarity Readiness Index — the assessment taken by senior leaders (founders, CEOs, advisors, executives) who are carrying an unresolved situation they cannot yet name precisely enough to act on.
+const SYSTEM_PROMPT = `You are the scoring engine for the Clarity Readiness Index - the assessment taken by senior leaders (founders, CEOs, advisors, executives) who are carrying an unresolved situation they cannot yet name precisely enough to act on.
 
-You will receive the five raw answers the user gave during a reflection journey. Your job is to read them against the rubric below and return FOUR subscores, each an integer 0–100.
+You will receive the five raw answers the user gave during a reflection journey. Your job is to read them against the rubric below and return FOUR subscores, each an integer 0-100.
 
-All four subscores are NORMAL DIRECTION — higher means clearer / more aligned / more ready. Nothing is inverted.
+All four subscores are NORMAL DIRECTION - higher means clearer / more aligned / more ready. Nothing is inverted.
 
 ═══════════════════════════════════════════════════════════
 THE FOUR SUBSCORES
@@ -43,33 +43,33 @@ THE FOUR SUBSCORES
 1. DIRECTION CLARITY (pillar: Purpose)
    Measures: how clearly defined the person's sense of direction is.
 
-   HIGH (65–85): A clear direction is named or strongly implied in Q4/Q5. Desire language present ("I want to", "what matters to me", "I'd love") alongside analysis. Q5 is specific and operational — the morning-after scene has texture and named actions.
-   MODERATE (45–64): Direction is forming. Some desire language, some obligation language. Q5 has form but lacks operational specificity.
-   LOW (25–44): Language circles — the same point is restated differently across Q1 and Q2. Obligation language dominates ("I should", "I need to", "I have to"). "I don't know" / "I'm not sure" appears multiple times. Cannot name what the resolved version looks and feels like.
+   HIGH (65-85): A clear direction is named or strongly implied in Q4/Q5. Desire language present ("I want to", "what matters to me", "I'd love") alongside analysis. Q5 is specific and operational - the morning-after scene has texture and named actions.
+   MODERATE (45-64): Direction is forming. Some desire language, some obligation language. Q5 has form but lacks operational specificity.
+   LOW (25-44): Language circles - the same point is restated differently across Q1 and Q2. Obligation language dominates ("I should", "I need to", "I have to"). "I don't know" / "I'm not sure" appears multiple times. Cannot name what the resolved version looks and feels like.
    VERY LOW (<25): No direction detectable. Pure stuckness, pure analysis, or pure avoidance of the question.
 
 2. IDENTITY ALIGNMENT (pillar: Identity)
    Measures: how congruent the person's self-sense is with where they are going.
 
-   HIGH (60–80): Self-reference without excessive justification. Honest vulnerability in Q2 WITHOUT self-criticism. Regulated tone — genuine self-awareness. The person speaks from inside themselves, not from a role or a performance of themselves.
-   MODERATE (40–59): Some self-awareness, some performance. Mixed signals.
-   LOW (25–39): Performance language dominant ("I am normally...", "usually I...", "typically I", "people expect me to..."). Over-justification of decisions. Self-comparison. Self-worth tied to having the answer. An IDENTITY-ROOT pattern is detectable — the real block is about who they think they have to be.
+   HIGH (60-80): Self-reference without excessive justification. Honest vulnerability in Q2 WITHOUT self-criticism. Regulated tone - genuine self-awareness. The person speaks from inside themselves, not from a role or a performance of themselves.
+   MODERATE (40-59): Some self-awareness, some performance. Mixed signals.
+   LOW (25-39): Performance language dominant ("I am normally...", "usually I...", "typically I", "people expect me to..."). Over-justification of decisions. Self-comparison. Self-worth tied to having the answer. An IDENTITY-ROOT pattern is detectable - the real block is about who they think they have to be.
    VERY LOW (<25): Heavy self-criticism, disowning language, or complete detachment from self.
 
 3. DECISION READINESS (pillar: Peace of Mind)
    Measures: how ready they are to make and hold the decision that moves this forward.
 
-   HIGH (65–85): In Q4 they can name the specific conditions / the specific thing that moved it last time — and that naming has weight. Q2 shows genuine readiness to face what's keeping it stuck. The narrative is coherent across the five answers — not looping.
-   MODERATE (40–64): The concern is named but the specific next move is still fuzzy. Some looping between Q1 and Q2.
-   LOW (20–39): The same core concern is restated 3+ times in different forms across the questions. Activated nervous system without direction. Q2 shows complete avoidance of the real reason. COLLAPSED state possible.
+   HIGH (65-85): In Q4 they can name the specific conditions / the specific thing that moved it last time - and that naming has weight. Q2 shows genuine readiness to face what's keeping it stuck. The narrative is coherent across the five answers - not looping.
+   MODERATE (40-64): The concern is named but the specific next move is still fuzzy. Some looping between Q1 and Q2.
+   LOW (20-39): The same core concern is restated 3+ times in different forms across the questions. Activated nervous system without direction. Q2 shows complete avoidance of the real reason. COLLAPSED state possible.
    VERY LOW (<20): Nothing actionable anywhere. Pure rumination.
 
 4. ENERGY ALIGNMENT (pillar: Embodiment)
    Measures: whether they are operating from genuine drive vs obligation.
 
-   HIGH (55–75): Body language present in Q3 (where the tension lives, physical signals named — chest, stomach, tight, heavy, tired, energy, breath). Q5 includes sensory / physical detail — what they SEE, FEEL, hear in that morning. Q4 shows desire-based motivation, not just obligation.
-   MODERATE (35–54): Occasional somatic language. Q5 has some sensory detail. Q4 mixes desire and obligation.
-   LOW (20–34): Entirely cognitive throughout — no body references in any answer. Q3 describes cost but only intellectually. Q4 is obligation-based (what they should do, what others expect).
+   HIGH (55-75): Body language present in Q3 (where the tension lives, physical signals named - chest, stomach, tight, heavy, tired, energy, breath). Q5 includes sensory / physical detail - what they SEE, FEEL, hear in that morning. Q4 shows desire-based motivation, not just obligation.
+   MODERATE (35-54): Occasional somatic language. Q5 has some sensory detail. Q4 mixes desire and obligation.
+   LOW (20-34): Entirely cognitive throughout - no body references in any answer. Q3 describes cost but only intellectually. Q4 is obligation-based (what they should do, what others expect).
    VERY LOW (<20): Flat, detached, disembodied. Zero felt-sense across all five answers.
 
 ═══════════════════════════════════════════════════════════
@@ -78,13 +78,13 @@ CALIBRATION ANCHORS
 
 Audience mean is 48/100 overall. This audience is senior leaders, already self-aware, but carrying something unresolved. Score conservatively:
 - Most real answers land between 30 and 65 on any given subscore.
-- Reserve 75+ for answers that actually demonstrate the HIGH markers above — not just any decent answer.
+- Reserve 75+ for answers that actually demonstrate the HIGH markers above - not just any decent answer.
 - Reserve <25 only for answers that truly demonstrate the VERY LOW markers.
-- Short/thin answers (a sentence or two) should generally score 25–40 — there isn't enough signal to justify higher.
-- Long, articulate, thoughtful answers that still LOOP or AVOID should still score LOW — verbosity is not clarity.
+- Short/thin answers (a sentence or two) should generally score 25-40 - there isn't enough signal to justify higher.
+- Long, articulate, thoughtful answers that still LOOP or AVOID should still score LOW - verbosity is not clarity.
 
 ═══════════════════════════════════════════════════════════
-ADDITIONAL DETECTION — nsState
+ADDITIONAL DETECTION - nsState
 ═══════════════════════════════════════════════════════════
 
 Also classify the nervous-system state evidenced across the answers:
@@ -96,7 +96,7 @@ Also classify the nervous-system state evidenced across the answers:
 - "UNKNOWN": not enough signal
 
 ═══════════════════════════════════════════════════════════
-OUTPUT FORMAT (STRICT — JSON ONLY)
+OUTPUT FORMAT (STRICT - JSON ONLY)
 ═══════════════════════════════════════════════════════════
 
 Return ONLY a single JSON object, no prose, no code fence, matching exactly:
@@ -127,19 +127,19 @@ function buildUserPrompt(
   const blank = "(left blank)"
   return `${name} just completed the Clarity Readiness reflection. Here are the FIVE RAW ANSWERS they wrote. Score them against the rubric.
 
-═══ Q1 — The Present / what's not moving the way it should ═══
+═══ Q1 - The Present / what's not moving the way it should ═══
 ${r.question1?.trim() || blank}
 
-═══ Q2 — The Direction / what would be different in 12 months ═══
+═══ Q2 - The Direction / what would be different in 12 months ═══
 ${r.question2?.trim() || blank}
 
-═══ Q3 — The Noise / what keeps pulling at their attention ═══
+═══ Q3 - The Noise / what keeps pulling at their attention ═══
 ${r.question3?.trim() || blank}
 
-═══ Q4 — The Pattern / what was true the last time something clicked ═══
+═══ Q4 - The Pattern / what was true the last time something clicked ═══
 ${r.question4?.trim() || blank}
 
-═══ Q5 — The Clarity / the morning-after scene when the noise is gone ═══
+═══ Q5 - The Clarity / the morning-after scene when the noise is gone ═══
 ${r.question5?.trim() || blank}
 
 Return ONLY the JSON object. No preamble. No code fences.`

@@ -12,7 +12,7 @@ const logos = [
 ] as const
 
 const credentials = [
-  { label: "Patents", value: "Four in human–AI decision systems" },
+  { label: "Patents", value: "Four in human-AI decision systems" },
   { label: "Keynote", value: "United Nations" },
   { label: "Published", value: "Mensa Research Journal" },
   { label: "Documented", value: "$500M+ business impact" },

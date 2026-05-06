@@ -9,7 +9,7 @@ export async function OPTIONS(request: Request) {
 }
 
 /**
- * GET /api/admin/prompts — Read all prompts (auth required)
+ * GET /api/admin/prompts - Read all prompts (auth required)
  */
 export async function GET(request: Request) {
   const headers = corsHeaders(request)
@@ -41,7 +41,7 @@ export async function GET(request: Request) {
 }
 
 /**
- * POST /api/admin/prompts — Write all prompts to Sheet2 (auth required)
+ * POST /api/admin/prompts - Write all prompts to Sheet2 (auth required)
  * Body: { data: Record<string, string> }
  * Header: X-Admin-Password
  */

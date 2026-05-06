@@ -2,6 +2,7 @@
 
 import Link from "next/link"
 import { ArrowRight } from "lucide-react"
+import { PrivacyNotice } from "@/components/privacy-notice"
 import { MagneticButton } from "./motion"
 
 /**
@@ -64,8 +65,8 @@ export function ReservationForm({
         ))}
       </ul>
 
-      <div className="mt-7 flex flex-col gap-4 lg:flex-row lg:items-center">
-        <MagneticButton className="flex-1">
+      <div className="mt-7">
+        <MagneticButton>
           <Link
             href="/challenge/audience"
             className="s-btn group w-full justify-center whitespace-nowrap"
@@ -77,14 +78,9 @@ export function ReservationForm({
             />
           </Link>
         </MagneticButton>
-        <p
-          className="text-[0.7rem] uppercase tracking-[0.22em] lg:text-right"
-          style={{ color: "color-mix(in srgb, var(--foreground) 60%, transparent)" }}
-        >
-          Ten minutes
-          <span className="block lg:inline lg:ml-2">In confidence</span>
-        </p>
       </div>
+
+      <PrivacyNotice className="mt-5" />
     </div>
   )
 }

@@ -9,7 +9,7 @@ export async function OPTIONS(request: Request) {
 }
 
 /**
- * GET /api/admin/responses — Read user responses from Cosmos DB (auth required).
+ * GET /api/admin/responses - Read user responses from Cosmos DB (auth required).
  * Query params: pageSize (default 25, max 100), continuationToken (URL-encoded)
  */
 export async function GET(request: Request) {

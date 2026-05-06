@@ -43,7 +43,7 @@ const dimensions = [
   {
     icon: Clock,
     name: "Time",
-    question: "Is urgency running your life — or are you running it?",
+    question: "Is urgency running your life - or are you running it?",
   },
   {
     icon: Brain,
@@ -129,13 +129,13 @@ export function SevenDimensionsSection() {
             <span className="text-foreground font-extrabold">
               7 key dimensions of life and work
             </span>{" "}
-            — identifying exactly where a hidden pattern is quietly limiting your results.
+            - identifying exactly where a hidden pattern is quietly limiting your results.
             Built on the AI Merge framework, peer-reviewed in the{" "}
             <span className="text-foreground font-extrabold">Mensa Research Journal</span>.
           </p>
         </div>
 
-        {/* Top row — 4 cards. Mobile = 1col, sm = 2col, lg = 4col. */}
+        {/* Top row - 4 cards. Mobile = 1col, sm = 2col, lg = 4col. */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
           {topRow.map((d, i) => (
             <DimensionCard
@@ -149,7 +149,7 @@ export function SevenDimensionsSection() {
           ))}
         </div>
 
-        {/* Bottom row — 3 cards. Constrained to ~75% width on lg so the cards
+        {/* Bottom row - 3 cards. Constrained to ~75% width on lg so the cards
             keep the same width as the top row, and centered for symmetry. */}
         <div className="mt-4 sm:mt-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 lg:max-w-[calc(75%+0.875rem)] lg:mx-auto">
           {bottomRow.map((d, i) => (

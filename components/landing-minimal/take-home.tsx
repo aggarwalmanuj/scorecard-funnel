@@ -7,7 +7,7 @@ const items = [
   {
     number: "I",
     title: "Your Unfair Advantage Score",
-    body: "A precise read across all seven dimensions — and the one quietly running underneath the others.",
+    body: "A precise read across all seven dimensions - and the one quietly running underneath the others.",
   },
   {
     number: "II",
@@ -17,12 +17,12 @@ const items = [
   {
     number: "III",
     title: "The summary",
-    body: "Top strength, primary constraint, and the shape of the pattern — in language you will recognise the moment it lands.",
+    body: "Top strength, primary constraint, and the shape of the pattern - in language you will recognise the moment it lands.",
   },
   {
     number: "IV",
     title: "The full diagnostic PDF",
-    body: "Your complete personalised report — composed specifically around your inputs, not a templated archetype.",
+    body: "Your complete personalised report - composed specifically around your inputs, not a templated archetype.",
   },
 ] as const
 
@@ -58,7 +58,7 @@ export function TakeHomeSection() {
         </Reveal>
 
         <div className="grid gap-12 lg:grid-cols-12 lg:gap-16">
-          {/* Deliverables visual — composed of three real artifacts the
+          {/* Deliverables visual - composed of three real artifacts the
               reader actually receives: the full diagnostic PDF (back card),
               the summary block (front card, smaller), and the personal
               audio composition (badge tag). Slight cross-rotation gives the
@@ -67,19 +67,19 @@ export function TakeHomeSection() {
           <Reveal as="figure" delay={200} className="lg:col-span-5">
             <ParallaxImage amount={14}>
               <div className="take-deck relative mx-auto w-full max-w-md">
-                {/* Soft signal halo behind the composition — ties the cards
+                {/* Soft signal halo behind the composition - ties the cards
                     together as one "deliverables" object rather than three
                     floating elements. Inherits --glow from the palette. */}
                 <span aria-hidden className="take-halo" />
 
-                {/* Back card — full diagnostic PDF page. Sits at the top,
+                {/* Back card - full diagnostic PDF page. Sits at the top,
                     tilted slightly counter-clockwise. width caps at 86%
                     so the front card always shows beside/below it. */}
                 <div className="take-back relative w-[86%] origin-bottom-left">
                   <div className="relative overflow-hidden rounded-[6px] ring-1 ring-foreground/15 shadow-[0_30px_80px_-32px_rgba(5,18,26,0.9)]">
                     <Image
                       src="/take/reportpdf.png"
-                      alt="A page from the personalised diagnostic PDF — your full reading composed around your inputs"
+                      alt="A page from the personalised diagnostic PDF - your full reading composed around your inputs"
                       width={988}
                       height={769}
                       sizes="(max-width: 640px) 80vw, (max-width: 1024px) 60vw, 36vw"
@@ -88,7 +88,7 @@ export function TakeHomeSection() {
                   </div>
                 </div>
 
-                {/* Front card — summary, sits below + right, opposite
+                {/* Front card - summary, sits below + right, opposite
                     tilt. Negative margin pulls it up so the cards visually
                     overlap; the absolute-positioned variant produced too
                     much vertical dead space at small widths. */}
@@ -96,7 +96,7 @@ export function TakeHomeSection() {
                   <div className="relative overflow-hidden rounded-[6px] ring-1 ring-foreground/25 shadow-[0_34px_70px_-26px_rgba(5,18,26,0.95)]">
                     <Image
                       src="/take/reportsummary.png"
-                      alt="The summary card — readiness index with the four pillars at a glance"
+                      alt="The summary card - readiness index with the four pillars at a glance"
                       width={1792}
                       height={815}
                       sizes="(max-width: 640px) 70vw, (max-width: 1024px) 50vw, 28vw"
@@ -105,7 +105,7 @@ export function TakeHomeSection() {
                   </div>
                 </div>
 
-                {/* Audio chip — third deliverable as a small badge tag.
+                {/* Audio chip - third deliverable as a small badge tag.
                     Positioned at the upper-right corner of the deck on
                     desktop; on mobile it sits even higher so it never
                     overlaps the score circle inside the PDF. */}

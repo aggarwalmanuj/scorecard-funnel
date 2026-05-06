@@ -27,7 +27,7 @@ const HARD_TIMEOUT_MS = 60_000
 function generateMockBeats(firstName: string) {
   const n = firstName.trim() || "You"
   return {
-    beat1: `${n}, looking at everything you shared — one thing becomes immediately clear.
+    beat1: `${n}, looking at everything you shared - one thing becomes immediately clear.
 
 The thing that's stuck isn't stuck because you lack capability. It's stuck because you've been solving the wrong layer.
 
@@ -35,13 +35,13 @@ Most leaders at your level do the same thing. They see a problem, assess their o
 
 But the real constraint isn't in the visible options. It's in the frame you're using to look at them.
 
-What you described in your first answer — the thing that's not moving the way it should — is a symptom. Not the cause.
+What you described in your first answer - the thing that's not moving the way it should - is a symptom. Not the cause.
 
 The cause is a structural pattern. It's been running for longer than this specific situation. And once you see it, you'll recognize it in a dozen other places too.`,
 
-    beat2: `The picture you painted of twelve months from now — that's not a fantasy. It's a signal.
+    beat2: `The picture you painted of twelve months from now - that's not a fantasy. It's a signal.
 
-Your subconscious already knows what "working" looks like. The evidence you described — the conversations, the calendar, the visible signs of movement — that's not imagination.
+Your subconscious already knows what "working" looks like. The evidence you described - the conversations, the calendar, the visible signs of movement - that's not imagination.
 
 It's pattern recognition in reverse.
 
@@ -49,17 +49,17 @@ What your answer reveals is that the gap between where you are and where you wan
 
 It's a clarity gap.
 
-You already know what needs to happen. What's missing is a clean signal — one decision that makes the others obvious.`,
+You already know what needs to happen. What's missing is a clean signal - one decision that makes the others obvious.`,
 
-    beat3: `The noise you named — the things pulling at your attention — that's the most important part of what you shared.
+    beat3: `The noise you named - the things pulling at your attention - that's the most important part of what you shared.
 
 Because here's what most leaders miss: noise isn't random. It's structural.
 
-The same things that pull at you today have been pulling at you for longer than you realize. The pattern repeats not because you lack discipline — but because the system is designed to produce that noise.
+The same things that pull at you today have been pulling at you for longer than you realize. The pattern repeats not because you lack discipline - but because the system is designed to produce that noise.
 
 Every item you mentioned is a symptom of the same root constraint.
 
-When you solve at the root — the noise doesn't get quieter. It disappears.`,
+When you solve at the root - the noise doesn't get quieter. It disappears.`,
 
     beat4: `You described a moment when things clicked. When the version of you that breaks through ceilings showed up.
 
@@ -75,7 +75,7 @@ The question isn't how to become that version of yourself again. The question is
 
 We now know the answer.`,
 
-    beat5: `The morning you described — the one where the noise was gone — that's not a visualization exercise.
+    beat5: `The morning you described - the one where the noise was gone - that's not a visualization exercise.
 
 It's a prototype.
 
@@ -476,7 +476,7 @@ export function ProcessingScreen({ audience }: { audience: Audience }) {
 
   return (
     <div className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden px-5">
-      {/* Marine palette already gives us a deep navy bg + teal signal — the
+      {/* Marine palette already gives us a deep navy bg + teal signal - the
           atmospheric layers below paint with palette tokens, not hardcoded
           colors, so they re-skin if Marine is ever changed. */}
       <div className="pointer-events-none absolute inset-0" aria-hidden>
@@ -506,7 +506,7 @@ export function ProcessingScreen({ audience }: { audience: Audience }) {
       </div>
 
       <div className="page-enter relative z-10 flex w-full max-w-md flex-col items-center">
-        {/* Progress ring — uses signal for the active stroke */}
+        {/* Progress ring - uses signal for the active stroke */}
         <div className="relative mb-10 h-28 w-28">
           <div
             className="absolute -inset-4 rounded-full opacity-[0.18] animate-glow-pulse"

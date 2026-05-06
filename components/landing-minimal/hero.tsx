@@ -15,14 +15,14 @@ export function MinimalHero() {
     <section className="relative" id="hero">
       <div className="mx-auto max-w-7xl px-5 pt-8 pb-16 sm:px-10 sm:pt-14 sm:pb-24 lg:px-16 lg:pt-16">
         <div className="grid items-start gap-10 lg:grid-cols-12 lg:gap-16">
-          {/* Left — editorial copy */}
+          {/* Left - editorial copy */}
           <div className="lg:col-span-7">
             <p className="eyebrow mb-6 text-foreground/70 sm:mb-8">
               <span className="pulse-dot mr-2.5" aria-hidden />
               <LetterReveal text="I · Your Unfair Advantage Score" />
             </p>
 
-            {/* Massive serif headline — clamps tight on small phones so a
+            {/* Massive serif headline - clamps tight on small phones so a
                 three-line layout doesn't exceed the fold; loosens up
                 cleanly through tablet to desktop. */}
             <h1 className="wrap-break-word font-serif text-[2.15rem] leading-[1.06] text-ink sm:text-6xl sm:leading-[1.02] lg:text-7xl xl:text-[5.6rem]">
@@ -45,7 +45,7 @@ export function MinimalHero() {
               <p>
                 You can&apos;t always name it. But you feel it. The ceiling
                 that keeps appearing. The work that won&apos;t fully click.
-                The sense that you&apos;re functioning — but not fully
+                The sense that you&apos;re functioning - but not fully
                 present in your own life.
               </p>
               <p className="text-foreground/70">
@@ -83,7 +83,7 @@ export function MinimalHero() {
             </Reveal>
           </div>
 
-          {/* Right — atmospheric image with halo + cursor-follow + parallax */}
+          {/* Right - atmospheric image with halo + cursor-follow + parallax */}
           <Reveal as="div" delay={200} className="lg:col-span-5">
             <CursorHalo>
               <div className="signal-halo relative">
@@ -91,7 +91,7 @@ export function MinimalHero() {
                   <div className="img-hover-zoom relative overflow-hidden rounded-sm">
                     <Image
                       src="/images/hero-leader.jpg"
-                      alt="A wide horizon at first light — the quiet a reading is meant to compose"
+                      alt="A wide horizon at first light - the quiet a reading is meant to compose"
                       width={1500}
                       height={2000}
                       sizes="(max-width: 1024px) 100vw, 42vw"
