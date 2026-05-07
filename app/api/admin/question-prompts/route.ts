@@ -7,6 +7,13 @@ export async function OPTIONS(request: Request) {
   return new NextResponse(null, { status: 204, headers: corsHeaders(request) })
 }
 
+// Admin-edited content; staleness is unacceptable here. The cheap server
+// cache in challenge-prompts.ts (5min TTL, invalidated on POST) absorbs
+// repeat reads, so the public-facing CDN/browser cache adds no value and
+// only masks admin edits. Force this route fully dynamic.
+export const dynamic = "force-dynamic"
+export const revalidate = 0
+
 /**
  * GET /api/admin/question-prompts?audience=individual|team
  *
@@ -18,7 +25,7 @@ export async function OPTIONS(request: Request) {
 export async function GET(request: Request) {
   const headers: Record<string, string> = {
     ...(corsHeaders(request) as Record<string, string>),
-    "Cache-Control": "public, max-age=60, s-maxage=300, stale-while-revalidate=600",
+    "Cache-Control": "private, no-store, must-revalidate",
   }
 
   const url = new URL(request.url)
