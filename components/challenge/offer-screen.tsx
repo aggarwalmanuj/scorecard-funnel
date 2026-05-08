@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import {
@@ -20,88 +20,75 @@ import { ChallengeMenuButton } from "@/components/challenge/challenge-funnel-hea
 import { VideoTestimonialsWall } from "@/components/video-testimonials-wall"
 
 export function OfferScreen({ audience }: { audience: Audience }) {
-  const { state, markComplete } = useChallenge()
+  const { state } = useChallenge()
   const [isProcessing, setIsProcessing] = useState(false)
-  const [showCalendly, setShowCalendly] = useState(false)
-  const [calendlyUrl, setCalendlyUrl] = useState("")
+  const [modalOpen, setModalOpen] = useState(false)
+  const [modalEmail, setModalEmail] = useState("")
+  const [modalFirstName, setModalFirstName] = useState("")
+  const [modalError, setModalError] = useState("")
 
-  /* Calendly scheduling URL — read from server-side env via /api route */
-  useEffect(() => {
-    fetch("/api/calendly/event-types")
-      .then((r) => {
-        if (!r.ok) {
-          console.error("[calendly] fetch failed:", r.status, r.statusText)
-          return null
-        }
-        return r.json()
+  const isValidEmail = (e: string) =>
+    /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(e.trim())
+
+  const startCheckout = async (email: string, firstName: string) => {
+    setIsProcessing(true)
+    try {
+      const res = await fetch("/api/stripe/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email,
+          firstName: firstName || undefined,
+          audience,
+        }),
       })
-      .then((data) => {
-        if (!data) return
-        if (data?.schedulingUrl) setCalendlyUrl(data.schedulingUrl)
-        else console.warn("[calendly] No scheduling URL in response:", data)
-      })
-      .catch((err) => console.error("[calendly] fetch error:", err))
-  }, [])
-
-  /* Calendly widget script — single load */
-  useEffect(() => {
-    if (document.querySelector('script[src*="calendly.com/assets/external/widget"]')) return
-    const script = document.createElement("script")
-    script.src = "https://assets.calendly.com/assets/external/widget.js"
-    script.async = true
-    document.head.appendChild(script)
-  }, [])
-
-  const handleBookSession = useCallback(() => {
-    if (!calendlyUrl) {
-      alert("Calendly is not configured. Set CALENDLY_URL in your environment.")
-      return
+      const data = (await res.json()) as {
+        checkoutUrl?: string
+        error?: string
+      }
+      if (!res.ok || !data.checkoutUrl) {
+        console.error("[stripe/checkout] failed", data)
+        setModalError(
+          data.error ?? "Could not start checkout. Please try again.",
+        )
+        setIsProcessing(false)
+        return
+      }
+      window.location.assign(data.checkoutUrl)
+    } catch (err) {
+      console.error("[stripe/checkout] network error", err)
+      setModalError("Network error. Please try again.")
+      setIsProcessing(false)
     }
-
-    const prefill: Record<string, string> = {}
-    if (state.firstName) prefill.name = state.firstName
-    if (state.email) prefill.email = state.email
-
-    if (
-      typeof window !== "undefined" &&
-      (window as unknown as {
-        Calendly?: {
-          initPopupWidget: (opts: {
-            url: string
-            prefill: Record<string, string>
-            utm: Record<string, string>
-          }) => void
-        }
-      }).Calendly
-    ) {
-      ;(
-        window as unknown as {
-          Calendly: {
-            initPopupWidget: (opts: {
-              url: string
-              prefill: Record<string, string>
-              utm: Record<string, string>
-            }) => void
-          }
-        }
-      ).Calendly.initPopupWidget({
-        url: calendlyUrl,
-        prefill,
-        utm: { utmSource: "ai-merge-challenge", utmMedium: "offer-page" },
-      })
-      markComplete()
-      return
-    }
-
-    setShowCalendly(true)
-    markComplete()
-  }, [calendlyUrl, state.firstName, state.email, markComplete])
+  }
 
   const handlePurchase = async () => {
-    setIsProcessing(true)
-    handleBookSession()
-    await new Promise((resolve) => setTimeout(resolve, 600))
-    setIsProcessing(false)
+    const email = state.email?.trim() ?? ""
+    const firstName = state.firstName?.trim() ?? ""
+    if (!isValidEmail(email) || !firstName) {
+      setModalEmail(isValidEmail(email) ? email : "")
+      setModalFirstName(firstName)
+      setModalError("")
+      setModalOpen(true)
+      return
+    }
+    await startCheckout(email, firstName)
+  }
+
+  const handleModalSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const email = modalEmail.trim()
+    const firstName = modalFirstName.trim()
+    if (!firstName) {
+      setModalError("Please enter your first name.")
+      return
+    }
+    if (!isValidEmail(email)) {
+      setModalError("Please enter a valid email address.")
+      return
+    }
+    setModalError("")
+    await startCheckout(email, firstName)
   }
 
   const includedItems = [
@@ -114,12 +101,6 @@ export function OfferScreen({ audience }: { audience: Audience }) {
 
   return (
     <div className="min-h-screen">
-      {/* Calendly widget CSS */}
-      <link
-        href="https://assets.calendly.com/assets/external/widget.css"
-        rel="stylesheet"
-      />
-
       {/* Header */}
       <header className="sticky top-0 z-40 w-full border-b border-border bg-background/85 backdrop-blur-xl">
         <div className="mx-auto flex h-16 max-w-4xl items-center justify-between gap-4 px-5 sm:px-8">
@@ -379,10 +360,10 @@ export function OfferScreen({ audience }: { audience: Audience }) {
                 className="font-serif tabular-nums leading-none text-ink"
                 style={{ fontSize: "clamp(48px, 7vw, 64px)" }}
               >
-                $297
+                $99
               </span>
               <span className="font-serif-italic text-[15px] text-foreground/70">
-                one-time
+                / month
               </span>
             </div>
             <div
@@ -454,7 +435,7 @@ export function OfferScreen({ audience }: { audience: Audience }) {
 
           <p className="mt-4 flex items-center justify-center gap-2 text-[11px] uppercase tracking-[0.22em] text-foreground/60">
             <Shield className="h-3 w-3" strokeWidth={1.5} />
-            Choose your time · 60-minute session
+            Secure checkout · Cancel any time
           </p>
 
           {/* Trust signals */}
@@ -486,24 +467,6 @@ export function OfferScreen({ audience }: { audience: Audience }) {
             ))}
           </ul>
 
-          {/* Inline Calendly fallback */}
-          {showCalendly && calendlyUrl && (
-            <div
-              className="mt-10 overflow-hidden rounded-md"
-              style={{
-                border:
-                  "1px solid color-mix(in srgb, var(--ink) 14%, transparent)",
-              }}
-            >
-              <iframe
-                src={`${calendlyUrl}?hide_gdpr_banner=1${state.firstName ? `&name=${encodeURIComponent(state.firstName)}` : ""}${state.email ? `&email=${encodeURIComponent(state.email)}` : ""}`}
-                width="100%"
-                height="700"
-                title="Schedule your Honest Decision Session"
-                className="w-full"
-              />
-            </div>
-          )}
         </div>
       </section>
 
@@ -549,6 +512,160 @@ export function OfferScreen({ audience }: { audience: Audience }) {
           </p>
         </div>
       </footer>
+
+      {/* Checkout details modal — pops when state.email / firstName are
+          missing or invalid. Mirrors the offer-section palette: lifted
+          var(--card) surface, signal-tinted accents, serif headings. */}
+      {modalOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center px-5 sm:px-8 animate-fade-in-up"
+          style={{
+            background: "color-mix(in srgb, var(--ink) 70%, transparent)",
+            backdropFilter: "blur(6px)",
+          }}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="checkout-modal-title"
+          onClick={(e) => {
+            if (e.target === e.currentTarget && !isProcessing) {
+              setModalOpen(false)
+            }
+          }}
+        >
+          <form
+            onSubmit={handleModalSubmit}
+            className="relative w-full max-w-md rounded-md p-7 shadow-2xl"
+            style={{
+              background: "var(--card)",
+              border:
+                "1px solid color-mix(in srgb, var(--ink) 22%, transparent)",
+              color: "var(--foreground)",
+            }}
+          >
+            <span
+              className="absolute inset-x-0 top-0 h-px"
+              style={{
+                background:
+                  "linear-gradient(90deg, transparent, var(--signal), transparent)",
+              }}
+              aria-hidden
+            />
+            <p className="eyebrow mb-4 inline-flex items-center gap-3 text-foreground/75">
+              <span
+                className="h-1.5 w-1.5 rounded-full"
+                style={{ background: "var(--signal)" }}
+                aria-hidden
+              />
+              Continue to checkout
+            </p>
+            <h3
+              id="checkout-modal-title"
+              className="mb-2 font-serif text-[22px] leading-snug text-ink sm:text-[24px]"
+            >
+              A couple of details
+              <span className="block font-serif-italic text-foreground">
+                before payment.
+              </span>
+            </h3>
+            <p className="mb-6 text-[14px] leading-[1.7] text-foreground/75">
+              We&apos;ll send your receipt and session details here.
+            </p>
+
+            <label className="mb-4 block">
+              <span className="mb-2 block text-[11px] uppercase tracking-[0.22em] text-foreground/70">
+                First name
+              </span>
+              <input
+                type="text"
+                value={modalFirstName}
+                onChange={(e) => setModalFirstName(e.target.value)}
+                autoFocus
+                required
+                disabled={isProcessing}
+                className="w-full rounded-md bg-transparent px-4 py-3 font-serif text-[15px] text-ink outline-none transition-colors focus:border-[color:var(--signal)]"
+                style={{
+                  border:
+                    "1px solid color-mix(in srgb, var(--ink) 22%, transparent)",
+                }}
+              />
+            </label>
+
+            <label className="mb-2 block">
+              <span className="mb-2 block text-[11px] uppercase tracking-[0.22em] text-foreground/70">
+                Email
+              </span>
+              <input
+                type="email"
+                value={modalEmail}
+                onChange={(e) => setModalEmail(e.target.value)}
+                required
+                disabled={isProcessing}
+                className="w-full rounded-md bg-transparent px-4 py-3 font-serif text-[15px] text-ink outline-none transition-colors focus:border-[color:var(--signal)]"
+                style={{
+                  border:
+                    "1px solid color-mix(in srgb, var(--ink) 22%, transparent)",
+                }}
+              />
+            </label>
+
+            {modalError && (
+              <p
+                className="mt-4 rounded-md px-3 py-2 text-[13px] leading-snug"
+                style={{
+                  background:
+                    "color-mix(in srgb, var(--signal) 8%, transparent)",
+                  border:
+                    "1px solid color-mix(in srgb, var(--signal) 30%, transparent)",
+                  color: "var(--ink)",
+                }}
+                role="alert"
+              >
+                {modalError}
+              </p>
+            )}
+
+            <div className="mt-7 flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setModalOpen(false)}
+                disabled={isProcessing}
+                className="text-[11px] uppercase tracking-[0.22em] text-foreground/65 transition-colors hover:text-ink disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={isProcessing}
+                className="s-btn group ml-auto h-12 px-6 text-[12px]"
+                style={{
+                  background: "var(--signal)",
+                  color: "var(--background)",
+                  border:
+                    "1px solid color-mix(in srgb, var(--signal) 60%, transparent)",
+                  boxShadow: "0 14px 40px -16px rgba(var(--glow), 0.55)",
+                }}
+              >
+                {isProcessing ? (
+                  <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border border-current border-t-transparent" />
+                ) : (
+                  <>
+                    Continue
+                    <ArrowRight
+                      className="h-3.5 w-3.5 transition-transform duration-500 group-hover:translate-x-1"
+                      strokeWidth={1.6}
+                    />
+                  </>
+                )}
+              </button>
+            </div>
+
+            <p className="mt-5 flex items-center justify-center gap-2 text-[11px] uppercase tracking-[0.22em] text-foreground/55">
+              <Shield className="h-3 w-3" strokeWidth={1.5} />
+              Secure checkout · Cancel any time
+            </p>
+          </form>
+        </div>
+      )}
     </div>
   )
 }

@@ -212,6 +212,11 @@ export function ProcessingScreen({ audience }: { audience: Audience }) {
   const [showClosingLine, setShowClosingLine] = useState(false)
   const [usedMock, setUsedMock] = useState(false)
   const [missingPrompts, setMissingPrompts] = useState(false)
+  // Tracks whether the summary's TTS audio bytes have finished loading
+  // (either from IndexedDB on a re-run or freshly from /api/tts).
+  // Navigation to beat-1 is blocked until this is true so /summary's
+  // listen button never has to show a loading state.
+  const [audioReady, setAudioReady] = useState(false)
   const abortRef = useRef<AbortController | null>(null)
 
   const saveParamsRef = useRef({ serialNumber: state.serialNumber, email: state.email, firstName: state.firstName })
@@ -288,7 +293,9 @@ export function ProcessingScreen({ audience }: { audience: Audience }) {
       state.summaryText.trim().length > 0
 
     if (fullyCached) {
-      void preloadSummaryAudio(state.summaryText)
+      void preloadSummaryAudio(state.summaryText).then((buf) => {
+        if (buf) setAudioReady(true)
+      })
       return
     }
 
@@ -415,7 +422,9 @@ export function ProcessingScreen({ audience }: { audience: Audience }) {
       }).then((text) => {
         if (text) {
           setSummaryText(text)
-          void preloadSummaryAudio(text)
+          void preloadSummaryAudio(text).then((buf) => {
+            if (buf) setAudioReady(true)
+          })
         }
       })
     })()
@@ -436,7 +445,8 @@ export function ProcessingScreen({ audience }: { audience: Audience }) {
     state.beats.beat5.trim().length >= BEAT_READY_MIN_CHARS &&
     !!state.clarityScore &&
     !!state.reportData &&
-    state.summaryText.trim().length > 0
+    state.summaryText.trim().length > 0 &&
+    audioReady
 
   const [timedOut, setTimedOut] = useState(false)
   useEffect(() => {

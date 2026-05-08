@@ -160,12 +160,10 @@ export function JourneySummaryScreen({ audience }: { audience: Audience }) {
   const [unlocked, setUnlocked] = useState(false)
 
   const [isPlaying, setIsPlaying] = useState(false)
-  const [isLoadingAudio, setIsLoadingAudio] = useState(false)
   const [isDownloadingAudio, setIsDownloadingAudio] = useState(false)
   const audioCtxRef = useRef<AudioContext | null>(null)
   const audioSourceRef = useRef<AudioBufferSourceNode | null>(null)
   const audioBytesRef = useRef<ArrayBuffer | null>(null)
-  const autoPlayedRef = useRef(false)
 
   useEffect(() => {
     return () => {
@@ -185,11 +183,47 @@ export function JourneySummaryScreen({ audience }: { audience: Audience }) {
     return buffer
   }
 
-  // Stub play handler — TTS is temporarily disabled; the button just
-  // toggles a "running" state for visual feedback. No network calls,
-  // no audio playback. Replace with handleRealPlayAudio when ready.
+  // Real audio playback. The bytes are guaranteed to be ready by the time
+  // this button is reachable — /processing blocks navigation to beat-1
+  // (and therefore to /summary) until preloadSummaryAudio resolves. We
+  // therefore never show a loading state; clicks either play instantly or
+  // toggle off if already playing.
   const handlePlayAudio = async () => {
-    setIsPlaying((prev) => !prev)
+    if (isPlaying) {
+      audioSourceRef.current?.stop()
+      audioSourceRef.current = null
+      setIsPlaying(false)
+      return
+    }
+    if (!summaryText) return
+    try {
+      const buffer = await fetchAudioBytes()
+      if (!buffer) return
+      if (!audioCtxRef.current || audioCtxRef.current.state === "closed") {
+        audioCtxRef.current = new AudioContext()
+      }
+      const ctx = audioCtxRef.current
+      if (ctx.state === "suspended") await ctx.resume()
+      // decodeAudioData consumes the buffer in some implementations; clone
+      // it so the cached bytes stay reusable for download / replay.
+      const audioBuffer = await ctx.decodeAudioData(buffer.slice(0))
+      const source = ctx.createBufferSource()
+      source.buffer = audioBuffer
+      source.connect(ctx.destination)
+      source.onended = () => {
+        setIsPlaying(false)
+        audioSourceRef.current = null
+      }
+      source.start(0)
+      audioSourceRef.current = source
+      setIsPlaying(true)
+    } catch (error) {
+      console.error(
+        "Audio playback error:",
+        error instanceof Error ? error.message : String(error),
+      )
+      setIsPlaying(false)
+    }
   }
 
   const handleDownloadAudio = async () => {
@@ -304,8 +338,10 @@ export function JourneySummaryScreen({ audience }: { audience: Audience }) {
     return () => clearTimeout(t)
   }, [isComplete, hasFailed])
 
-  // Auto-play disabled while TTS is stubbed — the button toggles a
-  // visual "playing" state only. Re-enable when real audio comes back.
+  // Auto-play intentionally disabled. Browser autoplay policies block
+  // unprompted playback without a user gesture, and the listen button is
+  // a single tap away — keeping playback explicit avoids the silent-fail
+  // edge case.
 
   const displayedText = useMemo(
     () => summaryText.slice(0, visibleChars),
