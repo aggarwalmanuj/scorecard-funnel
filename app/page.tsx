@@ -24,11 +24,11 @@ export default function Home() {
       <MinimalHeader />
       <main>
         <MinimalHero />
-        <SanctuarySection />
-        <DimensionsSection />
+        <CredentialsSection />
         <TakeHomeSection />
         <VoicesSection />
-        <CredentialsSection />
+        <SanctuarySection />
+        <DimensionsSection />
         <NotesSection />
         <ClosingSection />
       </main>
