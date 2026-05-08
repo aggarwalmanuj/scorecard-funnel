@@ -12,7 +12,7 @@ const logos = [
 ] as const
 
 const credentials = [
-  { label: "Patents", value: "Four in human–AI decision systems" },
+  { label: "Patents", value: "Four in human-AI decision systems" },
   { label: "Keynote", value: "United Nations" },
   { label: "Published", value: "Mensa Research Journal" },
   { label: "Documented", value: "$500M+ business impact" },
@@ -24,7 +24,7 @@ export function CredentialsSection() {
       <div className="mx-auto max-w-7xl px-5 sm:px-10 lg:px-16">
         <Reveal as="div" className="grid gap-12 lg:grid-cols-12 lg:gap-16">
           <div className="lg:col-span-4">
-            <p className="eyebrow mb-6 text-foreground/70">VI · Trusted by</p>
+            <p className="eyebrow mb-6 text-foreground/70">II · Trusted by</p>
             <h2 className="font-serif text-[1.75rem] leading-[1.1] text-ink sm:text-4xl sm:leading-[1.08]">
               The work composed
               <span className="block font-serif-italic text-foreground">

@@ -40,7 +40,7 @@ const testimonials = [
  */
 function initialsOf(author: string): string {
   const parts = author.replace(/[.,]/g, "").trim().split(/\s+/)
-  if (parts.length === 0) return "—"
+  if (parts.length === 0) return "-"
   if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase()
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
 }
@@ -107,7 +107,7 @@ export function TestimonialsSection() {
                 &ldquo;{testimonial.quote}&rdquo;
               </blockquote>
 
-              {/* Author block — initials chip stands in for the removed photo. */}
+              {/* Author block - initials chip stands in for the removed photo. */}
               <div className="mt-8 pt-6 border-t-2 border-foreground/5 flex items-center gap-4">
                 <span
                   className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-sm font-black tracking-tight transition-all duration-300 ${

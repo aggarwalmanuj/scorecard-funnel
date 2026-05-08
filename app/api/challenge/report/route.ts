@@ -83,9 +83,9 @@ const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 
 // ───────────────────────── scoring (parallel call #1) ─────────────────────────
 
-const SCORE_SYSTEM_PROMPT = `You are the scoring engine for the Clarity Readiness Index. Read the five raw answers and return FOUR subscores 0–100 (higher = clearer / more aligned / more ready) plus one short reason for each grounded in the user's actual words, plus an nervous-system state.
+const SCORE_SYSTEM_PROMPT = `You are the scoring engine for the Clarity Readiness Index. Read the five raw answers and return FOUR subscores 0-100 (higher = clearer / more aligned / more ready) plus one short reason for each grounded in the user's actual words, plus an nervous-system state.
 
-Audience mean is 48/100. Most real answers land 30–65. Reserve 75+ for answers that demonstrably show high direction, ownership, decision-readiness, or embodied energy. Reserve <25 for clear stuckness.
+Audience mean is 48/100. Most real answers land 30-65. Reserve 75+ for answers that demonstrably show high direction, ownership, decision-readiness, or embodied energy. Reserve <25 for clear stuckness.
 
 Return ONLY this JSON:
 {
@@ -127,19 +127,19 @@ function buildScoreUserPrompt(
   const blank = "(left blank)"
   return `${name} just completed the Clarity Readiness reflection.
 
-Q1 — what's not moving the way it should:
+Q1 - what's not moving the way it should:
 ${r.question1?.trim() || blank}
 
-Q2 — what would be different in 12 months:
+Q2 - what would be different in 12 months:
 ${r.question2?.trim() || blank}
 
-Q3 — what keeps pulling at their attention:
+Q3 - what keeps pulling at their attention:
 ${r.question3?.trim() || blank}
 
-Q4 — what was true the last time something clicked:
+Q4 - what was true the last time something clicked:
 ${r.question4?.trim() || blank}
 
-Q5 — the morning-after scene when the noise is gone:
+Q5 - the morning-after scene when the noise is gone:
 ${r.question5?.trim() || blank}
 
 Return ONLY the JSON object.`
@@ -147,48 +147,48 @@ Return ONLY the JSON object.`
 
 // ───────────────────────── narrative (parallel call #2) ────────────────────────
 
-const REPORT_SYSTEM_PROMPT = `You are a deeply perceptive guide writing a personalized Clarity Readiness Report for a senior leader who just completed a five-beat reflection journey. Your role is to synthesize what surfaced into a printable report — not a summary, but a mirror.
+const REPORT_SYSTEM_PROMPT = `You are a deeply perceptive guide writing a personalized Clarity Readiness Report for a senior leader who just completed a five-beat reflection journey. Your role is to synthesize what surfaced into a printable report - not a summary, but a mirror.
 
-Tone: warm, direct, unhurried. No buzzwords, no motivational language, no therapy-speak. Short, meaningful sentences. You trust silence. You never exaggerate. You write specifically for THIS person — every line must feel grounded in what they actually wrote.
+Tone: warm, direct, unhurried. No buzzwords, no motivational language, no therapy-speak. Short, meaningful sentences. You trust silence. You never exaggerate. You write specifically for THIS person - every line must feel grounded in what they actually wrote.
 
-You will receive both the user's RAW ANSWERS (Q1–Q5) and the AI-generated CLOSING BEATS (beat1–beat5) from earlier in the journey.
+You will receive both the user's RAW ANSWERS (Q1-Q5) and the AI-generated CLOSING BEATS (beat1-beat5) from earlier in the journey.
 
 Return ONLY this JSON shape, no prose, no code fences:
 
 {
-  "headline":   "<one sharp sentence — the thesis of their journey, max 14 words>",
-  "thread":     "<2–3 sentences naming the throughline running through everything they wrote>",
+  "headline":   "<one sharp sentence - the thesis of their journey, max 14 words>",
+  "thread":     "<2-3 sentences naming the throughline running through everything they wrote>",
   "pillars": [
-    { "key": "directionClarity",  "narrative": "<60–90 words on what their direction-clarity reading actually means for them, grounded in their words>", "evidence": "<short direct quote or close paraphrase from their answers, max 120 chars>", "focus": "<one-sentence imperative — the specific lever for this pillar>" },
-    { "key": "identityAlignment", "narrative": "<60–90 words…>", "evidence": "<…>", "focus": "<…>" },
-    { "key": "decisionReadiness", "narrative": "<60–90 words…>", "evidence": "<…>", "focus": "<…>" },
-    { "key": "energyAlignment",   "narrative": "<60–90 words…>", "evidence": "<…>", "focus": "<…>" }
+    { "key": "directionClarity",  "narrative": "<60-90 words on what their direction-clarity reading actually means for them, grounded in their words>", "evidence": "<short direct quote or close paraphrase from their answers, max 120 chars>", "focus": "<one-sentence imperative - the specific lever for this pillar>" },
+    { "key": "identityAlignment", "narrative": "<60-90 words…>", "evidence": "<…>", "focus": "<…>" },
+    { "key": "decisionReadiness", "narrative": "<60-90 words…>", "evidence": "<…>", "focus": "<…>" },
+    { "key": "energyAlignment",   "narrative": "<60-90 words…>", "evidence": "<…>", "focus": "<…>" }
   ],
   "themes": [
-    { "title": "<3–6 word theme name>", "body": "<2–3 sentences on this theme as it appears in their words>" },
-    { "title": "<3–6 word theme name>", "body": "<2–3 sentences>" }
+    { "title": "<3-6 word theme name>", "body": "<2-3 sentences on this theme as it appears in their words>" },
+    { "title": "<3-6 word theme name>", "body": "<2-3 sentences>" }
   ],
   "beats": [
-    { "n": 1, "title": "<3–5 word framing for this beat>", "quote": "<the strongest 1-sentence line from beat1, lightly tightened, max 200 chars>", "reflection": "<1 sentence reflecting back what this beat reveals>" },
+    { "n": 1, "title": "<3-5 word framing for this beat>", "quote": "<the strongest 1-sentence line from beat1, lightly tightened, max 200 chars>", "reflection": "<1 sentence reflecting back what this beat reveals>" },
     { "n": 2, "title": "<…>", "quote": "<…>", "reflection": "<…>" },
     { "n": 3, "title": "<…>", "quote": "<…>", "reflection": "<…>" },
     { "n": 4, "title": "<…>", "quote": "<…>", "reflection": "<…>" },
     { "n": 5, "title": "<…>", "quote": "<…>", "reflection": "<…>" }
   ],
   "takeaways": [
-    { "title": "<≤6 words>", "body": "<1–2 sentences — a concrete move, specific to their situation>", "urgency": "now" | "week" | "month" },
+    { "title": "<≤6 words>", "body": "<1-2 sentences - a concrete move, specific to their situation>", "urgency": "now" | "week" | "month" },
     { "title": "<…>", "body": "<…>", "urgency": "now" | "week" | "month" },
     { "title": "<…>", "body": "<…>", "urgency": "now" | "week" | "month" },
     { "title": "<…>", "body": "<…>", "urgency": "now" | "week" | "month" }
   ],
-  "thirtyDay": "<1–2 sentences — what to look for / re-measure 30 days from now>"
+  "thirtyDay": "<1-2 sentences - what to look for / re-measure 30 days from now>"
 }
 
 Constraints:
 - Every quote/evidence MUST be drawn from the user's actual writing. If a beat is empty, derive it from the matching raw answer.
 - Do NOT use the user's name more than once across the entire report.
 - Each pillar narrative MUST reference at least one specific thing they said.
-- Takeaways must be concrete and tailored — never generic ("be intentional", "trust yourself" are banned).
+- Takeaways must be concrete and tailored - never generic ("be intentional", "trust yourself" are banned).
 - Output ONLY the JSON object. No preamble. No markdown.`
 
 const reportSchema = z.object({
@@ -252,36 +252,36 @@ function buildReportUserPrompt(
 
 ═════ RAW ANSWERS ═════
 
-Q1 — what's not moving the way it should:
+Q1 - what's not moving the way it should:
 ${r.question1?.trim() || blank}
 
-Q2 — what would be different in 12 months:
+Q2 - what would be different in 12 months:
 ${r.question2?.trim() || blank}
 
-Q3 — what keeps pulling at their attention:
+Q3 - what keeps pulling at their attention:
 ${r.question3?.trim() || blank}
 
-Q4 — what was true the last time something clicked:
+Q4 - what was true the last time something clicked:
 ${r.question4?.trim() || blank}
 
-Q5 — the morning-after scene when the noise is gone:
+Q5 - the morning-after scene when the noise is gone:
 ${r.question5?.trim() || blank}
 
 ═════ CLOSING BEATS (AI-generated reflections from earlier) ═════
 
-Beat 1 — The Pattern:
+Beat 1 - The Pattern:
 ${b.beat1?.trim() || blank}
 
-Beat 2 — The Desired Future:
+Beat 2 - The Desired Future:
 ${b.beat2?.trim() || blank}
 
-Beat 3 — The Noise:
+Beat 3 - The Noise:
 ${b.beat3?.trim() || blank}
 
-Beat 4 — The Breakthrough Moment:
+Beat 4 - The Breakthrough Moment:
 ${b.beat4?.trim() || blank}
 
-Beat 5 — The Morning After Clarity:
+Beat 5 - The Morning After Clarity:
 ${b.beat5?.trim() || blank}
 
 Return ONLY the JSON object.`
@@ -394,7 +394,7 @@ export async function POST(request: Request) {
 
   // If the caller already has a score (from the clarity-score page), reuse
   // it and skip the second LLM scoring call entirely. Otherwise run scoring
-  // and narrative in parallel — total latency = max(score, report).
+  // and narrative in parallel - total latency = max(score, report).
   const reportPromise = callOpenRouter({
     apiKey,
     model,
@@ -459,7 +459,7 @@ export async function POST(request: Request) {
     clarity = scoreClarity(responses)
   }
 
-  // ── parse narrative (this one is required — if missing, return 502) ──
+  // ── parse narrative (this one is required - if missing, return 502) ──
   if (!reportRaw) {
     return new Response(
       JSON.stringify({ error: "Report generation failed" }),

@@ -6,7 +6,7 @@ import { VideoTestimonialsWall } from "@/components/video-testimonials-wall"
 const voices = [
   {
     quote:
-      "Life-changing. I didn't know something like this existed — a precise reading instead of another assessment.",
+      "Life-changing. I didn't know something like this existed - a precise reading instead of another assessment.",
     author: "Senior Executive",
     place: "Marbella",
   },
@@ -36,7 +36,7 @@ const voices = [
   },
   {
     quote:
-      "Six-times income in six months. Not because the strategy changed — because something in the way finally was not.",
+      "Six-times income in six months. Not because the strategy changed - because something in the way finally was not.",
     author: "Founder",
     place: "Anonymous",
   },
@@ -51,7 +51,7 @@ export function VoicesSection() {
           className="grid items-end gap-10 lg:grid-cols-12 lg:gap-16"
         >
           <div className="lg:col-span-7">
-            <p className="eyebrow mb-6 text-foreground/70">V · Voices</p>
+            <p className="eyebrow mb-6 text-foreground/70">IV · Voices</p>
             <h2 className="font-serif text-[2rem] leading-[1.08] text-ink sm:text-5xl lg:text-6xl">
               Words from those who
               <span className="block font-serif-italic text-foreground">
@@ -72,7 +72,7 @@ export function VoicesSection() {
         </Reveal>
       </div>
 
-      {/* Video testimonial wall — full-bleed, breaks out of the max-w-7xl
+      {/* Video testimonial wall - full-bleed, breaks out of the max-w-7xl
           gutter so cards extend to the viewport edges Netflix-style. The
           component handles its own internal max-w wrapping for the arrow
           controls and the swipe hint. */}
@@ -81,7 +81,7 @@ export function VoicesSection() {
       </Reveal>
 
       <div className="mx-auto max-w-7xl px-5 sm:px-10 lg:px-16">
-        {/* Written voices below the wall — three-column journal grid. */}
+        {/* Written voices below the wall - three-column journal grid. */}
         <Reveal as="p" delay={250} className="eyebrow mb-7 text-foreground/65">
           <span className="mr-3 inline-block h-px w-6 align-middle bg-foreground/40" />
           And in letters

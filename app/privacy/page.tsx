@@ -8,7 +8,7 @@ export const metadata: Metadata = {
 }
 
 /**
- * Editorial privacy doc — Marine palette is locked via the wrapper so the
+ * Editorial privacy doc - Marine palette is locked via the wrapper so the
  * page reads as part of the same family as the challenge funnel.
  */
 export default function PrivacyPolicyPage() {
@@ -93,20 +93,20 @@ export default function PrivacyPolicyPage() {
             <p>We use the information we collect for the following purposes:</p>
             <ul className="mt-3 list-disc space-y-2 pl-6 marker:text-foreground/40">
               <li>
-                <span className="text-ink">To deliver the experience —</span>{" "}
+                <span className="text-ink">To deliver the experience -</span>{" "}
                 your responses are processed by AI to generate personalised
                 reflections. This is the core purpose of our service.
               </li>
               <li>
-                <span className="text-ink">To improve our services —</span>{" "}
+                <span className="text-ink">To improve our services -</span>{" "}
                 we analyse usage patterns to improve quality and relevance.
               </li>
               <li>
-                <span className="text-ink">To communicate with you —</span>{" "}
+                <span className="text-ink">To communicate with you -</span>{" "}
                 if you have opted in, we may send you relevant follow-ups.
               </li>
               <li>
-                <span className="text-ink">To maintain security —</span>{" "}
+                <span className="text-ink">To maintain security -</span>{" "}
                 we use technical information to protect against unauthorised
                 access.
               </li>
@@ -170,17 +170,17 @@ export default function PrivacyPolicyPage() {
             </p>
             <ul className="mt-3 list-disc space-y-2 pl-6 marker:text-foreground/40">
               <li>
-                <span className="text-ink">Service providers —</span> we use
+                <span className="text-ink">Service providers -</span> we use
                 Azure, OpenRouter, and Vercel to operate our platform. These
                 providers are bound by their own privacy policies.
               </li>
               <li>
-                <span className="text-ink">Legal requirements —</span> we may
+                <span className="text-ink">Legal requirements -</span> we may
                 disclose information if required by law, regulation, or
                 legal process.
               </li>
               <li>
-                <span className="text-ink">Business transfers —</span> in the
+                <span className="text-ink">Business transfers -</span> in the
                 event of a merger, acquisition, or sale of assets, your
                 information may be transferred as part of that transaction.
               </li>
@@ -209,23 +209,23 @@ export default function PrivacyPolicyPage() {
             </p>
             <ul className="mt-3 list-disc space-y-2 pl-6 marker:text-foreground/40">
               <li>
-                <span className="text-ink">Access —</span> request a copy of
+                <span className="text-ink">Access -</span> request a copy of
                 the personal data we hold about you
               </li>
               <li>
-                <span className="text-ink">Rectification —</span> request
+                <span className="text-ink">Rectification -</span> request
                 correction of inaccurate personal data
               </li>
               <li>
-                <span className="text-ink">Deletion —</span> request deletion
+                <span className="text-ink">Deletion -</span> request deletion
                 of your personal data
               </li>
               <li>
-                <span className="text-ink">Portability —</span> request your
+                <span className="text-ink">Portability -</span> request your
                 data in a structured, machine-readable format
               </li>
               <li>
-                <span className="text-ink">Objection —</span> object to
+                <span className="text-ink">Objection -</span> object to
                 certain types of processing
               </li>
             </ul>
@@ -293,7 +293,7 @@ export default function PrivacyPolicyPage() {
               exercise your data rights, please contact us at:
             </p>
             <p className="mt-3 font-serif text-ink">
-              AIMerge — a TetraNoodle Technologies product
+              AIMerge - a TetraNoodle Technologies product
               <br />
               <span className="font-serif-italic text-foreground/85">
                 sales@tetranoodle.com

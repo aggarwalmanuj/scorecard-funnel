@@ -10,7 +10,7 @@ export function ClosingSection() {
       className="relative overflow-hidden"
       aria-labelledby="closing-heading"
     >
-      {/* Atmospheric image — kept from existing assets, palette-aware overlay. */}
+      {/* Atmospheric image - kept from existing assets, palette-aware overlay. */}
       <div className="absolute inset-0 -z-10">
         <Image
           src="/images/landscape-golden.jpg"
@@ -56,7 +56,7 @@ export function ClosingSection() {
               className="mt-6 max-w-xl text-[15.5px] leading-[1.75] text-foreground/85 sm:mt-8 sm:text-[1.05rem] sm:leading-[1.8]"
             >
               Sit, for ten minutes, with five honest questions. Let the reading
-              compose what you have already been carrying for years —
+              compose what you have already been carrying for years -
               somewhere quiet to land.
             </Reveal>
           </div>

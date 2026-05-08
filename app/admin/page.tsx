@@ -182,7 +182,7 @@ export default function AdminPage() {
       }
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e)
-      setLoadError(`Failed to load prompts: ${msg}. Fields are empty — configure prompts manually.`)
+      setLoadError(`Failed to load prompts: ${msg}. Fields are empty - configure prompts manually.`)
     } finally {
       setLoading(false)
     }
@@ -366,7 +366,7 @@ export default function AdminPage() {
   }
 
   /**
-   * Save BOTH audiences in a single round-trip — keeps the API simple and the
+   * Save BOTH audiences in a single round-trip - keeps the API simple and the
    * editor consistent. Each key is suffixed with the audience.
    */
   const handleSave = async () => {
@@ -395,7 +395,7 @@ export default function AdminPage() {
         body: JSON.stringify({ data: payload }),
       })
       if (res.status === 401) {
-        alert("Unauthorized — check your admin password.")
+        alert("Unauthorized - check your admin password.")
         setSaveLabel("Save Changes")
         return
       }
@@ -446,7 +446,7 @@ export default function AdminPage() {
   }
 
   /**
-   * Imports JSON config into the CURRENT audience tab only — never overwrites
+   * Imports JSON config into the CURRENT audience tab only - never overwrites
    * the other audience. This is intentional: admins seed each audience
    * separately so accidental cross-pollination is impossible.
    */
@@ -461,11 +461,11 @@ export default function AdminPage() {
       try {
         parsed = JSON.parse(text)
       } catch {
-        alert("Invalid JSON file — could not parse.")
+        alert("Invalid JSON file - could not parse.")
         return
       }
       if (!parsed || typeof parsed !== "object") {
-        alert("Invalid config file — expected a JSON object.")
+        alert("Invalid config file - expected a JSON object.")
         return
       }
       const obj = parsed as Record<string, unknown>
@@ -589,7 +589,7 @@ export default function AdminPage() {
   }
 
   const formatDate = (iso: string) => {
-    if (!iso) return "—"
+    if (!iso) return "-"
     try {
       return new Date(iso).toLocaleString(undefined, {
         year: "numeric", month: "short", day: "numeric",
@@ -598,7 +598,7 @@ export default function AdminPage() {
     } catch { return iso }
   }
 
-  // Editorial tab styling — every active state collapses to ink/background
+  // Editorial tab styling - every active state collapses to ink/background
   // so the admin chrome reads as one calm family, not four neon tags.
   const tabConfig = [
     { value: "system" as const, label: "System prompt", activeClass: "bg-ink text-background" },
@@ -669,7 +669,7 @@ export default function AdminPage() {
   // ── Main Admin Panel ──
   // Both audience pills use the same ink-on-background treatment; the
   // text label tells the reader which is active. Audience-specific colour
-  // coding got loud — calm wins on an internal tool.
+  // coding got loud - calm wins on an internal tool.
   const audienceClass = "bg-ink text-background"
 
   return (
@@ -745,7 +745,7 @@ export default function AdminPage() {
           <p className="max-w-2xl text-[15px] leading-[1.8] text-foreground/85">
             Toggle between the{" "}
             <span className="font-serif text-ink">Individual</span> and{" "}
-            <span className="font-serif text-ink">Team</span> audiences — each has its
+            <span className="font-serif text-ink">Team</span> audiences - each has its
             own content.{" "}
             <span className="font-serif text-ink">Save changes</span> writes both audiences in
             a single round-trip.
@@ -776,7 +776,7 @@ export default function AdminPage() {
 
         <div className="hairline mb-7" />
 
-        {/* Audience toggle — only for content tabs */}
+        {/* Audience toggle - only for content tabs */}
         {tab !== "responses" && (
           <div className="mb-7 flex flex-wrap items-center gap-3">
             <span className="eyebrow text-foreground/65">Audience</span>
@@ -819,7 +819,7 @@ export default function AdminPage() {
           </div>
         ) : (
           <div className="animate-fade-in-up delay-100">
-            {/* Tab Navigation — calm pill switcher */}
+            {/* Tab Navigation - calm pill switcher */}
             <div className="mb-7 inline-flex flex-wrap gap-0.5 rounded-full border border-border bg-card p-1">
               {tabConfig.map((t) => (
                 <button
@@ -844,7 +844,7 @@ export default function AdminPage() {
                   Editing the <strong className="text-foreground capitalize">{audience}</strong> system prompt. Sent
                   as the system message to the AI for every beat. Use placeholders:{" "}
                   <code className="px-1.5 py-0.5 rounded bg-card border border-border font-mono text-xs">{"{{NAME}}"}</code>,{" "}
-                  <code className="px-1.5 py-0.5 rounded bg-card border border-border font-mono text-xs">{"{{Q1}}"}</code>–<code className="px-1.5 py-0.5 rounded bg-card border border-border font-mono text-xs">{"{{Q5}}"}</code>{" "}
+                  <code className="px-1.5 py-0.5 rounded bg-card border border-border font-mono text-xs">{"{{Q1}}"}</code>-<code className="px-1.5 py-0.5 rounded bg-card border border-border font-mono text-xs">{"{{Q5}}"}</code>{" "}
                   which are replaced with user data at runtime.
                 </div>
 
@@ -852,7 +852,7 @@ export default function AdminPage() {
                   <div className="p-6">
                     <div className="flex justify-between items-center mb-2">
                       <label className="eyebrow text-foreground/65">
-                        System Prompt — {audience}
+                        System Prompt - {audience}
                       </label>
                       <span className="text-xs text-muted-foreground">
                         {current.systemPrompt.length} chars
@@ -903,7 +903,7 @@ export default function AdminPage() {
                           {i + 1}
                         </span>
                         <div className="flex-1 min-w-0">
-                          <p className="eyebrow text-foreground/70">{q.stageFraming || "—"}</p>
+                          <p className="eyebrow text-foreground/70">{q.stageFraming || "-"}</p>
                           <p className="text-sm text-foreground truncate mt-0.5">{q.question.slice(0, 80) || "(empty)"}</p>
                         </div>
                         <span className="text-xs text-muted-foreground shrink-0 mr-2">{wordCount(q.question + q.prompt)} words</span>
@@ -1183,7 +1183,7 @@ export default function AdminPage() {
                       {displayed.map((r) => {
                         const open = !!expandedResponses[r.id]
                         // Calmed Marine palette: foreground = body, ink = heading.
-                        // Tonal differentiation alone signals the audience —
+                        // Tonal differentiation alone signals the audience -
                         // no separate accent colour required.
                         const audienceBadge =
                           r.audience === "individual"
@@ -1212,11 +1212,11 @@ export default function AdminPage() {
                                   #{r.id}
                                 </Badge>
                                 <Badge variant="outline" className={`rounded-full text-[10px] uppercase tracking-[0.2em] shrink-0 ${audienceBadge}`}>
-                                  {r.audience || "—"}
+                                  {r.audience || "-"}
                                 </Badge>
                                 <div className="flex-1 min-w-0">
-                                  <p className="eyebrow text-foreground/70">{r.firstName || "—"}</p>
-                                  <p className="text-sm text-foreground truncate mt-0.5">{r.email || "—"}</p>
+                                  <p className="eyebrow text-foreground/70">{r.firstName || "-"}</p>
+                                  <p className="text-sm text-foreground truncate mt-0.5">{r.email || "-"}</p>
                                 </div>
                                 <Badge variant="secondary" className={`rounded-lg text-[10px] font-bold shrink-0 mr-1 ${r.question5 ? "bg-green-500/10 text-green-600 border-green-500/20" : "bg-amber-500/10 text-amber-600 border-amber-500/20"}`}>
                                   {r.question5 ? "Complete" : "Incomplete"}
@@ -1273,7 +1273,7 @@ export default function AdminPage() {
                                       <div key={`fb${n}`}>
                                         <label className="block eyebrow text-foreground/65 mb-1">Beat {n}</label>
                                         <span className="text-sm px-2 py-0.5 bg-secondary rounded-lg inline-block">
-                                          {val || "—"}
+                                          {val || "-"}
                                         </span>
                                       </div>
                                     )
@@ -1303,7 +1303,7 @@ export default function AdminPage() {
                                       >
                                         <label className="eyebrow text-foreground/65 cursor-pointer">Beat {n} Output</label>
                                         <span className="text-xs text-ink group-hover:underline">
-                                          {outOpen ? "Collapse" : `${val.length} chars — Click to expand`}
+                                          {outOpen ? "Collapse" : `${val.length} chars - Click to expand`}
                                         </span>
                                       </button>
                                       {outOpen && (

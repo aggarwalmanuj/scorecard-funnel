@@ -25,7 +25,7 @@ const NAV_LINKS: Array<{ href: string; label: string }> = [
 ]
 
 /**
- * Editorial menu trigger — small circular outline button consistent with
+ * Editorial menu trigger - small circular outline button consistent with
  * the rest of the Marine-locked challenge UI. The Sheet panel itself
  * renders via Radix portal at <body>, which sits OUTSIDE the page-level
  * `data-palette="marine"` wrapper, so we re-scope the palette inside the

@@ -64,7 +64,7 @@ export function DualPathSection() {
           </h2>
           <p className="mt-5 text-lg text-muted-foreground leading-relaxed">
             Whether you’re looking to unlock your personal performance or optimize your
-            leadership team — Your Unfair Advantage Score identifies the root cause at any
+            leadership team - Your Unfair Advantage Score identifies the root cause at any
             level.
           </p>
         </div>
@@ -134,7 +134,7 @@ export function DualPathSection() {
             </p>
             <p className="mt-1 text-sm text-muted-foreground leading-relaxed">
               Your data belongs to you. Always. Nothing is shared, sold or templated. Your
-              score and report are built specifically around your inputs — not a generic
+              score and report are built specifically around your inputs - not a generic
               algorithm.
             </p>
           </div>

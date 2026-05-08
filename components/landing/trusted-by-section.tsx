@@ -58,7 +58,7 @@ export function TrustedBySection() {
           </p>
         </div>
 
-        {/* Logo strip — actual brand marks. Greyscale by default with a subtle
+        {/* Logo strip - actual brand marks. Greyscale by default with a subtle
             hover lift to keep the row understated and editorial. */}
         <ul
           className={`mt-12 sm:mt-14 flex flex-wrap items-center justify-center gap-x-10 gap-y-6 sm:gap-x-14 ${

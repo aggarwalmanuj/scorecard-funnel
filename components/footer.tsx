@@ -43,11 +43,11 @@ export function Footer() {
                 />
               </Link>
               <p className="mt-4 text-sm text-muted-foreground leading-relaxed font-medium">
-                Your Unfair Advantage Score. A 10-minute diagnostic across 7 dimensions —
+                Your Unfair Advantage Score. A 10-minute diagnostic across 7 dimensions -
                 identifying the hidden pattern quietly limiting your performance.
               </p>
               <p className="mt-3 text-[12px] text-muted-foreground/80 font-medium">
-                Reviewed and published — Mensa Research Journal · Individual · Team · Organization
+                Reviewed and published - Mensa Research Journal · Individual · Team · Organization
               </p>
             </div>
 

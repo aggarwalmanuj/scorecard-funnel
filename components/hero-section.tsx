@@ -36,7 +36,7 @@ export function HeroSection() {
 
       {/* Hero Content */}
       <div className="flex-1 flex items-center justify-center relative">
-        {/* Background — geometric wireframe shapes */}
+        {/* Background - geometric wireframe shapes */}
         <div className="absolute inset-0 overflow-hidden" aria-hidden>
           <div className="absolute top-20 right-[10%] w-64 h-64 border-2 border-primary/10 rounded-full" />
           <div className="absolute bottom-32 left-[5%] w-40 h-40 border-2 border-primary/8 rotate-45" />
@@ -46,14 +46,14 @@ export function HeroSection() {
 
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-12 sm:py-16 md:py-20 lg:py-24 relative z-10 w-full">
           <div className="grid lg:grid-cols-2 gap-12 lg:gap-20 items-center">
-            {/* Left — Copy */}
+            {/* Left - Copy */}
             <div className={`${isVisible ? "animate-fade-in-left" : "opacity-0"}`}>
               <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full neu-border-primary bg-secondary text-primary text-sm font-extrabold mb-8">
                 <Sparkles className="h-3.5 w-3.5 fill-current" />
                 Mensa Research Journal · Peer-reviewed
               </div>
 
-              {/* Headline — sized so "Your Unfair" stays one line at every breakpoint.
+              {/* Headline - sized so "Your Unfair" stays one line at every breakpoint.
                   whitespace-nowrap pins it; font-size capped below the wrap point. */}
               <h1 className="font-black tracking-tighter text-foreground leading-[0.95] text-[44px] sm:text-[56px] md:text-[64px] lg:text-[60px] xl:text-[72px]">
                 <span className="block whitespace-nowrap">Your Unfair</span>
@@ -78,11 +78,11 @@ export function HeroSection() {
               </h1>
 
               <p className="mt-8 text-lg sm:text-xl text-muted-foreground max-w-lg leading-relaxed">
-                Discover what&apos;s quietly limiting your performance — and unlock what&apos;s
+                Discover what&apos;s quietly limiting your performance - and unlock what&apos;s
                 been working against you.
               </p>
 
-              {/* CTA — routes to the audience page where name + email are captured. */}
+              {/* CTA - routes to the audience page where name + email are captured. */}
               <div className="mt-10 flex flex-wrap items-center gap-4">
                 <Button
                   asChild
@@ -100,7 +100,7 @@ export function HeroSection() {
                 </span>
               </div>
 
-              {/* Social proof — counter without portrait stack (we don't have
+              {/* Social proof - counter without portrait stack (we don't have
                   real photos to use; numerals carry weight on their own). */}
               <div className="mt-10 inline-flex items-center gap-4 px-5 py-3 rounded-2xl border-2 border-foreground/10 bg-card transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md">
                 <span className="flex -space-x-1.5" aria-hidden>
@@ -118,7 +118,7 @@ export function HeroSection() {
               </div>
             </div>
 
-            {/* Right — Image */}
+            {/* Right - Image */}
             <div
               className={`relative ${isVisible ? "animate-fade-in-right delay-200" : "opacity-0"}`}
             >

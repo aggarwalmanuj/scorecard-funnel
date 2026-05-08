@@ -9,7 +9,7 @@ import {
 } from "react"
 
 /**
- * Reveal — fades + lifts its children when they enter the viewport. Pairs
+ * Reveal - fades + lifts its children when they enter the viewport. Pairs
  * with the `.reveal` / `.is-revealed` CSS in globals.css. The class-based
  * approach (rather than inline transforms) means staggered children can
  * use a single CSS rule and the browser keeps the transition on a single
@@ -60,7 +60,7 @@ export function Reveal({
 }
 
 /**
- * WordReveal — splits text into individual word-spans and animates each
+ * WordReveal - splits text into individual word-spans and animates each
  * with the `.word-rise` keyframe. Used on hero/closing headlines so the
  * type feels like it composes itself rather than appearing.
  *
@@ -128,7 +128,7 @@ export function WordReveal({
 }
 
 /**
- * LetterReveal — splits a short string into letter-spans for the eyebrow
+ * LetterReveal - splits a short string into letter-spans for the eyebrow
  * chapter marks. Spaces are preserved as non-breaking so the layout
  * doesn't shift mid-stagger.
  */
@@ -162,7 +162,7 @@ export function LetterReveal({
 }
 
 /**
- * MagneticButton — wraps its children with a small pointer-following
+ * MagneticButton - wraps its children with a small pointer-following
  * translate, capped at ±10px. Stops on touch devices (no hover) so we
  * don't steal taps. Resets smoothly on leave.
  */
@@ -212,7 +212,7 @@ export function MagneticButton({
 }
 
 /**
- * CursorHalo — sets --cx/--cy on its element from pointer position so
+ * CursorHalo - sets --cx/--cy on its element from pointer position so
  * the `.cursor-halo` ::after gradient follows the mouse. Pairs with
  * the existing signal-halo on the hero image.
  */
@@ -250,7 +250,7 @@ export function CursorHalo({
 }
 
 /**
- * ParallaxImage — lightweight scroll parallax. Translates the wrapped
+ * ParallaxImage - lightweight scroll parallax. Translates the wrapped
  * image up to ±20px based on its scroll position relative to the viewport
  * center. Disabled when prefers-reduced-motion is set.
  */

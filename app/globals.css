@@ -930,7 +930,33 @@ a:hover > .brand-mark {
   }
 }
 
-/* Mobile sheet — backdrop fades, panel slides down from above (sheets
+/* GDPR cookie consent banner. Slides up from below on first visit;
+   slides back down on dismiss. Animation is short enough that returning
+   visitors who want it gone don't have to wait, but long enough that
+   the entrance feels considered. Reduced-motion swaps to a fade. */
+@keyframes cookie-rise {
+  from { opacity: 0; transform: translateY(120%); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes cookie-set {
+  from { opacity: 1; transform: translateY(0); }
+  to   { opacity: 0; transform: translateY(120%); }
+}
+.cookie-consent {
+  animation: cookie-rise 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+  will-change: transform, opacity;
+}
+.cookie-consent.is-exit {
+  animation: cookie-set 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .cookie-consent,
+  .cookie-consent.is-exit {
+    animation: none;
+  }
+}
+
+/* Mobile sheet - backdrop fades, panel slides down from above (sheets
    that descend from the top read as nav, not modals). Each link inside
    the panel cascades in with a stagger via animationDelay set inline. */
 @keyframes sheet-backdrop-fade {

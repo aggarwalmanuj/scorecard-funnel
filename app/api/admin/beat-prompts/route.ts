@@ -7,6 +7,12 @@ export async function OPTIONS(request: Request) {
   return new NextResponse(null, { status: 204, headers: corsHeaders(request) })
 }
 
+// Admin-edited content; force dynamic so admin saves are picked up on the
+// next user request. Server-side prompt cache (challenge-prompts.ts) still
+// absorbs the read load and is invalidated on the admin POST.
+export const dynamic = "force-dynamic"
+export const revalidate = 0
+
 /**
  * GET /api/admin/beat-prompts?audience=individual|team
  * Returns beat display data (label, title, subtitle, feedbackQuestion) for the
@@ -15,7 +21,7 @@ export async function OPTIONS(request: Request) {
 export async function GET(request: Request) {
   const headers: Record<string, string> = {
     ...(corsHeaders(request) as Record<string, string>),
-    "Cache-Control": "public, max-age=60, s-maxage=300, stale-while-revalidate=600",
+    "Cache-Control": "private, no-store, must-revalidate",
   }
 
   const url = new URL(request.url)

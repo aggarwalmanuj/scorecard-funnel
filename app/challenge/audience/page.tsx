@@ -3,12 +3,13 @@
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { ArrowLeft, ArrowRight, User, Users, Shield, Check } from "lucide-react"
+import { ArrowLeft, ArrowRight, User, Users, Check } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { useChallenge, type Audience } from "@/context/challenge-context"
 import { submitSignup } from "@/lib/submit-to-google-sheet"
 import { ChallengeMenuButton } from "@/components/challenge/challenge-funnel-header-actions"
 import { ChallengeNavHome } from "@/components/challenge/challenge-nav-home"
+import { PrivacyNotice } from "@/components/privacy-notice"
 
 const cards: Array<{
   id: Audience
@@ -111,7 +112,7 @@ export default function AudienceSelectionPage() {
 
   return (
     <div className="flex min-h-screen flex-col">
-      {/* Editorial sticky nav — hairline border, no logo (per request). */}
+      {/* Editorial sticky nav - hairline border, no logo (per request). */}
       <header className="sticky top-0 z-40 border-b border-border bg-background/85 backdrop-blur-xl">
         <div className="mx-auto flex h-16 max-w-5xl items-center justify-between gap-4 px-5 sm:px-8">
           <ChallengeMenuButton />
@@ -146,7 +147,7 @@ export default function AudienceSelectionPage() {
             </p>
           </div>
 
-          {/* Form — name + email, calm two-column, editorial inputs */}
+          {/* Form - name + email, calm two-column, editorial inputs */}
           <form
             onSubmit={(e) => {
               e.preventDefault()
@@ -199,7 +200,7 @@ export default function AudienceSelectionPage() {
             </label>
           </form>
 
-          {/* Pick path — eyebrow + two editorial cards */}
+          {/* Pick path - eyebrow + two editorial cards */}
           <div className="mx-auto max-w-3xl">
             <p className="eyebrow mb-5 text-center text-foreground/70">
               II · Pick your path
@@ -316,10 +317,8 @@ export default function AudienceSelectionPage() {
             </button>
           </div>
 
-          <p className="mt-8 flex items-center justify-center gap-2 text-[12px] uppercase tracking-[0.22em] text-foreground/55">
-            <Shield className="h-3 w-3" strokeWidth={1.5} />
-            Private and secure · Never shared
-          </p>
+          <PrivacyNotice className="mx-auto mt-8 max-w-2xl justify-center text-center" />
+
         </div>
       </main>
     </div>
