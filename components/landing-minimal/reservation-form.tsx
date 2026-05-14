@@ -45,25 +45,18 @@ export function ReservationForm({
         {title}
       </p>
 
-      <ul
-        className="mt-5 grid gap-2 text-[13.5px] leading-snug sm:text-[14px]"
-        style={{ color: "color-mix(in srgb, var(--foreground) 80%, transparent)" }}
+      <p
+        className="mt-4 text-[13.5px] leading-[1.7] sm:text-[14px]"
+        style={{ color: "color-mix(in srgb, var(--foreground) 82%, transparent)" }}
       >
-        {[
-          "Ten quiet minutes",
-          "A precise read across seven dimensions",
-          "Delivered the same day",
-        ].map((line) => (
-          <li key={line} className="flex items-baseline gap-2.5">
-            <span
-              aria-hidden
-              className="mt-2 inline-block h-px w-3 shrink-0"
-              style={{ backgroundColor: "color-mix(in srgb, var(--foreground) 45%, transparent)" }}
-            />
-            <span>{line}</span>
-          </li>
-        ))}
-      </ul>
+        Take the assessment and receive your Unfair Advantage Score, a
+        personalized audio summary, and key insights{" "}
+        <span style={{ color: "var(--ink)" }}>
+          — all free, no credit card required.
+        </span>{" "}
+        A detailed diagnostic report is available to unlock after your
+        assessment.
+      </p>
 
       <div className="mt-7">
         <MagneticButton>

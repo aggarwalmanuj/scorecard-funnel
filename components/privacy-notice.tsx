@@ -1,7 +1,7 @@
 import { Shield } from "lucide-react"
 
 const PRIVACY_TEXT =
-  "Your responses are confidential and will never be shared with third parties. They may be reviewed by the AI Merge team to personalize your experience and ensure the right support reaches you."
+  "Your responses are reviewed by the TetraNoodle team for diagnostic purposes and to improve the AI Merge system. Your data is kept strictly private and never shared with third parties."
 
 /**
  * GDPR-aware privacy disclosure shown anywhere we collect or process user

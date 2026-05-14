@@ -255,7 +255,14 @@ export function ClarityReport() {
       {/* Top toolbar - hidden in print. Wordmark is omitted until the new
           logo arrives; the eyebrow on each page carries the section title. */}
       <div className="toolbar">
-        <Link href="/challenge/offer" className="back">
+        <Link
+          href={
+            state.audience === "individual" || state.audience === "team"
+              ? `/challenge/${state.audience}/offer`
+              : "/challenge/audience"
+          }
+          className="back"
+        >
           <ArrowLeft size={14} />
           Back to offer
         </Link>

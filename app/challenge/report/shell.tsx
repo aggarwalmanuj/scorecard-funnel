@@ -1,6 +1,9 @@
 "use client"
 
 import dynamic from "next/dynamic"
+import { Suspense } from "react"
+import { useSearchParams } from "next/navigation"
+import { ReportPaywall } from "@/components/challenge/report-paywall"
 
 // jspdf's "node" entrypoint pulls fflate's Worker dynamic-import path, which
 // Turbopack cannot resolve during the SSR pass. Loading ClarityReport with
@@ -14,17 +17,22 @@ const ClarityReport = dynamic(
   { ssr: false }
 )
 
-/**
- * The report renders inside `data-palette="marine"` so its scoped tokens
- * line up with the rest of the challenge funnel. The report's internal
- * CSS already supplies its own --ink/--brand variables (mapped to the
- * Marine teal family), but wrapping here keeps the chrome (focus rings,
- * ::selection) consistent if the report ever pulls in editorial utilities.
- */
+// The report is now a paid deliverable (included with every tier starting
+// at $47). Frontend gate only — backend should re-verify the session on
+// any sensitive operation. The unlock signal is ?paid=1 in the URL, which
+// matches the existing Stripe success redirect format.
+function ReportRouter() {
+  const searchParams = useSearchParams()
+  const isPaid = searchParams.get("paid") === "1"
+  return isPaid ? <ClarityReport /> : <ReportPaywall />
+}
+
 export function ClarityReportShell() {
   return (
     <div data-palette="marine" className="bg-background text-foreground font-sans">
-      <ClarityReport />
+      <Suspense fallback={null}>
+        <ReportRouter />
+      </Suspense>
     </div>
   )
 }
