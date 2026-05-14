@@ -9,20 +9,70 @@ import {
   preloadSummaryAudio,
 } from "@/lib/client/summary-audio-cache"
 
-// Thank-you page for the $47 Diagnostic Report (Stripe). The higher
-// tiers ($497 / $997) book directly through Calendly, so they never
-// land here.
+// Thank-you page — confirms successful transactions from both
+// Stripe ($47 Diagnostic) and Calendly ($497 Session / $997
+// Transformation). The view adapts to the source via the URL:
 //
-// Deliverables on this screen:
-//   • Diagnostic report PDF  — auto-downloads via /challenge/report?paid=1&autosave=1
-//   • Personalized audio summary (MP3) — downloads client-side from
-//     the IndexedDB cache populated during the funnel; falls back to
-//     a fresh /api/tts request if cache missed (rare).
+//   ?paid=1                  → Stripe success ($47)
+//   ?booked=1&tier=session   → Calendly success ($497)
+//   ?booked=1&tier=transformation → Calendly success ($997)
+//
+// All three include the diagnostic report + audio summary, so
+// the downloads section is shared across all tiers.
+
+type SuccessTier = "diagnostic" | "session" | "transformation"
+
+interface TierCopy {
+  eyebrow: string
+  headlinePrefix: string
+  headlineItalic: string
+  body: (email: string) => string
+}
+
+const TIER_COPY: Record<SuccessTier, TierCopy> = {
+  diagnostic: {
+    eyebrow: "Payment received · $47 · one-time",
+    headlinePrefix: "your downloads are",
+    headlineItalic: "ready.",
+    body: (email) =>
+      `A receipt is on its way to ${email}. Both files below are yours to keep.`,
+  },
+  session: {
+    eyebrow: "Session booked · $497",
+    headlinePrefix: "your session is",
+    headlineItalic: "locked in.",
+    body: (email) =>
+      `We've sent the calendar invite to ${email}. Your diagnostic report is included — download it below before we meet.`,
+  },
+  transformation: {
+    eyebrow: "Transformation booked · $997",
+    headlinePrefix: "the work",
+    headlineItalic: "begins.",
+    body: (email) =>
+      `We've sent the calendar invite to ${email}. Your diagnostic report and audio summary are below; your personalized audio protocol arrives after the session.`,
+  },
+}
+
+function resolveTier(): SuccessTier {
+  if (typeof window === "undefined") return "diagnostic"
+  const params = new URLSearchParams(window.location.search)
+  const t = params.get("tier")
+  if (t === "session" || t === "transformation") return t
+  return "diagnostic"
+}
 
 export default function ThankYouPage() {
   const { state, markComplete } = useChallenge()
   const [isDownloadingAudio, setIsDownloadingAudio] = useState(false)
   const [audioError, setAudioError] = useState<string | null>(null)
+  const [tier, setTier] = useState<SuccessTier>("diagnostic")
+
+  // Resolved on mount so SSR hydration doesn't mismatch.
+  useEffect(() => {
+    setTier(resolveTier())
+  }, [])
+
+  const copy = TIER_COPY[tier]
 
   useEffect(() => {
     markComplete()
@@ -85,16 +135,16 @@ export default function ThankYouPage() {
               style={{ background: "var(--signal)" }}
               aria-hidden
             />
-            Payment received · $47 · one-time
+            {copy.eyebrow}
           </p>
 
           <h1
             className="stagger-enter mb-6 font-serif text-[1.9rem] leading-[1.1] text-ink sm:text-[2.3rem] sm:leading-[1.06] md:text-[2.7rem]"
             style={{ animationDelay: "300ms" }}
           >
-            {state.firstName ? `${state.firstName}, your` : "Your"} downloads are
+            {state.firstName ? `${state.firstName}, ${copy.headlinePrefix}` : `Your ${copy.headlinePrefix}`}
             <span className="block font-serif-italic text-foreground">
-              ready.
+              {copy.headlineItalic}
             </span>
           </h1>
 
@@ -102,9 +152,7 @@ export default function ThankYouPage() {
             className="stagger-enter mb-12 max-w-xl text-[16px] leading-[1.8] text-foreground/85"
             style={{ animationDelay: "400ms" }}
           >
-            A receipt is on its way to{" "}
-            <span className="text-ink">{state.email || "your inbox"}</span>.
-            Both files below are yours to keep.
+            {copy.body(state.email || "your inbox")}
           </p>
 
           {/* Downloads */}

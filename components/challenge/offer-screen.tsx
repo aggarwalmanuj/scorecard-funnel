@@ -85,6 +85,27 @@ const TIERS: TierConfig[] = [
 
 type ModalKind = "none" | "upsell-1" | "upsell-2" | "contact"
 
+// Integration targets. Diagnostic goes through Stripe — the
+// price/product are resolved server-side from env at /api/stripe/checkout.
+// Session/Transformation are paid + scheduled inside Calendly's hosted
+// flow; Calendly URLs are read from NEXT_PUBLIC_* env vars so the
+// booking team can rotate them without a code change.
+//
+// Required env vars:
+//   NEXT_PUBLIC_CALENDLY_SESSION_URL          ($497 tier)
+//   NEXT_PUBLIC_CALENDLY_TRANSFORMATION_URL   ($997 tier)
+const TIER_INTEGRATION = {
+  diagnostic: { type: "stripe" as const },
+  session: {
+    type: "calendly" as const,
+    url: process.env.NEXT_PUBLIC_CALENDLY_SESSION_URL ?? "",
+  },
+  transformation: {
+    type: "calendly" as const,
+    url: process.env.NEXT_PUBLIC_CALENDLY_TRANSFORMATION_URL ?? "",
+  },
+}
+
 export function OfferScreen({ audience }: { audience: Audience }) {
   const { state } = useChallenge()
   const [isProcessing, setIsProcessing] = useState(false)
@@ -169,43 +190,56 @@ export function OfferScreen({ audience }: { audience: Audience }) {
     void startCheckout(email, firstName, tier)
   }
 
-  // $497 / $997 path — open the Calendly scheduling URL with
-  // tier-tagged UTM + prefilled name/email when we have them.
-  // The backend can return tier-specific URLs from the same
-  // endpoint (e.g. ?tier=session) when the booking team sets up
-  // separate event types per tier; until then a single URL is
-  // shared and the UTM tag preserves attribution.
-  const openCalendly = async (tier: Tier) => {
+  // $497 / $997 path — Calendly hosts the booking + payment for
+  // these tiers. We hand off directly to the PM-supplied tier URL
+  // (no API round-trip needed). On successful booking, Calendly
+  // redirects back to /challenge/thank-you?booked=1&tier=... so
+  // the user lands on a coherent confirmation screen with their
+  // diagnostic-report download. On cancel/close the user stays on
+  // Calendly's domain — they can navigate back themselves via the
+  // browser back button, which lands them back on this offer page.
+  const openCalendly = (tier: Tier) => {
+    const config = TIER_INTEGRATION[tier]
+    if (config.type !== "calendly") return
+    if (!config.url) {
+      console.error(
+        `[calendly] missing URL for tier "${tier}". Set NEXT_PUBLIC_CALENDLY_${
+          tier === "session" ? "SESSION" : "TRANSFORMATION"
+        }_URL in your environment.`,
+      )
+      setModal("contact")
+      setModalError(
+        "Booking is temporarily unavailable. Please try again shortly or email us.",
+      )
+      return
+    }
     setPendingTier(tier)
     setIsProcessing(true)
     try {
-      const res = await fetch(
-        `/api/calendly/event-types?tier=${encodeURIComponent(tier)}`,
-      )
-      const data = (await res.json()) as { schedulingUrl?: string; error?: string }
-      if (!res.ok || !data.schedulingUrl) {
-        console.error("[calendly] failed", data)
-        setIsProcessing(false)
-        // Surface inline by reusing the contact modal's error
-        // channel — keeps the user on the page rather than
-        // throwing them to a generic failure state.
-        setModal("contact")
-        setModalError(
-          data.error ?? "Could not open booking. Please try again.",
-        )
-        return
-      }
-      const url = new URL(data.schedulingUrl)
+      const url = new URL(config.url)
       url.searchParams.set("utm_source", "ai-merge-challenge")
       url.searchParams.set("utm_medium", tier)
       if (state.firstName) url.searchParams.set("name", state.firstName)
       if (state.email) url.searchParams.set("email", state.email)
+
+      // Post-booking redirect — Calendly honors this on Standard
+      // plans and above. On plans that ignore it, the user lands
+      // on Calendly's own confirmation page (still fine — they
+      // got the calendar invite by email).
+      if (typeof window !== "undefined") {
+        const redirect = new URL("/challenge/thank-you", window.location.origin)
+        redirect.searchParams.set("booked", "1")
+        redirect.searchParams.set("tier", tier)
+        if (audience) redirect.searchParams.set("audience", audience)
+        url.searchParams.set("redirect_url", redirect.toString())
+      }
+
       window.location.assign(url.toString())
     } catch (err) {
-      console.error("[calendly] network error", err)
+      console.error("[calendly] failed to open", err)
       setIsProcessing(false)
       setModal("contact")
-      setModalError("Network error. Please try again.")
+      setModalError("Could not open booking. Please try again.")
     }
   }
 
