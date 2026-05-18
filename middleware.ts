@@ -98,6 +98,17 @@ export async function middleware(request: NextRequest) {
   // These are split across script-src / connect-src / img-src per Clarity's
   // own deployment notes. Without all three, the SDK boots but recordings
   // never reach the dashboard and the browser silently CSP-blocks them.
+  //
+  // PostHog hosts (US Cloud):
+  //   - us.i.posthog.com — event ingestion + decide endpoint
+  //   - us-assets.i.posthog.com — lazy-loaded chunks (session-recorder,
+  //     surveys, web-vitals). posthog-js fetches these at runtime, so the
+  //     asset host must be listed under script-src OR strict-dynamic must
+  //     authorize it via the trusted bootstrap script. We list it
+  //     explicitly to keep behavior identical even if strict-dynamic is
+  //     ever relaxed.
+  //   - worker-src blob: — the session recorder spawns a Web Worker from
+  //     a blob URL to offload rrweb serialization.
   const scriptSrc = [
     "'self'",
     `'nonce-${nonce}'`,
@@ -107,6 +118,7 @@ export async function middleware(request: NextRequest) {
     "https://connect.facebook.net",
     "https://www.clarity.ms",
     "https://*.clarity.ms",
+    "https://us-assets.i.posthog.com",
   ]
     .filter(Boolean)
     .join(" ")
@@ -121,7 +133,8 @@ export async function middleware(request: NextRequest) {
     // element with an empty player and no console error.
     "media-src 'self' blob: https://bfyvfetxtgsgzjci.public.blob.vercel-storage.com",
     "font-src 'self' data:",
-    "connect-src 'self' https://openrouter.ai https://www.googleapis.com https://calendly.com https://connect.facebook.net https://www.facebook.com https://www.clarity.ms https://*.clarity.ms https://c.bing.com https://bfyvfetxtgsgzjci.public.blob.vercel-storage.com",
+    "connect-src 'self' https://openrouter.ai https://www.googleapis.com https://calendly.com https://connect.facebook.net https://www.facebook.com https://www.clarity.ms https://*.clarity.ms https://c.bing.com https://bfyvfetxtgsgzjci.public.blob.vercel-storage.com https://us.i.posthog.com https://us-assets.i.posthog.com",
+    "worker-src 'self' blob:",
     "frame-src 'self' https://calendly.com",
     "frame-ancestors 'none'",
     "base-uri 'self'",
