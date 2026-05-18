@@ -111,3 +111,18 @@ export async function buildUserPromptForBeat(
     .replace(/\{\{GATE2\}\}/g, gate2Resonance)
     .replace(/\{\{GATE4\}\}/g, gate4Tone)
 }
+
+/**
+ * Read the admin-configured detailed-scorecard (Clarity Readiness Report)
+ * narrative prompt. Falls back to the supplied default when admins haven't
+ * seeded a value — keeps the report endpoint working out of the box.
+ */
+export async function getReportSystemPrompt(
+  audience: Audience,
+  fallback: string
+): Promise<string> {
+  const prompts = await getCachedPrompts()
+  const value = prompts[audienceKey("report_system_prompt", audience)]
+  if (!value) return fallback
+  return value.replace(/\\n/g, "\n")
+}

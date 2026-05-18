@@ -43,6 +43,7 @@ type Beat = {
 
 type AudienceData = {
   systemPrompt: string
+  reportSystemPrompt: string
   questions: Question[]
   beats: Beat[]
 }
@@ -67,6 +68,7 @@ const EMPTY_BEATS: Beat[] = Array.from({ length: 5 }, () => ({
 
 const emptyAudienceData = (): AudienceData => ({
   systemPrompt: "",
+  reportSystemPrompt: "",
   questions: structuredClone(EMPTY_QUESTIONS),
   beats: structuredClone(EMPTY_BEATS),
 })
@@ -88,7 +90,7 @@ export default function AdminPage() {
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null)
 
   const [audience, setAudience] = useState<Audience>("individual")
-  const [tab, setTab] = useState<"system" | "questions" | "beats" | "responses">("system")
+  const [tab, setTab] = useState<"system" | "questions" | "beats" | "report" | "responses">("system")
 
   // Per-audience editor state. Both audiences persist in memory so switching
   // between them doesn't lose unsaved work.
@@ -146,6 +148,7 @@ export default function AdminPage() {
     }
     for (const aud of ["individual", "team"] as Audience[]) {
       next[aud].systemPrompt = raw[`system_prompt_${aud}`] || ""
+      next[aud].reportSystemPrompt = raw[`report_system_prompt_${aud}`] || ""
       const qRaw = raw[`questions_${aud}`]
       if (qRaw) {
         try {
@@ -376,6 +379,7 @@ export default function AdminPage() {
     for (const aud of ["individual", "team"] as Audience[]) {
       const ad = data[aud]
       payload[`system_prompt_${aud}`] = ad.systemPrompt
+      payload[`report_system_prompt_${aud}`] = ad.reportSystemPrompt
       payload[`questions_${aud}`] = JSON.stringify(ad.questions)
       ad.beats.forEach((b, i) => {
         payload[`beat${i + 1}_prompt_${aud}`] = b.userPrompt
@@ -511,10 +515,15 @@ export default function AdminPage() {
         userPrompt: b.userPrompt ?? "",
       }))
 
+      const importedReportPrompt =
+        typeof obj.reportSystemPrompt === "string" ? obj.reportSystemPrompt : ""
+
       setData((prev) => ({
         ...prev,
         [audience]: {
           systemPrompt: obj.systemPrompt as string,
+          // Preserve current value when older configs (without this field) are imported.
+          reportSystemPrompt: importedReportPrompt || prev[audience].reportSystemPrompt,
           questions: newQuestions,
           beats: newBeats,
         },
@@ -532,6 +541,7 @@ export default function AdminPage() {
       version: 2,
       audience,
       systemPrompt: current.systemPrompt,
+      reportSystemPrompt: current.reportSystemPrompt,
       questions: current.questions,
       beats: current.beats,
     }
@@ -555,6 +565,9 @@ export default function AdminPage() {
 
   const updateSystemPrompt = (value: string) =>
     setData((prev) => ({ ...prev, [audience]: { ...prev[audience], systemPrompt: value } }))
+
+  const updateReportSystemPrompt = (value: string) =>
+    setData((prev) => ({ ...prev, [audience]: { ...prev[audience], reportSystemPrompt: value } }))
 
   const updateQuestion = <K extends keyof Question>(idx: number, key: K, value: Question[K]) => {
     setData((prev) => ({
@@ -604,6 +617,7 @@ export default function AdminPage() {
     { value: "system" as const, label: "System prompt", activeClass: "bg-ink text-background" },
     { value: "questions" as const, label: "Questions", activeClass: "bg-ink text-background" },
     { value: "beats" as const, label: "Beat prompts", activeClass: "bg-ink text-background" },
+    { value: "report" as const, label: "Detailed scorecard", activeClass: "bg-ink text-background" },
     { value: "responses" as const, label: "Responses", activeClass: "bg-ink text-background" },
   ]
 
@@ -1037,6 +1051,38 @@ export default function AdminPage() {
                     </div>
                   )
                 })}
+              </div>
+            )}
+
+            {/* ── Detailed Scorecard Tab ── */}
+            {tab === "report" && (
+              <div className="space-y-4">
+                <div className="rounded-md border border-border bg-secondary/40 p-4 text-[14px] leading-[1.7] text-foreground/85">
+                  Editing the <strong className="text-foreground capitalize">{audience}</strong> detailed scorecard
+                  prompt. Sent as the system message when generating the printable
+                  Clarity Readiness Report (headline, pillars, themes, takeaways,
+                  30-day reflection). Leave empty to use the built-in default.
+                </div>
+
+                <div className="bg-card rounded-md s-card-static overflow-hidden">
+                  <div className="p-6">
+                    <div className="flex justify-between items-center mb-2">
+                      <label className="eyebrow text-foreground/65">
+                        Detailed Scorecard Prompt - {audience}
+                      </label>
+                      <span className="text-xs text-muted-foreground">
+                        {current.reportSystemPrompt.length} chars
+                      </span>
+                    </div>
+                    <Textarea
+                      rows={24}
+                      value={current.reportSystemPrompt}
+                      onChange={(e) => updateReportSystemPrompt(e.target.value)}
+                      placeholder="Leave empty to use the built-in default narrative prompt."
+                      className="min-h-[400px] font-mono text-sm s-input resize-y"
+                    />
+                  </div>
+                </div>
               </div>
             )}
 

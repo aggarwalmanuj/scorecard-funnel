@@ -124,6 +124,7 @@ export function ClarityReport() {
       body: JSON.stringify({
         firstName: state.firstName,
         email: state.email,
+        audience: state.audience ?? "individual",
         responses: state.responses,
         beats: state.beats,
         // Use the cached score so numbers match the summary page exactly.

@@ -6,6 +6,7 @@ import {
   type ClarityScore,
   type Subscores,
 } from "@/lib/scoring"
+import { getReportSystemPrompt } from "@/lib/server/challenge-prompts"
 
 /**
  * /api/challenge/report
@@ -40,6 +41,7 @@ import {
 const bodySchema = z.object({
   firstName: z.string().max(200).optional().default(""),
   email: z.string().max(320).optional().default(""),
+  audience: z.enum(["individual", "team"]).optional().default("individual"),
   responses: z.object({
     question1: z.string().max(50000).optional().default(""),
     question2: z.string().max(50000).optional().default(""),
@@ -147,7 +149,13 @@ Return ONLY the JSON object.`
 
 // ───────────────────────── narrative (parallel call #2) ────────────────────────
 
-const REPORT_SYSTEM_PROMPT = `You are a deeply perceptive guide writing a personalized Clarity Readiness Report for a senior leader who just completed a five-beat reflection journey. Your role is to synthesize what surfaced into a printable report - not a summary, but a mirror.
+/**
+ * Default narrative prompt used when admins haven't configured a custom
+ * version in Cosmos. The admin page (Detailed Scorecard tab) overrides
+ * this on a per-audience basis. Editing this constant only affects the
+ * baseline shipped with the code.
+ */
+const DEFAULT_REPORT_SYSTEM_PROMPT = `You are a deeply perceptive guide writing a personalized Clarity Readiness Report for a senior leader who just completed a five-beat reflection journey. Your role is to synthesize what surfaced into a printable report - not a summary, but a mirror.
 
 Tone: warm, direct, unhurried. No buzzwords, no motivational language, no therapy-speak. Short, meaningful sentences. You trust silence. You never exaggerate. You write specifically for THIS person - every line must feel grounded in what they actually wrote.
 
@@ -386,11 +394,16 @@ export async function POST(request: Request) {
     )
   }
 
-  const { firstName, responses, beats, precomputedScore } = parsed.data
+  const { firstName, responses, beats, precomputedScore, audience } = parsed.data
 
   const model = process.env.OPENROUTER_MODEL?.trim() || "openai/gpt-4o-mini"
   const referer =
     process.env.NEXT_PUBLIC_APP_URL?.trim() || "https://localhost:3000"
+
+  const reportSystem = await getReportSystemPrompt(
+    audience,
+    DEFAULT_REPORT_SYSTEM_PROMPT
+  )
 
   // If the caller already has a score (from the clarity-score page), reuse
   // it and skip the second LLM scoring call entirely. Otherwise run scoring
@@ -400,7 +413,7 @@ export async function POST(request: Request) {
     model,
     referer,
     title: "Honest Decision Challenge - Report Narrative",
-    system: REPORT_SYSTEM_PROMPT,
+    system: reportSystem,
     user: buildReportUserPrompt(firstName, responses, beats),
     temperature: 0.55,
     maxTokens: 2400,

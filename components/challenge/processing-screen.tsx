@@ -179,6 +179,7 @@ async function fetchReportInBackground(args: {
   email: string
   responses: ChallengeState["responses"]
   beats: ChallengeState["beats"]
+  audience: Audience
   precomputedScore?: {
     subscores: { directionClarity: number; identityAlignment: number; decisionReadiness: number; energyAlignment: number }
     reasons?: { directionClarity?: string; identityAlignment?: string; decisionReadiness?: string; energyAlignment?: string }
@@ -192,6 +193,7 @@ async function fetchReportInBackground(args: {
       body: JSON.stringify({
         firstName: args.firstName,
         email: args.email,
+        audience: args.audience,
         responses: args.responses,
         beats: args.beats,
         precomputedScore: args.precomputedScore ?? undefined,
@@ -337,6 +339,7 @@ export function ProcessingScreen({ audience }: { audience: Audience }) {
         const report = await fetchReportInBackground({
           firstName: state.firstName,
           email: saveParamsRef.current.email,
+          audience,
           responses: state.responses,
           beats: { beat1: "", beat2: "", beat3: "", beat4: "", beat5: "" },
           precomputedScore: score,
