@@ -14,8 +14,8 @@ type Choice = "accepted" | "rejected"
  * localStorage so it survives reloads and route changes.
  *
  * On dismissal we fire a `aimerge:cookie-consent` CustomEvent (detail:
- * "accepted" | "rejected"). Other client-side trackers (Clarity, FB
- * Pixel) can listen for it and gate their loading on consent. The
+ * "accepted" | "rejected"). Other client-side trackers (FB Pixel,
+ * PostHog) can listen for it and gate their loading on consent. The
  * server-side script tags currently render unconditionally; gating
  * those is a separate refactor that the event hook makes possible.
  *

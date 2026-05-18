@@ -92,13 +92,6 @@ export async function middleware(request: NextRequest) {
   const nonce = generateNonce()
   const isDev = process.env.NODE_ENV !== "production"
 
-  // Microsoft Clarity hosts:
-  //   - www.clarity.ms / *.clarity.ms — script + telemetry
-  //   - c.bing.com — Clarity's Bing-flavored beacon endpoint
-  // These are split across script-src / connect-src / img-src per Clarity's
-  // own deployment notes. Without all three, the SDK boots but recordings
-  // never reach the dashboard and the browser silently CSP-blocks them.
-  //
   // PostHog hosts (US Cloud):
   //   - us.i.posthog.com — event ingestion + decide endpoint
   //   - us-assets.i.posthog.com — lazy-loaded chunks (session-recorder,
@@ -116,8 +109,6 @@ export async function middleware(request: NextRequest) {
     isDev ? "'unsafe-eval'" : "",
     "https://assets.calendly.com",
     "https://connect.facebook.net",
-    "https://www.clarity.ms",
-    "https://*.clarity.ms",
     "https://us-assets.i.posthog.com",
   ]
     .filter(Boolean)
@@ -127,13 +118,13 @@ export async function middleware(request: NextRequest) {
     "default-src 'self'",
     `script-src ${scriptSrc}`,
     "style-src 'self' 'unsafe-inline' https://assets.calendly.com",
-    "img-src 'self' data: blob: https://hebbkx1anhila5yf.public.blob.vercel-storage.com https://bfyvfetxtgsgzjci.public.blob.vercel-storage.com https://www.facebook.com https://*.clarity.ms",
+    "img-src 'self' data: blob: https://hebbkx1anhila5yf.public.blob.vercel-storage.com https://bfyvfetxtgsgzjci.public.blob.vercel-storage.com https://www.facebook.com",
     // The Vercel blob host serves the testimonial videos. Without
     // explicit media-src, the browser silently CSP-blocks the <video>
     // element with an empty player and no console error.
     "media-src 'self' blob: https://bfyvfetxtgsgzjci.public.blob.vercel-storage.com",
     "font-src 'self' data:",
-    "connect-src 'self' https://openrouter.ai https://www.googleapis.com https://calendly.com https://connect.facebook.net https://www.facebook.com https://www.clarity.ms https://*.clarity.ms https://c.bing.com https://bfyvfetxtgsgzjci.public.blob.vercel-storage.com https://us.i.posthog.com https://us-assets.i.posthog.com",
+    "connect-src 'self' https://openrouter.ai https://www.googleapis.com https://calendly.com https://connect.facebook.net https://www.facebook.com https://bfyvfetxtgsgzjci.public.blob.vercel-storage.com https://us.i.posthog.com https://us-assets.i.posthog.com",
     "worker-src 'self' blob:",
     "frame-src 'self' https://calendly.com",
     "frame-ancestors 'none'",

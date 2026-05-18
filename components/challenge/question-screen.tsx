@@ -518,8 +518,6 @@ export function QuestionScreen({
                   : "Answer in your own words - continue when you are ready."}
               </p>
 
-              <PrivacyNotice className="mx-auto mt-3 max-w-md justify-center text-center" />
-
             </div>
 
             {/* RIGHT - image + quote + hint */}
@@ -566,43 +564,49 @@ export function QuestionScreen({
 
       {/* Navigation footer - single sticky band, calm hairline divider */}
       <footer className="sticky bottom-0 border-t border-border bg-background/85 px-5 py-4 backdrop-blur-xl sm:px-8 animate-fade-in-up">
-        <div className="mx-auto flex max-w-5xl items-center gap-3">
-          <button
-            type="button"
-            onClick={handleBack}
-            className="s-btn-ghost group h-12 px-5"
-            aria-label="Back to previous step"
-          >
-            <ArrowLeft
-              className="h-3.5 w-3.5 transition-transform duration-500 group-hover:-translate-x-1"
-              strokeWidth={1.6}
-            />
-            Back
-          </button>
+        <div className="mx-auto flex max-w-5xl flex-col gap-2">
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={handleBack}
+              className="s-btn-ghost group h-12 px-5"
+              aria-label="Back to previous step"
+            >
+              <ArrowLeft
+                className="h-3.5 w-3.5 transition-transform duration-500 group-hover:-translate-x-1"
+                strokeWidth={1.6}
+              />
+              Back
+            </button>
 
-          <button
-            type="button"
-            onClick={handleNext}
-            disabled={isNavigating || !answer.trim()}
-            aria-label={
-              questionNumber === 5
-                ? "Complete the reading"
-                : "Continue to next question"
-            }
-            className="s-btn group h-12 flex-1 justify-center"
-          >
-            {isNavigating ? (
-              <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border border-current border-t-transparent" />
-            ) : (
-              <>
-                {questionNumber === 5 ? "Complete the reading" : "Continue"}
-                <ArrowRight
-                  className="h-3.5 w-3.5 transition-transform duration-500 group-hover:translate-x-1"
-                  strokeWidth={1.6}
-                />
-              </>
-            )}
-          </button>
+            <button
+              type="button"
+              onClick={handleNext}
+              disabled={isNavigating || !answer.trim()}
+              aria-label={
+                questionNumber === 5
+                  ? "Complete the reading"
+                  : "Continue to next question"
+              }
+              className="s-btn group h-12 flex-1 justify-center"
+            >
+              {isNavigating ? (
+                <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border border-current border-t-transparent" />
+              ) : (
+                <>
+                  {questionNumber === 5 ? "Complete the reading" : "Continue"}
+                  <ArrowRight
+                    className="h-3.5 w-3.5 transition-transform duration-500 group-hover:translate-x-1"
+                    strokeWidth={1.6}
+                  />
+                </>
+              )}
+            </button>
+          </div>
+          <PrivacyNotice
+            variant="compact"
+            className="text-center sm:text-right"
+          />
         </div>
       </footer>
     </div>

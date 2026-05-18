@@ -6,16 +6,8 @@ import { Geist, Geist_Mono, Inter, Fraunces } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
 import { ChallengeProvider } from "@/context/challenge-context"
 import FacebookPixelTracker from "@/components/facebook-pixel"
-import ClarityInit from "@/components/clarity-init"
 import { DevTools } from "@/components/dev-tools"
 import "./globals.css"
-
-// Server-only env read — the project ID is threaded down as a prop so it
-// never appears in the bundle as a NEXT_PUBLIC_* variable. The ID itself
-// isn't strictly secret (Clarity's loader script exposes it client-side
-// once init runs), but server-only reads stay consistent with our other
-// funnels and avoid leaking the variable name to bundle inspectors.
-const CLARITY_ID = process.env.MICROSOFT_CLARITY_ID ?? ""
 
 const geist = Geist({
   subsets: ["latin"],
@@ -254,7 +246,6 @@ export default async function RootLayout({
         />
       </head>
       <body suppressHydrationWarning className="font-sans antialiased">
-        {CLARITY_ID ? <ClarityInit projectId={CLARITY_ID} /> : null}
         {FB_PIXEL_ID ? (
           <>
             <Script

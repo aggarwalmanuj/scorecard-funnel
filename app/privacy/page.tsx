@@ -102,6 +102,18 @@ export default function PrivacyPolicyPage() {
                 we analyse usage patterns to improve quality and relevance.
               </li>
               <li>
+                <span className="text-ink">
+                  Human review by the AIMerge team -
+                </span>{" "}
+                authorised members of the AIMerge team may read your responses
+                and AI-generated reflections to enhance your experience,
+                personalise follow-up, calibrate the diagnostic, and ensure
+                quality and safety. Access is restricted to staff who need it,
+                governed by confidentiality obligations, and never used to
+                identify you publicly or shared with third parties for
+                marketing.
+              </li>
+              <li>
                 <span className="text-ink">To communicate with you -</span>{" "}
                 if you have opted in, we may send you relevant follow-ups.
               </li>

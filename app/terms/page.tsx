@@ -121,8 +121,19 @@ const sections: Array<{ heading: string; body: React.ReactNode }> = [
         <p className="mt-3">
           You retain ownership of the responses you submit. By using the
           Service, you grant us a limited, non-exclusive license to process
-          your responses for the sole purpose of generating your
-          personalised reflections.
+          your responses for the purpose of generating your personalised
+          reflections, and to allow authorised members of the AIMerge team to
+          review your responses and AI-generated outputs to enhance your
+          experience, personalise follow-up, calibrate the diagnostic, and
+          ensure quality and safety. Such review is governed by the
+          confidentiality commitments described in our{" "}
+          <Link
+            href="/privacy"
+            className="text-ink underline-offset-4 hover:underline"
+          >
+            Privacy Policy
+          </Link>
+          .
         </p>
       </>
     ),

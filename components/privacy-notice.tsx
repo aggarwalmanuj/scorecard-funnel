@@ -1,18 +1,15 @@
+import Link from "next/link"
 import { Shield } from "lucide-react"
 
-const PRIVACY_TEXT =
-  "Your responses are reviewed by the TetraNoodle team for diagnostic purposes and to improve the AI Merge system. Your data is kept strictly private and never shared with third parties."
-
 /**
- * GDPR-aware privacy disclosure shown anywhere we collect or process user
- * input. Replaces the older short tags ("Private and secure · Never
- * shared", "In confidence") with a fuller, audit-friendly statement.
+ * Compact privacy disclosure shown next to form CTAs. Replaces the older
+ * long-form statement with a short pointer to the canonical Privacy and
+ * Terms documents.
  *
  * Two variants:
  *   - default: a small Shield + sentence block, suited to form footers.
- *   - "compact": same text rendered as a single paragraph without the
- *     icon, for cases where vertical space is tight (e.g. the closing
- *     CTA card meta line).
+ *   - "compact": same content rendered without the icon for tight spots
+ *     (e.g. inline next to a Continue button on the question footer).
  */
 export function PrivacyNotice({
   variant = "default",
@@ -21,12 +18,29 @@ export function PrivacyNotice({
   variant?: "default" | "compact"
   className?: string
 }) {
+  const linkClass =
+    "underline underline-offset-4 hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm"
+
+  const body = (
+    <>
+      Read our{" "}
+      <Link href="/privacy" className={linkClass} prefetch={false}>
+        Privacy
+      </Link>{" "}
+      and{" "}
+      <Link href="/terms" className={linkClass} prefetch={false}>
+        Terms
+      </Link>
+      .
+    </>
+  )
+
   if (variant === "compact") {
     return (
       <p
         className={`text-[11.5px] leading-[1.65] text-foreground/65 ${className}`}
       >
-        {PRIVACY_TEXT}
+        {body}
       </p>
     )
   }
@@ -39,7 +53,7 @@ export function PrivacyNotice({
         strokeWidth={1.6}
         aria-hidden
       />
-      <span>{PRIVACY_TEXT}</span>
+      <span>{body}</span>
     </p>
   )
 }
