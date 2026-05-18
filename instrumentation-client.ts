@@ -28,7 +28,21 @@ const IS_DEV = process.env.NODE_ENV !== "production"
 
 if (typeof window !== "undefined" && POSTHOG_KEY) {
   posthog.init(POSTHOG_KEY, {
-    api_host: POSTHOG_HOST,
+    // Production: route through `/ingest` (next.config.mjs rewrites)
+    // so ad blockers can't drop requests by matching the PostHog
+    // hostname.
+    // Dev: talk to PostHog directly. The rewrite would force the dev
+    // server's node.exe to upstream to AWS, and on Windows/corporate
+    // networks node often can't reach hosts the browser can (firewall
+    // rules typically allowlist browsers, not arbitrary Node processes)
+    // — symptom is ETIMEDOUT spam in the terminal. Devs don't run ad
+    // blockers on their own boxes, so bypassing the proxy in dev costs
+    // nothing.
+    api_host: IS_DEV ? POSTHOG_HOST : "/ingest",
+    // ui_host is where "Open in PostHog" links (from toolbar, replay,
+    // exception panels) point. Must be the dashboard host, not the
+    // ingestion host. Without this, those links 404.
+    ui_host: "https://us.posthog.com",
     defaults: "2026-01-30",
     // Force the initial pageview. The `2026-01-30` defaults set
     // `capture_pageview: 'history_change'`, which fires on SPA route

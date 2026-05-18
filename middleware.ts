@@ -167,7 +167,12 @@ export async function middleware(request: NextRequest) {
 export const config = {
   matcher: [
     {
-      source: "/((?!_next/static|_next/image|favicon.ico|icon.svg|images/).*)",
+      // `ingest` is excluded because those paths are PostHog reverse-proxy
+      // rewrites (see next.config.mjs). Running middleware on them would
+      // attach a nonce/CSP to PostHog's JSON responses (harmless but
+      // pointless) and — more importantly — would subject high-frequency
+      // session-recording POSTs to the per-IP API rate limit.
+      source: "/((?!_next/static|_next/image|favicon.ico|icon.svg|images/|ingest/).*)",
       missing: [
         { type: "header", key: "next-router-prefetch" },
         { type: "header", key: "purpose", value: "prefetch" },
