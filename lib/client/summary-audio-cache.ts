@@ -6,7 +6,7 @@
  *    so the second consumer awaits the first fetch instead of duplicating it.
  *  • IndexedDB — survives a full page refresh. The bytes are keyed by the
  *    summary text so a different run (different summary) is treated as a
- *    cache miss; ElevenLabs is only called once per unique summary.
+ *    cache miss; the TTS provider is only called once per unique summary.
  *
  * Why IndexedDB over localStorage: a 100–500 KB mp3 base64-encodes to
  * 130–700 KB, which can blow the ~5 MB localStorage quota when combined
