@@ -91,28 +91,37 @@ export type UserDocument = {
 // abusive client inflating documents past the 2 MB Cosmos item limit.
 const MAX_QUESTION_TEXT_LEN = 4000
 
+// Stateless OFFSET/LIMIT pagination. Cross-partition ORDER BY queries lose
+// their in-memory merge buffer when the iterator is rebuilt from just a
+// continuation token, which surfaces as empty pages with hasMore=true. The
+// offset form is partition-safe, stateless on the server, and acceptable on
+// RU cost for the admin panel's volumes.
 export async function fetchUsers(
   pageSize = 25,
-  continuationToken?: string
-): Promise<{ users: UserDocument[]; continuationToken: string | undefined; hasMore: boolean }> {
+  offset = 0
+): Promise<{ users: UserDocument[]; nextOffset: number; hasMore: boolean }> {
   await ensureInitialized()
   const container = usersContainer()
+
+  // Fetch pageSize + 1 to detect hasMore in a single round-trip.
+  const probe = pageSize + 1
   const querySpec = {
-    query: "SELECT * FROM c ORDER BY c.createdAt DESC",
+    query: "SELECT * FROM c ORDER BY c.createdAt DESC OFFSET @offset LIMIT @limit",
+    parameters: [
+      { name: "@offset", value: offset },
+      { name: "@limit", value: probe },
+    ],
   }
 
-  const response = container.items.query<UserDocument>(querySpec, {
-    maxItemCount: pageSize,
-    continuationToken,
-  })
+  const { resources } = await container.items
+    .query<UserDocument>(querySpec)
+    .fetchAll()
 
-  const { resources, continuationToken: nextToken, hasMoreResults } = await response.fetchNext()
+  const all = resources ?? []
+  const hasMore = all.length > pageSize
+  const users = hasMore ? all.slice(0, pageSize) : all
 
-  return {
-    users: resources ?? [],
-    continuationToken: nextToken ?? undefined,
-    hasMore: hasMoreResults ?? false,
-  }
+  return { users, nextOffset: offset + users.length, hasMore }
 }
 
 export async function searchUsers(opts: {

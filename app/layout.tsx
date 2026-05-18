@@ -1,12 +1,11 @@
 import type { Metadata, Viewport } from "next"
 import { Suspense } from "react"
 import { headers } from "next/headers"
-import Script from "next/script"
 import { Geist, Geist_Mono, Inter, Fraunces } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
 import { ChallengeProvider } from "@/context/challenge-context"
 import FacebookPixelTracker from "@/components/facebook-pixel"
-import { DevTools } from "@/components/dev-tools"
+import { CookieConsent } from "@/components/cookie-consent"
 import "./globals.css"
 
 const geist = Geist({
@@ -220,26 +219,37 @@ export default async function RootLayout({
       className={`${inter.variable} ${fraunces.variable}`}
     >
       <head>
-        <Script
+        {/*
+          Use plain <script> with suppressHydrationWarning rather than
+          next/script for these CSP-nonced inline blocks. Browsers strip
+          the `nonce` attribute from the live DOM after parsing (security
+          behavior, see https://html.spec.whatwg.org/#nonce-attributes),
+          so React's hydration diff sees the server-rendered nonce vs an
+          empty client value and warns. Suppressing the warning here is
+          the correct call because the mismatch is intentional and
+          unavoidable. strategy="beforeInteractive" on next/script is
+          functionally equivalent to a plain <head> script anyway.
+        */}
+        <script
           id="strip-bitdefender-attrs"
           nonce={nonce}
-          strategy="beforeInteractive"
+          suppressHydrationWarning
           dangerouslySetInnerHTML={{
             __html: `(function(){function s(n){n&&n.removeAttribute&&n.removeAttribute('bis_skin_checked')}new MutationObserver(function(ms){ms.forEach(function(m){if(m.attributeName==='bis_skin_checked')s(m.target);m.addedNodes&&m.addedNodes.forEach(function(n){s(n);n.querySelectorAll&&n.querySelectorAll('[bis_skin_checked]').forEach(s)})})}).observe(document.documentElement,{attributes:true,subtree:true,childList:true,attributeFilter:['bis_skin_checked']})})();`,
           }}
         />
-        <Script
+        <script
           id="ld-person"
           type="application/ld+json"
           nonce={nonce}
-          strategy="beforeInteractive"
+          suppressHydrationWarning
           dangerouslySetInnerHTML={{ __html: JSON.stringify(personSchema) }}
         />
-        <Script
+        <script
           id="ld-professional-service"
           type="application/ld+json"
           nonce={nonce}
-          strategy="beforeInteractive"
+          suppressHydrationWarning
           dangerouslySetInnerHTML={{
             __html: JSON.stringify(professionalServiceSchema),
           }}
@@ -248,10 +258,10 @@ export default async function RootLayout({
       <body suppressHydrationWarning className="font-sans antialiased">
         {FB_PIXEL_ID ? (
           <>
-            <Script
+            <script
               id="fb-pixel"
               nonce={nonce}
-              strategy="afterInteractive"
+              suppressHydrationWarning
               dangerouslySetInnerHTML={{
                 __html: `
 !function(f,b,e,v,n,t,s)
@@ -282,9 +292,7 @@ fbq('track', 'PageView');
           </>
         ) : null}
         <ChallengeProvider>{children}</ChallengeProvider>
-        <Suspense fallback={null}>
-          <DevTools />
-        </Suspense>
+        <CookieConsent />
         <Analytics />
       </body>
     </html>

@@ -10,7 +10,7 @@ export async function OPTIONS(request: Request) {
 
 /**
  * GET /api/admin/responses - Read user responses from Cosmos DB (auth required).
- * Query params: pageSize (default 25, max 100), continuationToken (URL-encoded)
+ * Query params: pageSize (default 25, max 100), offset (default 0).
  */
 export async function GET(request: Request) {
   const headers = corsHeaders(request)
@@ -31,12 +31,12 @@ export async function GET(request: Request) {
 
   const url = new URL(request.url)
   const pageSize = Math.min(Math.max(parseInt(url.searchParams.get("pageSize") ?? "25", 10) || 25, 1), 100)
-  const continuationToken = url.searchParams.get("continuationToken") || undefined
+  const offset = Math.max(parseInt(url.searchParams.get("offset") ?? "0", 10) || 0, 0)
 
   try {
-    const result = await fetchUsers(pageSize, continuationToken)
+    const result = await fetchUsers(pageSize, offset)
     return NextResponse.json(
-      { ok: true, users: result.users, continuationToken: result.continuationToken, hasMore: result.hasMore },
+      { ok: true, users: result.users, nextOffset: result.nextOffset, hasMore: result.hasMore },
       { headers }
     )
   } catch (e) {

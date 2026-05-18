@@ -116,7 +116,7 @@ export default function AdminPage() {
   const [responses, setResponses] = useState<UserResponse[]>([])
   const [responsesLoading, setResponsesLoading] = useState(false)
   const [responsesError, setResponsesError] = useState("")
-  const [responsesCursor, setResponsesCursor] = useState<string | undefined>()
+  const [responsesOffset, setResponsesOffset] = useState(0)
   const [responsesHasMore, setResponsesHasMore] = useState(false)
   const [expandedResponses, setExpandedResponses] = useState<Record<string, boolean>>({})
   const [expandedOutputs, setExpandedOutputs] = useState<Record<string, boolean>>({})
@@ -191,12 +191,11 @@ export default function AdminPage() {
     }
   }, [unpackPrompts])
 
-  const loadResponses = useCallback(async (cursor?: string) => {
+  const loadResponses = useCallback(async (offset = 0) => {
     setResponsesLoading(true)
     setResponsesError("")
     try {
-      const params = new URLSearchParams({ pageSize: "25" })
-      if (cursor) params.set("continuationToken", cursor)
+      const params = new URLSearchParams({ pageSize: "25", offset: String(offset) })
       const headers: Record<string, string> = {}
       const stored = sessionStorage.getItem("admin-api-password")
       if (stored) headers["X-Admin-Password"] = stored
@@ -205,9 +204,11 @@ export default function AdminPage() {
       if (!res.ok) throw new Error("HTTP " + res.status)
       const json = await res.json()
       if (json.ok) {
-        setResponses((prev) => (cursor ? [...prev, ...json.users] : json.users))
-        setResponsesCursor(json.continuationToken)
-        setResponsesHasMore(json.hasMore)
+        setResponses((prev) => (offset > 0 ? [...prev, ...json.users] : json.users))
+        setResponsesOffset(
+          typeof json.nextOffset === "number" ? json.nextOffset : offset + json.users.length
+        )
+        setResponsesHasMore(!!json.hasMore)
       }
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e)
@@ -1373,7 +1374,7 @@ export default function AdminPage() {
                             size="sm"
                             className="rounded-full border border-foreground/35 text-foreground hover:border-ink hover:text-ink text-[10px] uppercase tracking-[0.2em] px-8 "
                             disabled={responsesLoading}
-                            onClick={() => loadResponses(responsesCursor)}
+                            onClick={() => loadResponses(responsesOffset)}
                           >
                             {responsesLoading ? "Loading..." : "Load More"}
                           </Button>

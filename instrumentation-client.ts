@@ -25,8 +25,15 @@ import posthog from "posthog-js"
 const POSTHOG_KEY = process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN
 const POSTHOG_HOST = process.env.NEXT_PUBLIC_POSTHOG_HOST
 const IS_DEV = process.env.NODE_ENV !== "production"
+// Dev clicks should not pollute production funnels / replays, AND many dev
+// boxes (Windows + corporate networks) can't reach us.i.posthog.com from
+// the browser, which produces an endless stream of `TypeError: Failed to
+// fetch` in the terminal. So in dev we skip init entirely unless the
+// developer explicitly opts in via NEXT_PUBLIC_POSTHOG_ENABLE_DEV=true.
+const POSTHOG_DEV_ENABLED =
+  process.env.NEXT_PUBLIC_POSTHOG_ENABLE_DEV === "true"
 
-if (typeof window !== "undefined" && POSTHOG_KEY) {
+if (typeof window !== "undefined" && POSTHOG_KEY && (!IS_DEV || POSTHOG_DEV_ENABLED)) {
   posthog.init(POSTHOG_KEY, {
     // Production: route through `/ingest` (next.config.mjs rewrites)
     // so ad blockers can't drop requests by matching the PostHog
