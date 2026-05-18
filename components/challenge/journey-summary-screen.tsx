@@ -508,7 +508,13 @@ export function JourneySummaryScreen({ audience }: { audience: Audience }) {
                 reasons={scoreReasons}
                 nsState={nsState}
                 unlocked={unlocked}
-                onUnlock={() => setUnlocked(true)}
+                onUnlock={() => {
+                  // Navigate without flipping local `unlocked` state — flipping
+                  // it triggers a re-render that paints the un-blurred content
+                  // for a frame before the navigation completes, exposing the
+                  // paid subscores to free users.
+                  router.push(`/challenge/${audience}/offer`)
+                }}
               />
             ) : (
               <ClarityScorePending />
@@ -776,16 +782,42 @@ function ClarityScoreCard({
 
         {!unlocked ? (
           <div
-            className="absolute inset-0 z-10 flex items-center justify-center"
+            className="absolute inset-0 z-10 flex items-center justify-center px-5 py-6 sm:px-8"
             style={{
               background:
-                "linear-gradient(180deg, color-mix(in srgb, var(--background) 40%, transparent) 0%, color-mix(in srgb, var(--background) 60%, transparent) 100%)",
+                "linear-gradient(180deg, color-mix(in srgb, var(--background) 30%, transparent) 0%, color-mix(in srgb, var(--background) 55%, transparent) 100%)",
               borderTop: "1px solid var(--border)",
             }}
           >
-            <button type="button" onClick={onUnlock} className="s-btn">
-              Unlock
-            </button>
+            <div className="flex max-w-md flex-col items-center text-center">
+              <p className="font-serif text-[15.5px] leading-[1.5] text-ink sm:text-[16.5px]">
+                Your score reveals something specific about
+                <span className="block font-serif-italic text-foreground">
+                  what&apos;s quietly limiting your performance.
+                </span>
+              </p>
+              <button
+                type="button"
+                onClick={onUnlock}
+                className="s-btn group mt-5 h-12 px-6 text-[12px]"
+                style={{
+                  background: "var(--signal)",
+                  color: "var(--background)",
+                  border:
+                    "1px solid color-mix(in srgb, var(--signal) 60%, transparent)",
+                  boxShadow:
+                    "0 14px 40px -16px rgba(var(--glow), 0.55)",
+                }}
+              >
+                Unlock Your Full Report
+                <span
+                  aria-hidden
+                  className="ml-1 inline-block transition-transform duration-500 group-hover:translate-x-1"
+                >
+                  →
+                </span>
+              </button>
+            </div>
           </div>
         ) : null}
       </div>

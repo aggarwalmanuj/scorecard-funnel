@@ -2,11 +2,52 @@ import { NextResponse } from "next/server"
 import { z } from "zod"
 import { getStripe } from "@/lib/stripe"
 
+// Only "diagnostic" hits Stripe here; session/transformation are
+// paid + booked inside Calendly's hosted flow, which uses its own
+// Stripe integration and skips this endpoint entirely.
+//
+// Diagnostic price/product are resolved from env at request time
+// (not module load) so a misconfigured deploy fails per-request
+// with a clear 500 rather than crashing the whole route handler
+// import. Required env vars:
+//   STRIPE_DIAGNOSTIC_PRICE_ID         (preferred — exact Price ID)
+//   or
+//   STRIPE_DIAGNOSTIC_PRODUCT_ID       + STRIPE_DIAGNOSTIC_PRICE_CENTS
+function getDiagnosticConfig(): {
+  priceId?: string
+  productId?: string
+  unitAmount?: number
+} {
+  const priceId = process.env.STRIPE_DIAGNOSTIC_PRICE_ID?.trim()
+  if (priceId) return { priceId }
+
+  const productId = process.env.STRIPE_DIAGNOSTIC_PRODUCT_ID?.trim()
+  const unitAmountStr = process.env.STRIPE_DIAGNOSTIC_PRICE_CENTS?.trim()
+  if (!productId) {
+    throw new Error(
+      "Stripe diagnostic config missing: set STRIPE_DIAGNOSTIC_PRICE_ID, or STRIPE_DIAGNOSTIC_PRODUCT_ID + STRIPE_DIAGNOSTIC_PRICE_CENTS",
+    )
+  }
+  if (!unitAmountStr) {
+    throw new Error(
+      "STRIPE_DIAGNOSTIC_PRICE_CENTS is required when using STRIPE_DIAGNOSTIC_PRODUCT_ID",
+    )
+  }
+  const unitAmount = Number.parseInt(unitAmountStr, 10)
+  if (!Number.isFinite(unitAmount) || unitAmount <= 0) {
+    throw new Error(
+      "STRIPE_DIAGNOSTIC_PRICE_CENTS must be a positive integer (cents)",
+    )
+  }
+  return { productId, unitAmount }
+}
+
 const Body = z.object({
-  email: z.string().email(),
-  firstName: z.string().trim().max(80).optional(),
+  email: z.string().trim().email().max(254),
+  firstName: z.string().trim().min(1).max(80),
   lastName: z.string().trim().max(80).optional(),
   audience: z.enum(["individual", "team"]).optional(),
+  tier: z.enum(["diagnostic"]).default("diagnostic"),
 })
 
 export async function POST(req: Request) {
@@ -25,62 +66,88 @@ export async function POST(req: Request) {
     )
   }
 
-  const { email, firstName, lastName, audience } = parsed.data
+  const { email, firstName, lastName, audience, tier } = parsed.data
+
+  let diagnosticConfig: ReturnType<typeof getDiagnosticConfig>
+  try {
+    diagnosticConfig = getDiagnosticConfig()
+  } catch (err) {
+    console.error("[stripe/checkout] env misconfiguration:", err)
+    return NextResponse.json(
+      { error: "Checkout is not configured. Please contact support." },
+      { status: 500 },
+    )
+  }
 
   const forwardedHost = req.headers.get("x-forwarded-host")
   const forwardedProto = req.headers.get("x-forwarded-proto")
   const host = forwardedHost ?? req.headers.get("host")
-  const proto = forwardedProto ?? (host?.startsWith("localhost") ? "http" : "https")
+  const proto =
+    forwardedProto ?? (host?.startsWith("localhost") ? "http" : "https")
   const siteUrl = host
     ? `${proto}://${host}`
-    : (process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ??
-       new URL(req.url).origin)
+    : process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ??
+      new URL(req.url).origin
 
-  const successUrl = `${siteUrl}/challenge/thank-you?paid=1${
-    audience ? `&audience=${audience}` : ""
-  }&session_id={CHECKOUT_SESSION_ID}`
+  // {CHECKOUT_SESSION_ID} is a Stripe-side template token — must
+  // arrive unencoded, so we assemble the query string manually
+  // rather than via URLSearchParams (which percent-encodes braces).
+  const successQuery = [
+    "paid=1",
+    `tier=${tier}`,
+    audience ? `audience=${encodeURIComponent(audience)}` : null,
+    "session_id={CHECKOUT_SESSION_ID}",
+  ]
+    .filter(Boolean)
+    .join("&")
+  const successUrl = `${siteUrl}/challenge/thank-you?${successQuery}`
   const cancelUrl = audience
-    ? `${siteUrl}/challenge/${audience}/offer`
-    : `${siteUrl}/`
+    ? `${siteUrl}/challenge/${audience}/offer?canceled=1`
+    : `${siteUrl}/?canceled=1`
 
   try {
     const stripe = getStripe()
     const fullName = [firstName, lastName].filter(Boolean).join(" ").trim()
 
-    const session = await stripe.checkout.sessions.create({
-      mode: "subscription",
-      payment_method_types: ["card"],
-      line_items: [
-        {
+    // Prefer a Stripe Price ID when configured (cleanest — lets
+    // the team change pricing entirely from the Dashboard). Fall
+    // back to inline price_data bound to a product when only the
+    // product ID + amount are provided.
+    const lineItem = diagnosticConfig.priceId
+      ? ({ quantity: 1, price: diagnosticConfig.priceId } as const)
+      : ({
           quantity: 1,
           price_data: {
-            currency: "usd",
-            unit_amount: 9900,
-            recurring: { interval: "month" },
-            product_data: {
-              name: "The Honest Decision Session",
-              description:
-                "60-minute private decision session with Manuj Aggarwal. Cancel any time.",
-            },
+            currency: "usd" as const,
+            unit_amount: diagnosticConfig.unitAmount!,
+            product: diagnosticConfig.productId!,
           },
-        },
-      ],
+        } as const)
+
+    const session = await stripe.checkout.sessions.create({
+      mode: "payment",
+      payment_method_types: ["card"],
+      line_items: [lineItem],
       customer_email: email,
       success_url: successUrl,
       cancel_url: cancelUrl,
       allow_promotion_codes: true,
       metadata: {
         source: "scorecard-funnel",
+        tier,
+        productId: diagnosticConfig.productId ?? "",
+        priceId: diagnosticConfig.priceId ?? "",
         audience: audience ?? "",
-        firstName: firstName ?? "",
+        firstName,
         lastName: lastName ?? "",
         fullName,
       },
-      subscription_data: {
+      payment_intent_data: {
         metadata: {
           source: "scorecard-funnel",
+          tier,
           audience: audience ?? "",
-          firstName: firstName ?? "",
+          firstName,
           lastName: lastName ?? "",
         },
       },

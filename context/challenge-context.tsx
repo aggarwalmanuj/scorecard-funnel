@@ -232,9 +232,9 @@ export function ChallengeProvider({ children }: { children: ReactNode }) {
     setState((prev) => ({ ...prev, summaryText: text }))
   }, [])
 
-  const markComplete = () => {
-    setState((prev) => ({ ...prev, isComplete: true }))
-  }
+  const markComplete = useCallback(() => {
+    setState((prev) => (prev.isComplete ? prev : { ...prev, isComplete: true }))
+  }, [])
 
   const reset = () => {
     setState(defaultState)

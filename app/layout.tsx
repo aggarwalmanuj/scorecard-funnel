@@ -7,6 +7,7 @@ import { Analytics } from "@vercel/analytics/next"
 import { ChallengeProvider } from "@/context/challenge-context"
 import FacebookPixelTracker from "@/components/facebook-pixel"
 import ClarityInit from "@/components/clarity-init"
+import { DevTools } from "@/components/dev-tools"
 import "./globals.css"
 
 // Server-only env read — the project ID is threaded down as a prop so it
@@ -290,6 +291,9 @@ fbq('track', 'PageView');
           </>
         ) : null}
         <ChallengeProvider>{children}</ChallengeProvider>
+        <Suspense fallback={null}>
+          <DevTools />
+        </Suspense>
         <Analytics />
       </body>
     </html>
