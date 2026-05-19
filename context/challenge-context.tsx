@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, useCallback, useRef, type ReactNode } from "react"
 import { clearSummaryAudio } from "@/lib/client/summary-audio-cache"
+import { clearBeatAudio } from "@/lib/client/beat-audio-cache"
 
 const STORAGE_KEY = "ufa-challenge"
 
@@ -240,6 +241,7 @@ export function ChallengeProvider({ children }: { children: ReactNode }) {
     setState(defaultState)
     localStorage.removeItem(STORAGE_KEY)
     clearSummaryAudio()
+    clearBeatAudio()
   }
 
   return (

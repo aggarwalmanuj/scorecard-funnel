@@ -48,7 +48,7 @@ export function CtaBanner() {
           <div className="relative rounded-2xl overflow-hidden neu-border neu-shadow-lg img-hover-zoom order-2 lg:order-1">
             <Image
               src="/images/landscape-golden.jpg"
-              alt="The path forward"
+              alt="A golden landscape opening at first light — preview of the AIMerge clarity diagnostic report unlocked after a leader completes the five-question assessment."
               width={600}
               height={450}
               className="w-full h-auto object-cover aspect-4/3"

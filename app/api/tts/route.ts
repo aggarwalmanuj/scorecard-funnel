@@ -1,19 +1,33 @@
 import { ElevenLabsClient } from "elevenlabs";
 import { NextRequest, NextResponse } from "next/server";
 
-// TTS provider toggle. Default is xAI Grok. Set TTS_PROVIDER=elevenlabs to
-// re-enable the legacy ElevenLabs path (kept intact below).
-const PROVIDER = (process.env.TTS_PROVIDER || "xai").toLowerCase();
+type Provider = "xai" | "elevenlabs";
+
+// Default provider when the client doesn't specify one. Per-request `provider`
+// in the POST body (e.g. "xai" for beat reveals, "elevenlabs" for the final
+// summary) overrides this.
+const DEFAULT_PROVIDER: Provider =
+  (process.env.TTS_PROVIDER || "xai").toLowerCase() === "elevenlabs"
+    ? "elevenlabs"
+    : "xai";
 
 export async function POST(request: NextRequest) {
   try {
-    const { beatContent } = await request.json();
+    const body = (await request.json()) as {
+      beatContent?: string;
+      provider?: string;
+    };
+    const { beatContent } = body;
+    const provider: Provider =
+      body.provider === "elevenlabs" || body.provider === "xai"
+        ? body.provider
+        : DEFAULT_PROVIDER;
 
     if (!beatContent) {
       return NextResponse.json({ error: 'Text is required' }, { status: 400 });
     }
 
-    if (PROVIDER === "elevenlabs") {
+    if (provider === "elevenlabs") {
       return await elevenLabsTts(beatContent);
     }
 
@@ -77,8 +91,8 @@ async function xaiGrokTts(text: string): Promise<NextResponse> {
   });
 }
 
-// Legacy ElevenLabs path. Disabled by default; re-enable by setting
-// TTS_PROVIDER=elevenlabs in the environment.
+// ElevenLabs path. Used for the journey summary; also reachable for any
+// other surface that sends `provider: "elevenlabs"`.
 async function elevenLabsTts(text: string): Promise<NextResponse> {
   const apiKey = process.env.ELEVENLABS_API_KEY;
   const voiceId = process.env.ELEVENLABS_VOICE_ID || 'cR39HTrtXbjvEP4CNYFx';
