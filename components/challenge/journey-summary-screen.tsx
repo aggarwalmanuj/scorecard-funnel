@@ -164,6 +164,7 @@ export function JourneySummaryScreen({ audience }: { audience: Audience }) {
   const audioCtxRef = useRef<AudioContext | null>(null)
   const audioSourceRef = useRef<AudioBufferSourceNode | null>(null)
   const audioBytesRef = useRef<ArrayBuffer | null>(null)
+  const hasAutoplayedRef = useRef(false)
 
   useEffect(() => {
     return () => {
@@ -338,10 +339,22 @@ export function JourneySummaryScreen({ audience }: { audience: Audience }) {
     return () => clearTimeout(t)
   }, [isComplete, hasFailed])
 
-  // Auto-play intentionally disabled. Browser autoplay policies block
-  // unprompted playback without a user gesture, and the listen button is
-  // a single tap away — keeping playback explicit avoids the silent-fail
-  // edge case.
+  // Autoplay the summary as soon as the text lands. The ElevenLabs bytes
+  // are preloaded on /processing and that screen blocks navigation until
+  // they resolve, so the cached audio is ready by the time we mount.
+  // Fires at most once per mount; if browser autoplay policy blocks
+  // playback, handlePlayAudio's catch swallows the error and the Listen
+  // button remains as a manual fallback.
+  useEffect(() => {
+    if (!summaryText.trim()) return
+    if (hasAutoplayedRef.current) return
+    if (isPlaying) return
+    hasAutoplayedRef.current = true
+    void handlePlayAudio()
+    // handlePlayAudio identity changes every render — intentionally
+    // omitted from deps to avoid refiring autoplay.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [summaryText])
 
   const displayedText = useMemo(
     () => summaryText.slice(0, visibleChars),

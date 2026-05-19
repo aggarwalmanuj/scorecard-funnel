@@ -21,6 +21,12 @@ interface QuestionScreenProps {
   placeholder: string
   quoteZone: string
   backgroundImage: string
+  /**
+   * Descriptive alt text for the hero image — fall back to a generic
+   * default if the page doesn't pass one. Used by search engines and
+   * answer-engine crawlers to understand each question's theme.
+   */
+  imageAlt?: string
   nextRoute: string
   prevRoute: string
   /**
@@ -40,6 +46,7 @@ export function QuestionScreen({
   placeholder,
   quoteZone,
   backgroundImage,
+  imageAlt,
   nextRoute,
   prevRoute,
   isMissing = false,
@@ -526,7 +533,7 @@ export function QuestionScreen({
                 <div className="img-hover-zoom relative aspect-video w-full overflow-hidden rounded-md">
                   <Image
                     src={backgroundImage}
-                    alt={`Question ${questionNumber} illustration`}
+                    alt={imageAlt ?? `AIMerge clarity diagnostic — question ${questionNumber} of 5`}
                     fill
                     className="animate-ken-burns object-cover"
                     priority

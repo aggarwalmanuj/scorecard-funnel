@@ -22,6 +22,7 @@ export default function Question1Page({ params }: { params: Promise<{ audience: 
       placeholder={prompt?.placeholder ?? ""}
       quoteZone={prompt?.quoteZone ?? ""}
       backgroundImage="/images/q1-conversation.jpg"
+      imageAlt="Two figures in quiet conversation across a low table — question 1 of the AIMerge clarity diagnostic asks what isn't moving the way it should."
       nextRoute={`/challenge/${audience}/question-2`}
       prevRoute="/challenge/audience"
       isMissing={isMissing}
