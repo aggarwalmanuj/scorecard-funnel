@@ -160,6 +160,8 @@ export function JourneySummaryScreen({ audience }: { audience: Audience }) {
   const [unlocked, setUnlocked] = useState(false)
 
   const [isPlaying, setIsPlaying] = useState(false)
+  const [isLoadingAudio, setIsLoadingAudio] = useState(false)
+  const [audioError, setAudioError] = useState<string | null>(null)
   const [isDownloadingAudio, setIsDownloadingAudio] = useState(false)
   const audioCtxRef = useRef<AudioContext | null>(null)
   const audioSourceRef = useRef<AudioBufferSourceNode | null>(null)
@@ -183,11 +185,11 @@ export function JourneySummaryScreen({ audience }: { audience: Audience }) {
     return buffer
   }
 
-  // Real audio playback. The bytes are guaranteed to be ready by the time
-  // this button is reachable — /processing blocks navigation to beat-1
-  // (and therefore to /summary) until preloadSummaryAudio resolves. We
-  // therefore never show a loading state; clicks either play instantly or
-  // toggle off if already playing.
+  // Real audio playback. /processing tries to preload the TTS bytes, but
+  // the TTS endpoint can fail or be slow, so we DON'T assume the buffer is
+  // ready — we surface loading + error states explicitly so a click always
+  // produces visible feedback (testers reported "button does nothing" when
+  // the silent-null path was hit).
   const handlePlayAudio = async () => {
     if (isPlaying) {
       audioSourceRef.current?.stop()
@@ -196,9 +198,15 @@ export function JourneySummaryScreen({ audience }: { audience: Audience }) {
       return
     }
     if (!summaryText) return
+    if (isLoadingAudio) return
+    setAudioError(null)
+    setIsLoadingAudio(true)
     try {
       const buffer = await fetchAudioBytes()
-      if (!buffer) return
+      if (!buffer) {
+        setAudioError("Audio is not available right now. Please try again.")
+        return
+      }
       if (!audioCtxRef.current || audioCtxRef.current.state === "closed") {
         audioCtxRef.current = new AudioContext()
       }
@@ -223,6 +231,9 @@ export function JourneySummaryScreen({ audience }: { audience: Audience }) {
         error instanceof Error ? error.message : String(error),
       )
       setIsPlaying(false)
+      setAudioError("Audio could not be played. Please try again.")
+    } finally {
+      setIsLoadingAudio(false)
     }
   }
 
@@ -528,8 +539,15 @@ export function JourneySummaryScreen({ audience }: { audience: Audience }) {
                 type="button"
                 id="summary-audio-btn"
                 onClick={handlePlayAudio}
-                aria-label={isPlaying ? "Stop audio" : "Click here to listen"}
-                className="group relative w-full max-w-md flex items-center justify-center gap-3 px-8 py-4 sm:py-5 rounded-2xl font-black uppercase tracking-[0.14em] transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
+                disabled={isLoadingAudio}
+                aria-label={
+                  isPlaying
+                    ? "Stop audio"
+                    : isLoadingAudio
+                      ? "Preparing audio"
+                      : "Click here to listen"
+                }
+                className="group relative w-full max-w-md flex items-center justify-center gap-3 px-8 py-4 sm:py-5 rounded-2xl font-black uppercase tracking-[0.14em] transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] disabled:cursor-wait disabled:opacity-90"
                 style={{
                   fontSize: "clamp(16px, 2.2vw, 20px)",
                   background: "linear-gradient(135deg, #fde047 0%, #f59e0b 100%)",
@@ -537,15 +555,21 @@ export function JourneySummaryScreen({ audience }: { audience: Audience }) {
                   border: "1px solid rgba(255,255,255,0.35)",
                   boxShadow:
                     "0 18px 40px rgba(245,158,11,0.4), inset 0 1px 0 rgba(255,255,255,0.45)",
-                  animation: !isPlaying
-                    ? "attention-pulse 2.5s ease-out infinite"
-                    : "none",
+                  animation:
+                    !isPlaying && !isLoadingAudio
+                      ? "attention-pulse 2.5s ease-out infinite"
+                      : "none",
                 }}
               >
                 {isPlaying ? (
                   <>
                     <Square className="h-3.5 w-3.5 fill-current" strokeWidth={1.6} />
                     Stop listening
+                  </>
+                ) : isLoadingAudio ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" strokeWidth={1.6} />
+                    Preparing audio…
                   </>
                 ) : (
                   <>
@@ -554,6 +578,15 @@ export function JourneySummaryScreen({ audience }: { audience: Audience }) {
                   </>
                 )}
               </button>
+
+              {audioError && (
+                <p
+                  role="alert"
+                  className="font-serif-italic text-[13px] text-destructive/90"
+                >
+                  {audioError}
+                </p>
+              )}
 
               <button
                 type="button"

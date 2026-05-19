@@ -34,20 +34,26 @@ export function CredentialsSection() {
           </div>
 
           <div className="lg:col-span-8">
-            <ul className="grid grid-cols-2 items-center gap-x-8 gap-y-8 sm:grid-cols-5">
+            {/* Logos centered in their grid cells with generous gutters so
+                the row reads as a calm sequence instead of a cramped strip.
+                `object-center` (default) + bigger gap-x replaces the prior
+                `object-left` + gap-x-8 combo flagged by QA as "check
+                spacing". Heights nudged up so smaller marks (Pearson, UN)
+                don't disappear next to the wider ones. */}
+            <ul className="grid grid-cols-2 items-center justify-items-center gap-x-10 gap-y-10 sm:grid-cols-5 sm:gap-x-12 lg:gap-x-14">
               {logos.map((logo, i) => (
                 <Reveal
                   as="li"
                   key={logo.alt}
                   delay={150 + i * 80}
-                  className="relative h-8 sm:h-10"
+                  className="relative h-9 w-full sm:h-11"
                 >
                   <Image
                     src={logo.src}
                     alt={logo.alt}
                     fill
-                    sizes="(min-width: 640px) 110px, 90px"
-                    className="object-contain object-left opacity-60 grayscale transition-all duration-700 hover:opacity-100 hover:grayscale-0"
+                    sizes="(min-width: 640px) 120px, 100px"
+                    className="object-contain opacity-60 grayscale transition-all duration-700 hover:opacity-100 hover:grayscale-0"
                   />
                 </Reveal>
               ))}

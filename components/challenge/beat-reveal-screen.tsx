@@ -82,22 +82,43 @@ export function BeatRevealScreen({
     return () => clearInterval(id)
   }, [isRevealed, tokens])
 
-  const submitFeedback = (option: string, reason?: string) => {
+  const submitFeedback = async (option: string, reason?: string) => {
     setFeedback(option)
-    if (state.email?.trim() && state.serialNumber) {
-      const combined = reason?.trim() ? `${option} | ${reason.trim()}` : option
-      void submitToGoogleSheet({
-        action: "feedback",
-        firstName: state.firstName,
-        email: state.email.trim(),
-        audience,
-        serialNumber: state.serialNumber,
-        beatNumber,
-        feedback: combined,
-      })
-    }
     setIsTransitioning(true)
-    window.setTimeout(() => router.push(nextRoute), 1200)
+
+    // Kick the save off immediately, but DO NOT fire-and-forget. Testers
+    // reported missing feedback rows; root cause is that the previous code
+    // navigated 1200ms after dispatching the fetch, which can cancel the
+    // request mid-flight on slower connections. We now race the save
+    // against a generous max-wait so the user is never stranded if the
+    // network is completely dead, but in the common path the write lands
+    // before the transition begins.
+    const TRANSITION_DELAY_MS = 1200
+    const SAVE_MAX_WAIT_MS = 5000
+    const minDelay = new Promise<void>((r) =>
+      window.setTimeout(r, TRANSITION_DELAY_MS),
+    )
+    const savePromise =
+      state.email?.trim() && state.serialNumber
+        ? submitToGoogleSheet({
+            action: "feedback",
+            firstName: state.firstName,
+            email: state.email.trim(),
+            audience,
+            serialNumber: state.serialNumber,
+            beatNumber,
+            feedback: reason?.trim() ? `${option} | ${reason.trim()}` : option,
+          }).catch(() => false)
+        : Promise.resolve(true)
+    const saveWithCap = Promise.race<boolean>([
+      savePromise,
+      new Promise<boolean>((r) =>
+        window.setTimeout(() => r(false), SAVE_MAX_WAIT_MS),
+      ),
+    ])
+
+    await Promise.all([minDelay, saveWithCap])
+    router.push(nextRoute)
   }
 
   const handleFeedback = (option: string) => {
@@ -106,12 +127,12 @@ export function BeatRevealScreen({
       setPendingPartly(true)
       return
     }
-    submitFeedback(option)
+    void submitFeedback(option)
   }
 
   const handlePartlyContinue = () => {
     if (feedback || isTransitioning) return
-    submitFeedback(PARTLY_ID, partlyReason)
+    void submitFeedback(PARTLY_ID, partlyReason)
   }
 
   const handleBack = () => router.push(prevRoute)

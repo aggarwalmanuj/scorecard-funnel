@@ -22,7 +22,16 @@ const processingSteps = [
 ]
 
 const BEAT_READY_MIN_CHARS = 40
-const HARD_TIMEOUT_MS = 60_000
+// Auto-navigate fallback if the pipeline hasn't completed by here.
+// 75s gives slow networks room to finish without abandoning the user
+// (testers reported sitting for ~2 min with no feedback — that wait now
+// has explicit progressive messaging plus a "Continue anyway" button).
+const HARD_TIMEOUT_MS = 75_000
+// Show "this is taking a moment" after the checklist animation completes
+// but allReady hasn't flipped yet.
+const SLOW_HINT_AFTER_MS = 22_000
+// Surface an explicit escape hatch so the user is never truly stuck.
+const ESCAPE_HATCH_AFTER_MS = 45_000
 
 function generateMockBeats(firstName: string) {
   const n = firstName.trim() || "You"
@@ -219,16 +228,28 @@ export function ProcessingScreen({ audience }: { audience: Audience }) {
   // Navigation to beat-1 is blocked until this is true so /summary's
   // listen button never has to show a loading state.
   const [audioReady, setAudioReady] = useState(false)
+  // Tracks whether ALL beat-output writes to Cosmos have finished
+  // (success or final failure). Gates navigation to beat-1 so the user
+  // can't reach the reveal screens — and the admin Responses tab — before
+  // their beat_output rows have been persisted. Without this gate, fast
+  // streamers can navigate while the saves are still in flight, which
+  // testers reported as missing beat_output cells in the database.
+  const [outputsSaved, setOutputsSaved] = useState(false)
   const abortRef = useRef<AbortController | null>(null)
+  // Collects every save promise so we can await ALL of them (including
+  // mock saves dispatched from applyMocks) before flipping outputsSaved.
+  const savePromisesRef = useRef<Promise<boolean>[]>([])
 
   const saveParamsRef = useRef({ serialNumber: state.serialNumber, email: state.email, firstName: state.firstName })
   saveParamsRef.current = { serialNumber: state.serialNumber, email: state.email, firstName: state.firstName }
 
   const saveOutputToSheet = useCallback(
-    (beatNumber: 1 | 2 | 3 | 4 | 5, output: string) => {
+    (beatNumber: 1 | 2 | 3 | 4 | 5, output: string): Promise<boolean> => {
       const { serialNumber, email, firstName } = saveParamsRef.current
-      if (!serialNumber || !email?.trim() || !output.trim()) return
-      void submitToGoogleSheet({
+      if (!serialNumber || !email?.trim() || !output.trim()) {
+        return Promise.resolve(false)
+      }
+      const p = submitToGoogleSheet({
         action: "beat_output",
         firstName,
         email: email.trim(),
@@ -236,7 +257,9 @@ export function ProcessingScreen({ audience }: { audience: Audience }) {
         serialNumber,
         beatNumber,
         output,
-      })
+      }).catch(() => false)
+      savePromisesRef.current.push(p)
+      return p
     },
     [audience],
   )
@@ -295,6 +318,11 @@ export function ProcessingScreen({ audience }: { audience: Audience }) {
       state.summaryText.trim().length > 0
 
     if (fullyCached) {
+      // Re-entry path (e.g. a back-then-forward navigation): everything
+      // is already persisted in the challenge context, so no new save
+      // round-trips are needed. Mark outputs as already-saved so the
+      // navigation gate doesn't wait on an empty promise set.
+      setOutputsSaved(true)
       void preloadSummaryAudio(state.summaryText).then((buf) => {
         if (buf) setAudioReady(true)
       })
@@ -430,6 +458,19 @@ export function ProcessingScreen({ audience }: { audience: Audience }) {
           })
         }
       })
+
+      // Wait for all beat-output writes to settle (success OR final
+      // failure after retries) before allowing navigation. Promise.race
+      // against a hard cap so the user is never stranded if Cosmos is
+      // completely unreachable — the writes will still continue under
+      // keepalive after navigation, and the in-page retries will have
+      // exhausted by then.
+      const SAVE_HARD_WAIT_MS = 12_000
+      await Promise.race([
+        Promise.allSettled(savePromisesRef.current),
+        new Promise((r) => setTimeout(r, SAVE_HARD_WAIT_MS)),
+      ])
+      if (active) setOutputsSaved(true)
     })()
 
     return () => {
@@ -449,21 +490,43 @@ export function ProcessingScreen({ audience }: { audience: Audience }) {
     !!state.clarityScore &&
     !!state.reportData &&
     state.summaryText.trim().length > 0 &&
-    audioReady
+    audioReady &&
+    outputsSaved
 
   const [timedOut, setTimedOut] = useState(false)
+  const [showSlowHint, setShowSlowHint] = useState(false)
+  const [showEscapeHatch, setShowEscapeHatch] = useState(false)
+  const [userForcedContinue, setUserForcedContinue] = useState(false)
+
   useEffect(() => {
     const t = setTimeout(() => setTimedOut(true), HARD_TIMEOUT_MS)
     return () => clearTimeout(t)
   }, [])
 
   useEffect(() => {
+    const t1 = setTimeout(() => setShowSlowHint(true), SLOW_HINT_AFTER_MS)
+    const t2 = setTimeout(() => setShowEscapeHatch(true), ESCAPE_HATCH_AFTER_MS)
+    return () => {
+      clearTimeout(t1)
+      clearTimeout(t2)
+    }
+  }, [])
+
+  useEffect(() => {
     if (!minElapsed) return
     if (missingPrompts) return
-    if (!allReady && !timedOut) return
+    if (!allReady && !timedOut && !userForcedContinue) return
     const t = setTimeout(() => router.push(`/challenge/${audience}/beat-1`), 400)
     return () => clearTimeout(t)
-  }, [minElapsed, allReady, timedOut, router, audience, missingPrompts])
+  }, [
+    minElapsed,
+    allReady,
+    timedOut,
+    userForcedContinue,
+    router,
+    audience,
+    missingPrompts,
+  ])
 
   const progressPercent = ((activeStep + 1) / processingSteps.length) * 100
 
@@ -637,6 +700,36 @@ export function ProcessingScreen({ audience }: { audience: Audience }) {
           </p>
         )}
       </div>
+
+      {/* Slow-network banner — fixed at the viewport bottom so it's always
+          visible regardless of how tall the centered checklist column has
+          grown. Testers reported the previous inline placement was below
+          the fold on standard laptop screens. */}
+      {!allReady && (showSlowHint || showEscapeHatch) && (
+        <div
+          className="fixed inset-x-0 bottom-0 z-30 border-t border-border/40 bg-background/85 px-5 py-3 backdrop-blur-xl animate-in fade-in slide-in-from-bottom-2 duration-500 sm:py-4"
+          role="status"
+          aria-live="polite"
+        >
+          <div className="mx-auto flex max-w-3xl flex-col items-center justify-between gap-2 sm:flex-row sm:gap-4">
+            <p className="flex items-center gap-2 text-center text-[12px] uppercase tracking-[0.2em] text-foreground/70 sm:text-left">
+              <span className="pulse-dot" aria-hidden />
+              {showEscapeHatch
+                ? "Still working — taking longer than usual."
+                : "Still working — your network is taking a moment."}
+            </p>
+            {showEscapeHatch && (
+              <button
+                type="button"
+                onClick={() => setUserForcedContinue(true)}
+                className="shrink-0 rounded-full border border-foreground/40 px-5 py-1.5 text-[11px] uppercase tracking-[0.2em] text-foreground transition-colors duration-300 hover:border-ink hover:text-ink"
+              >
+                Continue with what we have
+              </button>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

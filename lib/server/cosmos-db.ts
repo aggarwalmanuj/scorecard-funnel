@@ -184,6 +184,9 @@ export async function readPrompts(): Promise<Record<string, string>> {
 
   const result: Record<string, string> = {}
   for (const item of resources) {
+    // Skip internal control documents (e.g. the serial-number counter)
+    // so the admin prompts editor never sees them as editable prompts.
+    if (typeof item.id === "string" && item.id.startsWith("__")) continue
     if (item.id && item.value !== undefined) {
       result[item.id] = String(item.value)
     }
@@ -207,15 +210,86 @@ export async function writePrompts(data: Record<string, string>): Promise<void> 
    Users container
    ═══════════════════════════════════════════════ */
 
-/** Get the next serial number by finding the current max. */
-async function getNextSerialNumber(): Promise<number> {
-  const container = usersContainer()
-  const { resources } = await container.items
+/**
+ * Atomically allocate the next serial number using a singleton counter
+ * document with ETag-based optimistic concurrency. Two concurrent signups
+ * will see the same ETag, only one's `replace` will succeed; the loser
+ * gets 412 PreconditionFailed and retries — guaranteeing unique, gap-free
+ * serial numbers under concurrency.
+ *
+ * The counter lives in the `prompts` container (keyed by /id) under the
+ * id "__sno_counter" so we don't need a third container. On first call
+ * (counter doc absent) we seed it from MAX(c.id) in the users container
+ * so existing data isn't skipped. This migration path runs at most once
+ * per deployment.
+ */
+const SNO_COUNTER_ID = "__sno_counter"
+const SNO_MAX_ATTEMPTS = 10
+
+async function seedCounterFromUsersMax(): Promise<number> {
+  const users = usersContainer()
+  const { resources } = await users.items
     .query("SELECT VALUE MAX(StringToNumber(c.id)) FROM c")
     .fetchAll()
+  const max = resources[0]
+  return typeof max === "number" && !Number.isNaN(max) ? max : 0
+}
 
-  const maxSno = resources[0] ?? 0
-  return (typeof maxSno === "number" && !Number.isNaN(maxSno) ? maxSno : 0) + 1
+async function getNextSerialNumber(): Promise<number> {
+  const counter = promptsContainer()
+  for (let attempt = 0; attempt < SNO_MAX_ATTEMPTS; attempt++) {
+    try {
+      const { resource, etag } = await counter
+        .item(SNO_COUNTER_ID, SNO_COUNTER_ID)
+        .read<{ id: string; value: number }>()
+
+      if (!resource) {
+        // First-ever allocation — seed from existing users so we don't
+        // hand out colliding ids for data that pre-dates the counter.
+        const seed = await seedCounterFromUsersMax()
+        try {
+          await counter.items.create(
+            { id: SNO_COUNTER_ID, value: seed + 1 },
+            { accessCondition: { type: "IfNoneMatch", condition: "*" } },
+          )
+          return seed + 1
+        } catch (e: unknown) {
+          // Another process created the counter at the same time — fall
+          // through to the read+CAS path on the next loop iteration.
+          const code = (e as { code?: number })?.code
+          if (code !== 409 /* Conflict */) throw e
+          continue
+        }
+      }
+
+      const current = typeof resource.value === "number" ? resource.value : 0
+      const next = current + 1
+      try {
+        await counter
+          .item(SNO_COUNTER_ID, SNO_COUNTER_ID)
+          .replace(
+            { id: SNO_COUNTER_ID, value: next },
+            { accessCondition: { type: "IfMatch", condition: etag ?? "" } },
+          )
+        return next
+      } catch (e: unknown) {
+        const code = (e as { code?: number })?.code
+        if (code === 412 /* PreconditionFailed — lost the CAS race */) continue
+        throw e
+      }
+    } catch (e: unknown) {
+      const code = (e as { code?: number })?.code
+      if (code === 404) {
+        // Counter doc missing AND read threw 404 rather than returning
+        // undefined — retry the loop to take the seed path.
+        continue
+      }
+      throw e
+    }
+  }
+  throw new Error(
+    `[cosmos-db] Failed to allocate serial number after ${SNO_MAX_ATTEMPTS} CAS attempts`,
+  )
 }
 
 /**

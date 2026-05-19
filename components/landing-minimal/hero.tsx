@@ -28,7 +28,7 @@ export function MinimalHero() {
             <h1 className="wrap-break-word font-serif text-[2.15rem] leading-[1.06] text-ink sm:text-6xl sm:leading-[1.02] lg:text-7xl xl:text-[5.6rem]">
               <WordReveal
                 segments={[
-                  { kind: "text", text: "Something quietly" },
+                  { kind: "text", text: "Something is quietly" },
                   { kind: "br" },
                   { kind: "italic", text: "limiting" },
                   { kind: "br" },
