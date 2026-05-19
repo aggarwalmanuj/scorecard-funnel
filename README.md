@@ -1,4 +1,4 @@
-# The Honest Decision Challenge
+# The Honest Decision Challenge 
 
 An interactive, multi-step funnel experience built with Next.js. Users sign up, answer five introspective questions, receive personalized "beat" reveals, and land on a final offer page — all while their progress is captured to a Google Sheet in real time. 
 
