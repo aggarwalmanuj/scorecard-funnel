@@ -35,21 +35,22 @@ const POSTHOG_DEV_ENABLED =
 
 if (typeof window !== "undefined" && POSTHOG_KEY && (!IS_DEV || POSTHOG_DEV_ENABLED)) {
   posthog.init(POSTHOG_KEY, {
-    // Production: route through `/ingest` (next.config.mjs rewrites)
-    // so ad blockers can't drop requests by matching the PostHog
-    // hostname.
-    // Dev: talk to PostHog directly. The rewrite would force the dev
-    // server's node.exe to upstream to AWS, and on Windows/corporate
-    // networks node often can't reach hosts the browser can (firewall
-    // rules typically allowlist browsers, not arbitrary Node processes)
-    // — symptom is ETIMEDOUT spam in the terminal. Devs don't run ad
-    // blockers on their own boxes, so bypassing the proxy in dev costs
-    // nothing.
-    api_host: IS_DEV ? POSTHOG_HOST : "/ingest",
-    // ui_host is where "Open in PostHog" links (from toolbar, replay,
-    // exception panels) point. Must be the dashboard host, not the
-    // ingestion host. Without this, those links 404.
-    ui_host: "https://us.posthog.com",
+    // Route ALL PostHog traffic (events, feature flags, lazy-loaded
+    // chunks) through our same-origin `/ingest` reverse proxy defined in
+    // next.config.mjs. This is what makes ad/tracker blockers (uBlock,
+    // Brave Shields, AdGuard, EasyList) treat the requests as first-party
+    // and let them through. Note: even in dev, the proxy hops via the
+    // Next.js dev server's Node process to PostHog — so a dev box that
+    // can't reach us.i.posthog.com from Node (Windows + corporate
+    // firewall) will see proxied requests fail. The
+    // NEXT_PUBLIC_POSTHOG_ENABLE_DEV env var above gates whether init
+    // runs in dev at all, so that environment can opt out cleanly.
+    api_host: "/ingest",
+    // ui_host is used ONLY for toolbar/debug "Open in PostHog" links and
+    // must stay as the canonical dashboard host so they resolve. Keep
+    // this pointing at the original NEXT_PUBLIC_POSTHOG_HOST value — do
+    // not route it through the proxy.
+    ui_host: POSTHOG_HOST,
     defaults: "2026-01-30",
     // Force the initial pageview. The `2026-01-30` defaults set
     // `capture_pageview: 'history_change'`, which fires on SPA route

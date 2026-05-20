@@ -92,16 +92,13 @@ export async function middleware(request: NextRequest) {
   const nonce = generateNonce()
   const isDev = process.env.NODE_ENV !== "production"
 
-  // PostHog hosts (US Cloud):
-  //   - us.i.posthog.com — event ingestion + decide endpoint
-  //   - us-assets.i.posthog.com — lazy-loaded chunks (session-recorder,
-  //     surveys, web-vitals). posthog-js fetches these at runtime, so the
-  //     asset host must be listed under script-src OR strict-dynamic must
-  //     authorize it via the trusted bootstrap script. We list it
-  //     explicitly to keep behavior identical even if strict-dynamic is
-  //     ever relaxed.
-  //   - worker-src blob: — the session recorder spawns a Web Worker from
-  //     a blob URL to offload rrweb serialization.
+  // PostHog hosts are NOT listed here — all PostHog traffic (events,
+  // feature flags, asset chunks) is reverse-proxied through `/ingest`
+  // (see next.config.mjs rewrites) and is therefore same-origin, covered
+  // by 'self'. Keeping *.posthog.com out of the trusted-origin set keeps
+  // CSP tight. The session recorder still spawns a Web Worker from a
+  // blob URL even when the script itself is same-origin, so the
+  // `worker-src 'self' blob:` directive below is still required.
   const scriptSrc = [
     "'self'",
     `'nonce-${nonce}'`,
@@ -109,7 +106,6 @@ export async function middleware(request: NextRequest) {
     isDev ? "'unsafe-eval'" : "",
     "https://assets.calendly.com",
     "https://connect.facebook.net",
-    "https://us-assets.i.posthog.com",
   ]
     .filter(Boolean)
     .join(" ")
@@ -124,7 +120,7 @@ export async function middleware(request: NextRequest) {
     // element with an empty player and no console error.
     "media-src 'self' blob: https://bfyvfetxtgsgzjci.public.blob.vercel-storage.com",
     "font-src 'self' data:",
-    "connect-src 'self' https://openrouter.ai https://www.googleapis.com https://calendly.com https://connect.facebook.net https://www.facebook.com https://bfyvfetxtgsgzjci.public.blob.vercel-storage.com https://us.i.posthog.com https://us-assets.i.posthog.com",
+    "connect-src 'self' https://openrouter.ai https://www.googleapis.com https://calendly.com https://connect.facebook.net https://www.facebook.com https://bfyvfetxtgsgzjci.public.blob.vercel-storage.com",
     "worker-src 'self' blob:",
     "frame-src 'self' https://calendly.com",
     "frame-ancestors 'none'",
