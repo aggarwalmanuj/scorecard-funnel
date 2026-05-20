@@ -67,6 +67,7 @@ export function BeatRevealScreen({
   const audioSourceRef = useRef<AudioBufferSourceNode | null>(null)
   const audioBytesRef = useRef<ArrayBuffer | null>(null)
   const hasAutoplayedRef = useRef(false)
+  const tokenTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   const tokens = useMemo(() => {
     if (!beatContent?.trim()) return [] as string[]
@@ -181,11 +182,30 @@ export function BeatRevealScreen({
       setVisibleTokenCount(i)
       if (i >= tokens.length) {
         clearInterval(id)
+        tokenTimerRef.current = null
         setIsComplete(true)
       }
     }, 38)
-    return () => clearInterval(id)
+    tokenTimerRef.current = id
+    return () => {
+      clearInterval(id)
+      tokenTimerRef.current = null
+    }
   }, [isRevealed, tokens])
+
+  // Double-click anywhere on the reflection card to skip the typewriter
+  // straight to the end. Why: testers found the 38ms-per-token pace too
+  // slow on re-reads.
+  const handleSkipReveal = () => {
+    if (tokens.length === 0) return
+    if (isComplete) return
+    if (tokenTimerRef.current) {
+      clearInterval(tokenTimerRef.current)
+      tokenTimerRef.current = null
+    }
+    setVisibleTokenCount(tokens.length)
+    setIsComplete(true)
+  }
 
   // Autoplay: once the typewriter finishes and the xAI buffer is ready,
   // start playback automatically. Fires at most once per beat (guarded by
@@ -350,9 +370,11 @@ export function BeatRevealScreen({
         {/* Reflection card */}
         <div className="px-5 sm:px-8 py-10 animate-curtain-rise">
           <div
+            onDoubleClick={handleSkipReveal}
+            title={!isComplete && tokens.length > 0 ? "Double-click to skip" : undefined}
             className={`mx-auto max-w-2xl rounded-md p-7 transition-all duration-700 sm:p-8 ${
               isComplete ? "border border-ink bg-card" : "s-card-static"
-            }`}
+            } ${!isComplete && tokens.length > 0 ? "cursor-pointer" : ""}`}
           >
             <div
               className={`mb-3 transition-all duration-500 ${
