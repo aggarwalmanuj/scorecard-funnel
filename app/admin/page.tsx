@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
+import { DEFAULT_REPORT_SYSTEM_PROMPT } from "@/lib/default-report-prompt"
 import {
   ChevronDown,
   Save,
@@ -68,7 +69,7 @@ const EMPTY_BEATS: Beat[] = Array.from({ length: 5 }, () => ({
 
 const emptyAudienceData = (): AudienceData => ({
   systemPrompt: "",
-  reportSystemPrompt: "",
+  reportSystemPrompt: DEFAULT_REPORT_SYSTEM_PROMPT,
   questions: structuredClone(EMPTY_QUESTIONS),
   beats: structuredClone(EMPTY_BEATS),
 })
@@ -148,7 +149,8 @@ export default function AdminPage() {
     }
     for (const aud of ["individual", "team"] as Audience[]) {
       next[aud].systemPrompt = raw[`system_prompt_${aud}`] || ""
-      next[aud].reportSystemPrompt = raw[`report_system_prompt_${aud}`] || ""
+      next[aud].reportSystemPrompt =
+        raw[`report_system_prompt_${aud}`] || DEFAULT_REPORT_SYSTEM_PROMPT
       const qRaw = raw[`questions_${aud}`]
       if (qRaw) {
         try {
@@ -1062,24 +1064,37 @@ export default function AdminPage() {
                   Editing the <strong className="text-foreground capitalize">{audience}</strong> detailed scorecard
                   prompt. Sent as the system message when generating the printable
                   Clarity Readiness Report (headline, pillars, themes, takeaways,
-                  30-day reflection). Leave empty to use the built-in default.
+                  30-day reflection). Use <strong>Load default</strong> to drop the
+                  built-in baseline into the editor, then tweak and save.
                 </div>
 
                 <div className="bg-card rounded-md s-card-static overflow-hidden">
                   <div className="p-6">
-                    <div className="flex justify-between items-center mb-2">
+                    <div className="flex justify-between items-center mb-2 gap-2 flex-wrap">
                       <label className="eyebrow text-foreground/65">
                         Detailed Scorecard Prompt - {audience}
                       </label>
-                      <span className="text-xs text-muted-foreground">
-                        {current.reportSystemPrompt.length} chars
-                      </span>
+                      <div className="flex items-center gap-3">
+                        <span className="text-xs text-muted-foreground">
+                          {current.reportSystemPrompt.length} chars
+                        </span>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => updateReportSystemPrompt(DEFAULT_REPORT_SYSTEM_PROMPT)}
+                          className="h-8 rounded-full px-3 text-[10px] uppercase tracking-[0.18em] border-foreground/35 text-foreground hover:border-ink hover:text-ink"
+                          title="Replace the textarea content with the built-in default prompt"
+                        >
+                          Load default
+                        </Button>
+                      </div>
                     </div>
                     <Textarea
                       rows={24}
                       value={current.reportSystemPrompt}
                       onChange={(e) => updateReportSystemPrompt(e.target.value)}
-                      placeholder="Leave empty to use the built-in default narrative prompt."
+                      placeholder="Detailed scorecard narrative prompt. Click 'Load default' to insert the built-in baseline."
                       className="min-h-[400px] font-mono text-sm s-input resize-y"
                     />
                   </div>
