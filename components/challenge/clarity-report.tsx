@@ -535,12 +535,12 @@ function ReportHeader({
 }) {
   return (
     <header className="head">
-      {/* Logo slot - kept blank until the matching wordmark is supplied. The
-          dot+rule pairing carries the brand placeholder consistently with
-          the rest of the funnel. */}
+      {/* AIMerge wordmark + report eyebrow. The .brand-mark mask inherits
+          the page's --ink (navy on the report's cream surface) so it stays
+          legible; html2canvas-pro renders CSS mask correctly into the PDF. */}
       <div className="logo">
-        <span className="dot" aria-hidden />
-        <span>Clarity Readiness Report</span>
+        <span className="brand-mark brand-mark-sm" aria-hidden />
+        <span className="report-name">Clarity Readiness Report</span>
       </div>
       {compact ? (
         <div className="meta">
@@ -1051,17 +1051,23 @@ function ReportStyles() {
       .report-root .logo {
         display: inline-flex;
         align-items: center;
-        gap: 8px;
+        gap: 10px;
         font-weight: 800;
         letter-spacing: -0.01em;
         color: var(--ink);
         font-size: 13px;
       }
-      .report-root .logo .dot {
-        width: 12px;
-        height: 12px;
-        border-radius: 4px;
-        background: linear-gradient(135deg, var(--brand), var(--brand-dark));
+      .report-root .logo .brand-mark {
+        width: 96px;
+      }
+      .report-root .logo .report-name {
+        padding-left: 10px;
+        border-left: 1px solid var(--line);
+        font-size: 9.5px;
+        font-weight: 800;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: var(--ink-soft);
       }
       .report-root .foot {
         position: absolute;

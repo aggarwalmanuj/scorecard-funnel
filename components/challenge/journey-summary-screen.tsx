@@ -275,8 +275,15 @@ export function JourneySummaryScreen({ audience }: { audience: Audience }) {
   const [visibleChars, setVisibleChars] = useState(0)
   const fullTextRef = useRef("")
   const charTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  // Sticky skip flag — once set (by double-click), every subsequent stream
+  // chunk renders instantly instead of restarting the typewriter.
+  const skippedRef = useRef(false)
 
   const startReveal = () => {
+    if (skippedRef.current) {
+      setVisibleChars(fullTextRef.current.length)
+      return
+    }
     if (charTimerRef.current) return
     charTimerRef.current = setInterval(() => {
       setVisibleChars((prev) => {
@@ -291,11 +298,23 @@ export function JourneySummaryScreen({ audience }: { audience: Audience }) {
     }, 18)
   }
 
+  // Double-click anywhere on the summary text to skip the typewriter and
+  // (for an in-flight stream) keep subsequent chunks rendering instantly.
+  const handleSkipReveal = () => {
+    skippedRef.current = true
+    if (charTimerRef.current) {
+      clearInterval(charTimerRef.current)
+      charTimerRef.current = null
+    }
+    setVisibleChars(fullTextRef.current.length)
+  }
+
   useEffect(() => {
     if (!isHydrated) return
 
     fullTextRef.current = ""
     setVisibleChars(0)
+    skippedRef.current = false
 
     if (state.summaryText && state.summaryText.trim()) {
       fullTextRef.current = state.summaryText
@@ -620,7 +639,15 @@ export function JourneySummaryScreen({ audience }: { audience: Audience }) {
           )}
 
           {/* 3. Summary text */}
-          <div className="mt-14 min-h-[120px]">
+          <div
+            className={`mt-14 min-h-[120px] ${
+              isCursorVisible && summaryText ? "cursor-pointer" : ""
+            }`}
+            onDoubleClick={handleSkipReveal}
+            title={
+              isCursorVisible && summaryText ? "Double-click to skip" : undefined
+            }
+          >
             {!summaryText && isStreaming && (
               <div className="mt-2 flex items-center gap-3">
                 <span className="pulse-dot" aria-hidden />

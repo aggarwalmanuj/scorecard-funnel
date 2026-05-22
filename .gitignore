@@ -15,4 +15,7 @@ node_modules
 .next/
 .DS_Store
 
+# TypeScript incremental build cache — regenerated on every tsc run.
+tsconfig.tsbuildinfo
+
 .agents

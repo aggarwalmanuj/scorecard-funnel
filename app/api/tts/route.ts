@@ -98,6 +98,13 @@ async function elevenLabsTts(text: string): Promise<NextResponse> {
   const voiceId = process.env.ELEVENLABS_VOICE_ID || 'cR39HTrtXbjvEP4CNYFx';
   const modelId = process.env.ELEVENLABS_MODEL_ID || 'eleven_turbo_v2_5';
 
+  // ElevenLabs accepts 0.7–1.2; <1 slows speech, >1 speeds it up. Default
+  // 0.9 reads the summary at a calmer, more reflective pace.
+  const rawSpeed = Number.parseFloat(process.env.ELEVENLABS_VOICE_SPEED || "0.9");
+  const speed = Number.isFinite(rawSpeed)
+    ? Math.min(1.2, Math.max(0.7, rawSpeed))
+    : 0.9;
+
   if (!apiKey) {
     console.warn("ElevenLabs API key is missing");
     return NextResponse.json({ error: 'ElevenLabs API key not configured' }, { status: 500 });
@@ -109,6 +116,7 @@ async function elevenLabsTts(text: string): Promise<NextResponse> {
     text,
     model_id: modelId,
     output_format: "mp3_44100_128",
+    voice_settings: { speed },
   });
 
   const chunks: Buffer[] = [];
