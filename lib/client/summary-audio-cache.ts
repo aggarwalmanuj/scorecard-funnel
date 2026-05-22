@@ -15,10 +15,10 @@
  */
 
 const DB_NAME = "scorecard-funnel"
-// Bumped to 2 when the summary voice switched to ElevenLabs — the upgrade
-// handler drops any xAI-era bytes still living under the same text key so
-// returning visitors get the new voice on next load.
-const DB_VERSION = 2
+// Bumped to 3 when the ElevenLabs voice was slowed to 0.9× — the upgrade
+// handler drops any 1.0× bytes still living under the same text key so
+// returning visitors get the slower-paced voice on next load.
+const DB_VERSION = 3
 const STORE = "summaryAudio"
 
 let cachedText: string | null = null
