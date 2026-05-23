@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef, useMemo } from "react"
+import { useState, useEffect, useRef, useMemo, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { ArrowRight, Volume2, Square, Loader2, Download } from "lucide-react"
 import { useChallenge, type Audience } from "@/context/challenge-context"
@@ -15,6 +15,10 @@ import {
   type ClarityScore,
   type Subscores,
 } from "@/lib/scoring"
+import {
+  downloadArrayBufferAsFile,
+  useAudioPlayback,
+} from "@/hooks/use-audio-playback"
 
 type ScoreSource = "llm" | "fallback" | "pending"
 type ScoreReasons = Partial<Record<keyof Subscores, string>>
@@ -159,113 +163,70 @@ export function JourneySummaryScreen({ audience }: { audience: Audience }) {
   const [ctaVisible, setCtaVisible] = useState(false)
   const [unlocked, setUnlocked] = useState(false)
 
-  const [isPlaying, setIsPlaying] = useState(false)
-  const [isLoadingAudio, setIsLoadingAudio] = useState(false)
-  const [audioError, setAudioError] = useState<string | null>(null)
-  const [isDownloadingAudio, setIsDownloadingAudio] = useState(false)
-  const audioCtxRef = useRef<AudioContext | null>(null)
-  const audioSourceRef = useRef<AudioBufferSourceNode | null>(null)
-  const audioBytesRef = useRef<ArrayBuffer | null>(null)
-  const hasAutoplayedRef = useRef(false)
-
-  useEffect(() => {
-    return () => {
-      audioSourceRef.current?.stop()
-      audioCtxRef.current?.close()
-    }
-  }, [])
-
-  const fetchAudioBytes = async (): Promise<ArrayBuffer | null> => {
-    if (audioBytesRef.current) return audioBytesRef.current
+  // HTML5 audio playback via the shared Safari-safe hook. Previous Web
+  // Audio API impl broke on Safari macOS because `ctx.resume()` was
+  // awaited after `fetchAudioBytes()` — by then the user-activation flag
+  // had been dropped and Safari refused to start the context, leaving
+  // the Listen button permanently stuck on "Preparing audio…".
+  const fetchSummaryBytes = useCallback(async (): Promise<ArrayBuffer | null> => {
     if (!summaryText.trim()) return null
     const pending =
       getCachedSummaryAudio(summaryText) ?? preloadSummaryAudio(summaryText)
-    const buffer = await pending
-    if (!buffer) throw new Error("TTS request failed or returned empty buffer")
-    audioBytesRef.current = buffer
-    return buffer
-  }
+    return pending
+  }, [summaryText])
 
-  // Real audio playback. /processing tries to preload the TTS bytes, but
-  // the TTS endpoint can fail or be slow, so we DON'T assume the buffer is
-  // ready — we surface loading + error states explicitly so a click always
-  // produces visible feedback (testers reported "button does nothing" when
-  // the silent-null path was hit).
-  const handlePlayAudio = async () => {
-    if (isPlaying) {
-      audioSourceRef.current?.stop()
-      audioSourceRef.current = null
-      setIsPlaying(false)
+  const audio = useAudioPlayback({
+    cacheKey: summaryText,
+    fetchBytes: fetchSummaryBytes,
+    mimeType: "audio/mpeg",
+    enabled: Boolean(summaryText.trim()),
+  })
+
+  const isPlaying = audio.isPlaying
+  const isLoadingAudio = audio.isLoading
+  const audioError = audio.error
+  const [isDownloadingAudio, setIsDownloadingAudio] = useState(false)
+  const hasAutoplayedRef = useRef(false)
+
+  const handlePlayAudio = useCallback(() => {
+    audio.toggle()
+  }, [audio])
+
+  const handleDownloadAudio = useCallback(() => {
+    if (isDownloadingAudio) return
+    const buffer = audio.getBytes()
+    const safeName =
+      (state.firstName || "your")
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-|-$/g, "")
+        .slice(0, 30) || "your"
+
+    if (!buffer) {
+      // Buffer hasn't arrived yet. Kick off a fetch and trigger the
+      // download once it lands — but do NOT block this user gesture
+      // with an await, since Safari needs the `a.click()` to dispatch
+      // from inside the same task. Best UX: surface a brief loading
+      // state and let the hook's preload finish, then re-prompt.
+      setIsDownloadingAudio(true)
+      void fetchSummaryBytes()
+        .then((buf) => {
+          downloadArrayBufferAsFile({
+            buffer: buf,
+            filename: `${safeName}-clarity-summary.mp3`,
+          })
+        })
+        .finally(() => setIsDownloadingAudio(false))
       return
     }
-    if (!summaryText) return
-    if (isLoadingAudio) return
-    setAudioError(null)
-    setIsLoadingAudio(true)
-    try {
-      const buffer = await fetchAudioBytes()
-      if (!buffer) {
-        setAudioError("Audio is not available right now. Please try again.")
-        return
-      }
-      if (!audioCtxRef.current || audioCtxRef.current.state === "closed") {
-        audioCtxRef.current = new AudioContext()
-      }
-      const ctx = audioCtxRef.current
-      if (ctx.state === "suspended") await ctx.resume()
-      // decodeAudioData consumes the buffer in some implementations; clone
-      // it so the cached bytes stay reusable for download / replay.
-      const audioBuffer = await ctx.decodeAudioData(buffer.slice(0))
-      const source = ctx.createBufferSource()
-      source.buffer = audioBuffer
-      source.connect(ctx.destination)
-      source.onended = () => {
-        setIsPlaying(false)
-        audioSourceRef.current = null
-      }
-      source.start(0)
-      audioSourceRef.current = source
-      setIsPlaying(true)
-    } catch (error) {
-      console.error(
-        "Audio playback error:",
-        error instanceof Error ? error.message : String(error),
-      )
-      setIsPlaying(false)
-      setAudioError("Audio could not be played. Please try again.")
-    } finally {
-      setIsLoadingAudio(false)
-    }
-  }
 
-  const handleDownloadAudio = async () => {
-    if (isDownloadingAudio) return
-    if (!summaryText.trim()) return
-    try {
-      setIsDownloadingAudio(true)
-      const buffer = await fetchAudioBytes()
-      if (!buffer) return
-      const blob = new Blob([buffer.slice(0)], { type: "audio/mpeg" })
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement("a")
-      const safeName =
-        (state.firstName || "your")
-          .toLowerCase()
-          .replace(/[^a-z0-9]+/g, "-")
-          .replace(/^-|-$/g, "")
-          .slice(0, 30) || "your"
-      a.href = url
-      a.download = `${safeName}-clarity-summary.mp3`
-      document.body.appendChild(a)
-      a.click()
-      a.remove()
-      setTimeout(() => URL.revokeObjectURL(url), 1000)
-    } catch (error) {
-      console.error("Audio download error:", error instanceof Error ? error.message : String(error))
-    } finally {
-      setIsDownloadingAudio(false)
-    }
-  }
+    // Synchronous path — runs entirely inside the click gesture so
+    // Safari permits the download dispatch.
+    downloadArrayBufferAsFile({
+      buffer,
+      filename: `${safeName}-clarity-summary.mp3`,
+    })
+  }, [audio, fetchSummaryBytes, isDownloadingAudio, state.firstName])
 
   useEffect(() => {
     const t = setTimeout(() => setIsVisible(true), 80)
@@ -369,22 +330,21 @@ export function JourneySummaryScreen({ audience }: { audience: Audience }) {
     return () => clearTimeout(t)
   }, [isComplete, hasFailed])
 
-  // Autoplay the summary as soon as the text lands. The ElevenLabs bytes
-  // are preloaded on /processing and that screen blocks navigation until
-  // they resolve, so the cached audio is ready by the time we mount.
-  // Fires at most once per mount; if browser autoplay policy blocks
-  // playback, handlePlayAudio's catch swallows the error and the Listen
-  // button remains as a manual fallback.
+  // Attempt autoplay once the audio element is primed. Modern Chrome
+  // allows it after the user's funnel interaction (the "Continue"
+  // clicks that brought them here count as user activation for the
+  // page). Safari ignores autoplay attempts on audio elements without
+  // muted=true, so the call resolves with NotAllowedError and the
+  // hook surfaces no error — the Listen button stays visible as a
+  // manual fallback. The point of this effect is to *opportunistically*
+  // start playback, never to gate UI on its success.
   useEffect(() => {
-    if (!summaryText.trim()) return
+    if (!audio.isReady) return
     if (hasAutoplayedRef.current) return
-    if (isPlaying) return
+    if (audio.isPlaying) return
     hasAutoplayedRef.current = true
-    void handlePlayAudio()
-    // handlePlayAudio identity changes every render — intentionally
-    // omitted from deps to avoid refiring autoplay.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [summaryText])
+    audio.toggle()
+  }, [audio])
 
   const displayedText = useMemo(
     () => summaryText.slice(0, visibleChars),
@@ -624,16 +584,16 @@ export function JourneySummaryScreen({ audience }: { audience: Audience }) {
                 type="button"
                 id="summary-audio-download-btn"
                 onClick={handleDownloadAudio}
-                disabled={isDownloadingAudio}
+                disabled={isDownloadingAudio || !audio.isReady}
                 aria-label="Download audio summary"
-                className="inline-flex items-center gap-2 rounded-full border border-border px-4 py-1.5 text-[10px] uppercase tracking-[0.22em] text-foreground/75 transition-colors duration-300 hover:border-ink hover:text-ink disabled:opacity-50"
+                className="inline-flex items-center gap-2 rounded-full border border-border px-4 py-1.5 text-[10px] uppercase tracking-[0.22em] text-foreground/75 transition-colors duration-300 hover:border-ink hover:text-ink disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {isDownloadingAudio ? (
+                {isDownloadingAudio || !audio.isReady ? (
                   <Loader2 className="h-3 w-3 animate-spin" strokeWidth={1.6} />
                 ) : (
                   <Download className="h-3 w-3" strokeWidth={1.6} />
                 )}
-                Download audio
+                {audio.isReady ? "Download audio" : "Preparing download…"}
               </button>
             </div>
           )}

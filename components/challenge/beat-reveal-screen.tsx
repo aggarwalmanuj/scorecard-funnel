@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useMemo, useRef } from "react"
+import { useState, useEffect, useMemo, useRef, useCallback } from "react"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
 import { ArrowRight, ArrowLeft, Check, Volume2, Square } from "lucide-react"
@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { useChallenge, type Audience, type ChallengeState } from "@/context/challenge-context"
 import { submitToGoogleSheet } from "@/lib/submit-to-google-sheet"
 import { preloadBeatAudio } from "@/lib/client/beat-audio-cache"
+import { useAudioPlayback } from "@/hooks/use-audio-playback"
 import { ChallengeNavHome } from "@/components/challenge/challenge-nav-home"
 import { ChallengeMenuButton } from "@/components/challenge/challenge-funnel-header-actions"
 
@@ -55,17 +56,10 @@ export function BeatRevealScreen({
   const [isTransitioning, setIsTransitioning] = useState(false)
 
   // ── Beat audio (xAI Grok voice) ──
-  // Preload kicks off as soon as the beat content is known so the listen
-  // button can play instantly when the user reaches it. Decoded buffer is
-  // held in a ref so toggling play/stop doesn't re-decode the bytes.
-  // `isAudioBufferReady` mirrors `audioBytesRef.current` as state so the
-  // autoplay effect below can re-run when the bytes arrive.
-  const [isAudioPlaying, setIsAudioPlaying] = useState(false)
-  const [isAudioLoading, setIsAudioLoading] = useState(false)
-  const [isAudioBufferReady, setIsAudioBufferReady] = useState(false)
-  const audioCtxRef = useRef<AudioContext | null>(null)
-  const audioSourceRef = useRef<AudioBufferSourceNode | null>(null)
-  const audioBytesRef = useRef<ArrayBuffer | null>(null)
+  // HTML5 audio playback via the shared Safari-safe hook. The previous
+  // Web Audio API impl awaited the buffer before constructing the
+  // AudioContext, dropping Safari's user-activation flag and leaving
+  // the Listen button stuck on "Loading…" forever.
   const hasAutoplayedRef = useRef(false)
   const tokenTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
@@ -88,91 +82,33 @@ export function BeatRevealScreen({
     setPendingPartly(false)
     setPartlyReason("")
     setIsRevealed(false)
-    // Reset cached/decoded audio for the previous beat — a new beatContent
-    // means a different cache key in beat-audio-cache.
-    audioSourceRef.current?.stop()
-    audioSourceRef.current = null
-    audioBytesRef.current = null
     hasAutoplayedRef.current = false
-    setIsAudioPlaying(false)
-    setIsAudioLoading(false)
-    setIsAudioBufferReady(false)
     const t = setTimeout(() => setIsRevealed(true), 300)
     return () => clearTimeout(t)
   }, [beatContent])
 
-  // Kick off xAI TTS as soon as the beat content lands so it's ready by the
-  // time the typewriter finishes and the listen button appears.
-  useEffect(() => {
-    if (!beatContent || !beatContent.trim()) return
-    let cancelled = false
-    void preloadBeatAudio(beatNumber, beatContent).then((buf) => {
-      if (cancelled) return
-      if (buf) {
-        audioBytesRef.current = buf
-        setIsAudioBufferReady(true)
-      }
-    })
-    return () => {
-      cancelled = true
-    }
+  const fetchBeatBytes = useCallback(async (): Promise<ArrayBuffer | null> => {
+    const text = beatContent?.trim()
+    if (!text) return null
+    return preloadBeatAudio(beatNumber, text)
   }, [beatContent, beatNumber])
 
-  // Tear down WebAudio on unmount so navigating away mid-playback doesn't
-  // leak an open AudioContext.
-  useEffect(() => {
-    return () => {
-      audioSourceRef.current?.stop()
-      audioCtxRef.current?.close()
-    }
-  }, [])
+  const audio = useAudioPlayback({
+    // Composite key so a different beatNumber with the same text still
+    // mints a fresh blob URL (matches the cacheKey scheme in beat-audio-cache).
+    cacheKey: `${beatNumber}::${beatContent ?? ""}`,
+    fetchBytes: fetchBeatBytes,
+    mimeType: "audio/mpeg",
+    enabled: Boolean(beatContent?.trim()),
+  })
 
-  const handlePlayBeatAudio = async () => {
-    if (isAudioPlaying) {
-      audioSourceRef.current?.stop()
-      audioSourceRef.current = null
-      setIsAudioPlaying(false)
-      return
-    }
-    if (!beatContent?.trim()) return
-    try {
-      setIsAudioLoading(true)
-      const buffer =
-        audioBytesRef.current ??
-        (await preloadBeatAudio(beatNumber, beatContent))
-      if (!buffer) {
-        setIsAudioLoading(false)
-        return
-      }
-      audioBytesRef.current = buffer
-      if (!audioCtxRef.current || audioCtxRef.current.state === "closed") {
-        audioCtxRef.current = new AudioContext()
-      }
-      const ctx = audioCtxRef.current
-      if (ctx.state === "suspended") await ctx.resume()
-      // decodeAudioData consumes the buffer in some implementations; clone
-      // it so the cached bytes stay reusable for replay.
-      const audioBuffer = await ctx.decodeAudioData(buffer.slice(0))
-      const source = ctx.createBufferSource()
-      source.buffer = audioBuffer
-      source.connect(ctx.destination)
-      source.onended = () => {
-        setIsAudioPlaying(false)
-        audioSourceRef.current = null
-      }
-      source.start(0)
-      audioSourceRef.current = source
-      setIsAudioPlaying(true)
-    } catch (error) {
-      console.error(
-        "Beat audio playback error:",
-        error instanceof Error ? error.message : String(error),
-      )
-      setIsAudioPlaying(false)
-    } finally {
-      setIsAudioLoading(false)
-    }
-  }
+  const isAudioPlaying = audio.isPlaying
+  const isAudioLoading = audio.isLoading
+  const isAudioBufferReady = audio.isReady
+
+  const handlePlayBeatAudio = useCallback(() => {
+    audio.toggle()
+  }, [audio])
 
   useEffect(() => {
     if (!isRevealed || tokens.length === 0) return
@@ -207,22 +143,19 @@ export function BeatRevealScreen({
     setIsComplete(true)
   }
 
-  // Autoplay: once the typewriter finishes and the xAI buffer is ready,
-  // start playback automatically. Fires at most once per beat (guarded by
-  // hasAutoplayedRef, which resets when beatContent changes). If browser
-  // autoplay policy blocks playback, handlePlayBeatAudio's catch swallows
-  // the error and the Listen button remains as a manual fallback.
+  // Opportunistic autoplay once the typewriter finishes and the audio
+  // element is primed. Chrome typically allows it after page interaction;
+  // Safari rejects with NotAllowedError, which the hook handles silently —
+  // the Listen button remains visible as a manual fallback. Fires at most
+  // once per beat (hasAutoplayedRef resets when beatContent changes).
   useEffect(() => {
     if (!isComplete) return
     if (!isAudioBufferReady) return
     if (hasAutoplayedRef.current) return
     if (isAudioPlaying) return
     hasAutoplayedRef.current = true
-    void handlePlayBeatAudio()
-    // handlePlayBeatAudio is intentionally omitted — its identity changes
-    // every render and would refire autoplay.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isComplete, isAudioBufferReady])
+    audio.toggle()
+  }, [isComplete, isAudioBufferReady, isAudioPlaying, audio])
 
   // `async` is required — the body below awaits the save before
   // navigating so feedback rows don't get dropped on slow connections.

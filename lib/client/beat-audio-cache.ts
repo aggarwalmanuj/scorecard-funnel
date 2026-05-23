@@ -20,8 +20,20 @@ type BeatNumber = 1 | 2 | 3 | 4 | 5
 
 const memCache = new Map<string, Promise<ArrayBuffer | null>>()
 
+// See summary-audio-cache.ts for the rationale on these timeouts — Safari
+// Private Browsing aborts IDB transactions silently and we must never leave
+// the audio button stuck on a hung promise.
+const IDB_OP_TIMEOUT_MS = 2500
+
 function isBrowser(): boolean {
   return typeof window !== "undefined" && typeof indexedDB !== "undefined"
+}
+
+function withTimeout<T>(p: Promise<T>, fallback: T): Promise<T> {
+  return Promise.race([
+    p,
+    new Promise<T>((resolve) => setTimeout(() => resolve(fallback), IDB_OP_TIMEOUT_MS)),
+  ])
 }
 
 function cacheKey(beatNumber: BeatNumber, text: string): string {
@@ -37,22 +49,33 @@ function openDb(): Promise<IDBDatabase> {
     }
     req.onsuccess = () => resolve(req.result)
     req.onerror = () => reject(req.error)
+    req.onblocked = () => reject(new Error("IndexedDB open blocked"))
   })
 }
 
 async function idbGet(key: string): Promise<ArrayBuffer | null> {
   if (!isBrowser()) return null
   try {
-    const db = await openDb()
-    return await new Promise<ArrayBuffer | null>((resolve) => {
-      const tx = db.transaction(STORE, "readonly")
-      const req = tx.objectStore(STORE).get(key)
-      req.onsuccess = () => {
-        const v = req.result
-        resolve(v instanceof ArrayBuffer ? v : null)
-      }
-      req.onerror = () => resolve(null)
-    })
+    const db = await withTimeout(openDb(), null as unknown as IDBDatabase)
+    if (!db) return null
+    return await withTimeout(
+      new Promise<ArrayBuffer | null>((resolve) => {
+        try {
+          const tx = db.transaction(STORE, "readonly")
+          const req = tx.objectStore(STORE).get(key)
+          req.onsuccess = () => {
+            const v = req.result
+            resolve(v instanceof ArrayBuffer ? v : null)
+          }
+          req.onerror = () => resolve(null)
+          tx.onabort = () => resolve(null)
+          tx.onerror = () => resolve(null)
+        } catch {
+          resolve(null)
+        }
+      }),
+      null,
+    )
   } catch {
     return null
   }
@@ -61,14 +84,22 @@ async function idbGet(key: string): Promise<ArrayBuffer | null> {
 async function idbSet(key: string, value: ArrayBuffer): Promise<void> {
   if (!isBrowser()) return
   try {
-    const db = await openDb()
-    await new Promise<void>((resolve) => {
-      const tx = db.transaction(STORE, "readwrite")
-      tx.objectStore(STORE).put(value, key)
-      tx.oncomplete = () => resolve()
-      tx.onerror = () => resolve()
-      tx.onabort = () => resolve()
-    })
+    const db = await withTimeout(openDb(), null as unknown as IDBDatabase)
+    if (!db) return
+    await withTimeout(
+      new Promise<void>((resolve) => {
+        try {
+          const tx = db.transaction(STORE, "readwrite")
+          tx.objectStore(STORE).put(value, key)
+          tx.oncomplete = () => resolve()
+          tx.onerror = () => resolve()
+          tx.onabort = () => resolve()
+        } catch {
+          resolve()
+        }
+      }),
+      undefined,
+    )
   } catch {
     /* ignore */
   }
@@ -77,14 +108,22 @@ async function idbSet(key: string, value: ArrayBuffer): Promise<void> {
 async function idbClear(): Promise<void> {
   if (!isBrowser()) return
   try {
-    const db = await openDb()
-    await new Promise<void>((resolve) => {
-      const tx = db.transaction(STORE, "readwrite")
-      tx.objectStore(STORE).clear()
-      tx.oncomplete = () => resolve()
-      tx.onerror = () => resolve()
-      tx.onabort = () => resolve()
-    })
+    const db = await withTimeout(openDb(), null as unknown as IDBDatabase)
+    if (!db) return
+    await withTimeout(
+      new Promise<void>((resolve) => {
+        try {
+          const tx = db.transaction(STORE, "readwrite")
+          tx.objectStore(STORE).clear()
+          tx.oncomplete = () => resolve()
+          tx.onerror = () => resolve()
+          tx.onabort = () => resolve()
+        } catch {
+          resolve()
+        }
+      }),
+      undefined,
+    )
   } catch {
     /* ignore */
   }
