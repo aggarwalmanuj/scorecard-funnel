@@ -7,6 +7,7 @@ import { useChallenge, type ChallengeState, type Audience } from "@/context/chal
 import { streamBeatFromApi, isAbortErrorLike } from "@/lib/stream-beat-client"
 import { submitToGoogleSheet } from "@/lib/submit-to-google-sheet"
 import { preloadSummaryAudio } from "@/lib/client/summary-audio-cache"
+import { preloadBeatAudio } from "@/lib/client/beat-audio-cache"
 import { ChallengeNavHome } from "@/components/challenge/challenge-nav-home"
 import { ChallengeMenuButton } from "@/components/challenge/challenge-funnel-header-actions"
 
@@ -33,72 +34,10 @@ const SLOW_HINT_AFTER_MS = 22_000
 // Surface an explicit escape hatch so the user is never truly stuck.
 const ESCAPE_HATCH_AFTER_MS = 45_000
 
-function generateMockBeats(firstName: string) {
-  const n = firstName.trim() || "You"
-  return {
-    beat1: `${n}, looking at everything you shared - one thing becomes immediately clear.
-
-The thing that's stuck isn't stuck because you lack capability. It's stuck because you've been solving the wrong layer.
-
-Most leaders at your level do the same thing. They see a problem, assess their options, and make the best decision they can with what they can see.
-
-But the real constraint isn't in the visible options. It's in the frame you're using to look at them.
-
-What you described in your first answer - the thing that's not moving the way it should - is a symptom. Not the cause.
-
-The cause is a structural pattern. It's been running for longer than this specific situation. And once you see it, you'll recognize it in a dozen other places too.`,
-
-    beat2: `The picture you painted of twelve months from now - that's not a fantasy. It's a signal.
-
-Your subconscious already knows what "working" looks like. The evidence you described - the conversations, the calendar, the visible signs of movement - that's not imagination.
-
-It's pattern recognition in reverse.
-
-What your answer reveals is that the gap between where you are and where you want to be is not a knowledge gap. It's not a resource gap.
-
-It's a clarity gap.
-
-You already know what needs to happen. What's missing is a clean signal - one decision that makes the others obvious.`,
-
-    beat3: `The noise you named - the things pulling at your attention - that's the most important part of what you shared.
-
-Because here's what most leaders miss: noise isn't random. It's structural.
-
-The same things that pull at you today have been pulling at you for longer than you realize. The pattern repeats not because you lack discipline - but because the system is designed to produce that noise.
-
-Every item you mentioned is a symptom of the same root constraint.
-
-When you solve at the root - the noise doesn't get quieter. It disappears.`,
-
-    beat4: `You described a moment when things clicked. When the version of you that breaks through ceilings showed up.
-
-That moment wasn't luck. It was conditions.
-
-What was absent: the noise. The second-guessing. The overhead of decisions that hadn't been made yet.
-
-What was present: clarity. A single focus. Permission to move without explaining yourself.
-
-The difference between now and then isn't capability. It's interference.
-
-The question isn't how to become that version of yourself again. The question is: what's currently in the way?
-
-We now know the answer.`,
-
-    beat5: `The morning you described - the one where the noise was gone - that's not a visualization exercise.
-
-It's a prototype.
-
-Everything in that picture is technically possible tomorrow. Nothing you described requires resources you don't have, people you don't know, or capabilities you haven't built.
-
-What it requires is a single decision. One honest decision that clears the interference and makes the rest of the path obvious.
-
-That decision is now visible.`,
-  }
-}
-
 async function fetchClarityScoreInBackground(
   responses: ChallengeState["responses"],
   firstName: string,
+  audience: Audience,
 ): Promise<{
   subscores: { directionClarity: number; identityAlignment: number; decisionReadiness: number; energyAlignment: number }
   reasons: { directionClarity?: string; identityAlignment?: string; decisionReadiness?: string; energyAlignment?: string }
@@ -108,7 +47,7 @@ async function fetchClarityScoreInBackground(
     const res = await fetch("/api/challenge/score", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ firstName, responses }),
+      body: JSON.stringify({ firstName, responses, audience }),
     })
     if (!res.ok) return null
     const json = (await res.json()) as {
@@ -143,6 +82,7 @@ async function fetchClarityScoreInBackground(
 
 async function streamSummaryInBackground(args: {
   firstName: string
+  audience: Audience
   beats: ChallengeState["beats"]
 }): Promise<string | null> {
   try {
@@ -221,7 +161,6 @@ export function ProcessingScreen({ audience }: { audience: Audience }) {
   const [activeStep, setActiveStep] = useState(0)
   const [minElapsed, setMinElapsed] = useState(false)
   const [showClosingLine, setShowClosingLine] = useState(false)
-  const [usedMock, setUsedMock] = useState(false)
   const [missingPrompts, setMissingPrompts] = useState(false)
   // Tracks whether the summary's TTS audio bytes have finished loading
   // (either from IndexedDB on a re-run or freshly from /api/tts).
@@ -236,8 +175,8 @@ export function ProcessingScreen({ audience }: { audience: Audience }) {
   // testers reported as missing beat_output cells in the database.
   const [outputsSaved, setOutputsSaved] = useState(false)
   const abortRef = useRef<AbortController | null>(null)
-  // Collects every save promise so we can await ALL of them (including
-  // mock saves dispatched from applyMocks) before flipping outputsSaved.
+  // Collects every save promise so we can await ALL of them before
+  // flipping outputsSaved.
   const savePromisesRef = useRef<Promise<boolean>[]>([])
 
   const saveParamsRef = useRef({ serialNumber: state.serialNumber, email: state.email, firstName: state.firstName })
@@ -263,22 +202,6 @@ export function ProcessingScreen({ audience }: { audience: Audience }) {
     },
     [audience],
   )
-
-  const applyMocksRef = useRef(() => {})
-  applyMocksRef.current = () => {
-    const m = generateMockBeats(saveParamsRef.current.firstName)
-    setBeat("beat1", m.beat1)
-    setBeat("beat2", m.beat2)
-    setBeat("beat3", m.beat3)
-    setBeat("beat4", m.beat4)
-    setBeat("beat5", m.beat5)
-    setUsedMock(true)
-    saveOutputToSheet(1, m.beat1)
-    saveOutputToSheet(2, m.beat2)
-    saveOutputToSheet(3, m.beat3)
-    saveOutputToSheet(4, m.beat4)
-    saveOutputToSheet(5, m.beat5)
-  }
 
   useEffect(() => {
     const t = setTimeout(() => setMinElapsed(true), 7000)
@@ -345,19 +268,19 @@ export function ProcessingScreen({ audience }: { audience: Audience }) {
         if (!active) return
         const readyJson = (await readyRes.json()) as { ok?: boolean }
         if (!readyJson.ok) {
-          applyMocksRef.current()
+          setMissingPrompts(true)
           return
         }
       } catch (e) {
         if (!active) return
         if (isAbortErrorLike(e)) return
-        applyMocksRef.current()
+        setMissingPrompts(true)
         return
       }
 
       if (!active) return
 
-      scorePromise = fetchClarityScoreInBackground(state.responses, state.firstName)
+      scorePromise = fetchClarityScoreInBackground(state.responses, state.firstName, state.audience ?? "individual")
       void scorePromise.then((score) => {
         if (score) setClarityScore(score)
       })
@@ -388,7 +311,7 @@ export function ProcessingScreen({ audience }: { audience: Audience }) {
       fallbackTimer = setTimeout(() => {
         if (!active) return
         if (beatsLenRef.current < 40) {
-          applyMocksRef.current()
+          setMissingPrompts(true)
         }
       }, 28000)
 
@@ -405,6 +328,11 @@ export function ProcessingScreen({ audience }: { audience: Audience }) {
         ).then((result) => {
           if (finalTexts[n]) {
             saveOutputToSheet(n as 1 | 2 | 3 | 4 | 5, finalTexts[n])
+            // Fire-and-forget TTS preload as soon as this beat's text is
+            // finalised. The cache module dedupes by (beatNumber, text), so
+            // by the time the user navigates to /beat-N the audio buffer is
+            // either already in memory or in-flight - no "Loading…" stall.
+            void preloadBeatAudio(n as 1 | 2 | 3 | 4 | 5, finalTexts[n])
           }
           return result
         }),
@@ -414,30 +342,14 @@ export function ProcessingScreen({ audience }: { audience: Audience }) {
       if (fallbackTimer) clearTimeout(fallbackTimer)
       if (!active) return
 
-      const m = generateMockBeats(firstName)
-      const keys = ["beat1", "beat2", "beat3", "beat4", "beat5"] as const
-
+      // First beat failing is treated as a generation failure - surface the
+      // configuration-error UI so the user contacts the admin instead of
+      // seeing nothing or fake copy. Individual later-beat failures leave
+      // whatever streamed (possibly empty) - downstream code handles empty
+      // beats gracefully (`beat: ""`).
       if (!results[0]?.ok) {
-        const firstErr = "error" in results[0]! ? results[0].error : ""
-        if (typeof firstErr === "string" && /Prompt configuration error/i.test(firstErr)) {
-          setMissingPrompts(true)
-          return
-        }
-        applyMocksRef.current()
-        for (let i = 0; i < 5; i++) finalTexts[i + 1] = m[keys[i]]
-      } else {
-        for (let i = 0; i < 5; i++) {
-          const r = results[i]
-          if (r && !r.ok) {
-            if ("error" in r && r.error === "aborted") {
-              /* leave whatever streamed */
-            } else {
-              setBeat(keys[i], m[keys[i]])
-              saveOutputToSheet((i + 1) as 1 | 2 | 3 | 4 | 5, m[keys[i]])
-              finalTexts[i + 1] = m[keys[i]]
-            }
-          }
-        }
+        setMissingPrompts(true)
+        return
       }
 
       const finalBeats: ChallengeState["beats"] = {
@@ -449,6 +361,7 @@ export function ProcessingScreen({ audience }: { audience: Audience }) {
       }
       void streamSummaryInBackground({
         firstName: state.firstName,
+        audience: state.audience ?? "individual",
         beats: finalBeats,
       }).then((text) => {
         if (text) {
@@ -694,11 +607,6 @@ export function ProcessingScreen({ audience }: { audience: Audience }) {
           </div>
         )}
 
-        {process.env.NODE_ENV === "development" && usedMock && (
-          <p className="mt-6 text-[11px] uppercase tracking-[0.22em] text-foreground/40">
-            Dev · using mirror copy (add OPENROUTER_API_KEY for AI)
-          </p>
-        )}
       </div>
 
       {/* Slow-network banner — fixed at the viewport bottom so it's always

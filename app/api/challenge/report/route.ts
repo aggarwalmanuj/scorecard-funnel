@@ -1,13 +1,26 @@
-import { redactError } from "@/lib/security"
+import { redactError, sanitizeForPrompt } from "@/lib/security"
 import { z } from "zod"
 import {
   buildClarityScoreFromSubscores,
+  normalizeLlmScoreOutput,
   scoreClarity,
   type ClarityScore,
   type Subscores,
 } from "@/lib/scoring"
-import { getReportSystemPrompt } from "@/lib/server/challenge-prompts"
-import { DEFAULT_REPORT_SYSTEM_PROMPT } from "@/lib/default-report-prompt"
+import {
+  getReportSystemPrompt,
+  getReportUserPromptTemplate,
+  getScoreSystemPrompt,
+  getScoreUserPromptTemplate,
+} from "@/lib/server/challenge-prompts"
+import {
+  DEFAULT_REPORT_SYSTEM_PROMPT,
+  DEFAULT_REPORT_USER_PROMPT,
+} from "@/lib/default-report-prompt"
+import {
+  DEFAULT_SCORE_SYSTEM_PROMPT,
+  DEFAULT_SCORE_USER_PROMPT,
+} from "@/lib/default-score-prompt"
 
 /**
  * /api/challenge/report
@@ -85,67 +98,28 @@ const bodySchema = z.object({
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 
 // ───────────────────────── scoring (parallel call #1) ─────────────────────────
+//
+// The system prompt for this parallel scoring call is admin-configurable via
+// the Score tab in /admin — same source of truth as /api/challenge/score so
+// both endpoints always use the same prompt. Output is normalized via the
+// shared `normalizeLlmScoreOutput` helper, which accepts both the legacy
+// 4-subscore shape and the simpler `{ score, confidence, top3issues,
+// summary }` shape.
 
-const SCORE_SYSTEM_PROMPT = `You are the scoring engine for the Clarity Readiness Index. Read the five raw answers and return FOUR subscores 0-100 (higher = clearer / more aligned / more ready) plus one short reason for each grounded in the user's actual words, plus an nervous-system state.
-
-Audience mean is 48/100. Most real answers land 30-65. Reserve 75+ for answers that demonstrably show high direction, ownership, decision-readiness, or embodied energy. Reserve <25 for clear stuckness.
-
-Return ONLY this JSON:
-{
-  "subscores": { "directionClarity": int, "identityAlignment": int, "decisionReadiness": int, "energyAlignment": int },
-  "reasons":   { "directionClarity": str,  "identityAlignment": str,  "decisionReadiness": str,  "energyAlignment": str  },
-  "nsState":   "REGULATED" | "ACTIVATED" | "COLLAPSED" | "IDENTITY-ROOT" | "PURPOSE-ROOT" | "UNKNOWN"
-}`
-
-const scoreResponseSchema = z.object({
-  subscores: z.object({
-    directionClarity: z.number().int().min(0).max(100),
-    identityAlignment: z.number().int().min(0).max(100),
-    decisionReadiness: z.number().int().min(0).max(100),
-    energyAlignment: z.number().int().min(0).max(100),
-  }),
-  reasons: z.object({
-    directionClarity: z.string().max(500),
-    identityAlignment: z.string().max(500),
-    decisionReadiness: z.string().max(500),
-    energyAlignment: z.string().max(500),
-  }),
-  nsState: z
-    .enum([
-      "REGULATED",
-      "ACTIVATED",
-      "COLLAPSED",
-      "IDENTITY-ROOT",
-      "PURPOSE-ROOT",
-      "UNKNOWN",
-    ])
-    .optional(),
-})
-
-function buildScoreUserPrompt(
+function applyScoreUserTemplate(
+  template: string,
   firstName: string,
   r: z.infer<typeof bodySchema>["responses"]
 ): string {
-  const name = (firstName || "").trim() || "The user"
+  const name = sanitizeForPrompt((firstName || "").trim()) || "The user"
   const blank = "(left blank)"
-  return `${name} just completed the Clarity Readiness reflection.
-
-Q1 - what's not moving the way it should:
-${r.question1?.trim() || blank}
-
-Q2 - what would be different in 12 months:
-${r.question2?.trim() || blank}
-
-Q3 - what keeps pulling at their attention:
-${r.question3?.trim() || blank}
-
-Q4 - what was true the last time something clicked:
-${r.question4?.trim() || blank}
-
-Q5 - the morning-after scene when the noise is gone:
-${r.question5?.trim() || blank}
-
-Return ONLY the JSON object.`
+  return template
+    .replace(/\{\{NAME\}\}/g, name)
+    .replace(/\{\{Q1\}\}/g, sanitizeForPrompt(r.question1?.trim() || blank))
+    .replace(/\{\{Q2\}\}/g, sanitizeForPrompt(r.question2?.trim() || blank))
+    .replace(/\{\{Q3\}\}/g, sanitizeForPrompt(r.question3?.trim() || blank))
+    .replace(/\{\{Q4\}\}/g, sanitizeForPrompt(r.question4?.trim() || blank))
+    .replace(/\{\{Q5\}\}/g, sanitizeForPrompt(r.question5?.trim() || blank))
 }
 
 // ───────────────────────── narrative (parallel call #2) ────────────────────────
@@ -200,50 +174,26 @@ const reportSchema = z.object({
   thirtyDay: z.string().max(600),
 })
 
-function buildReportUserPrompt(
+function applyReportUserTemplate(
+  template: string,
   firstName: string,
   r: z.infer<typeof bodySchema>["responses"],
   b: z.infer<typeof bodySchema>["beats"]
 ): string {
-  const name = (firstName || "").trim() || "the user"
+  const name = sanitizeForPrompt((firstName || "").trim()) || "the user"
   const blank = "(left blank)"
-  return `Write the personalized Clarity Readiness Report for ${name}, based on the following.
-
-═════ RAW ANSWERS ═════
-
-Q1 - what's not moving the way it should:
-${r.question1?.trim() || blank}
-
-Q2 - what would be different in 12 months:
-${r.question2?.trim() || blank}
-
-Q3 - what keeps pulling at their attention:
-${r.question3?.trim() || blank}
-
-Q4 - what was true the last time something clicked:
-${r.question4?.trim() || blank}
-
-Q5 - the morning-after scene when the noise is gone:
-${r.question5?.trim() || blank}
-
-═════ CLOSING BEATS (AI-generated reflections from earlier) ═════
-
-Beat 1 - The Pattern:
-${b.beat1?.trim() || blank}
-
-Beat 2 - The Desired Future:
-${b.beat2?.trim() || blank}
-
-Beat 3 - The Noise:
-${b.beat3?.trim() || blank}
-
-Beat 4 - The Breakthrough Moment:
-${b.beat4?.trim() || blank}
-
-Beat 5 - The Morning After Clarity:
-${b.beat5?.trim() || blank}
-
-Return ONLY the JSON object.`
+  return template
+    .replace(/\{\{NAME\}\}/g, name)
+    .replace(/\{\{Q1\}\}/g, sanitizeForPrompt(r.question1?.trim() || blank))
+    .replace(/\{\{Q2\}\}/g, sanitizeForPrompt(r.question2?.trim() || blank))
+    .replace(/\{\{Q3\}\}/g, sanitizeForPrompt(r.question3?.trim() || blank))
+    .replace(/\{\{Q4\}\}/g, sanitizeForPrompt(r.question4?.trim() || blank))
+    .replace(/\{\{Q5\}\}/g, sanitizeForPrompt(r.question5?.trim() || blank))
+    .replace(/\{\{BEAT1\}\}/g, sanitizeForPrompt(b.beat1?.trim() || blank))
+    .replace(/\{\{BEAT2\}\}/g, sanitizeForPrompt(b.beat2?.trim() || blank))
+    .replace(/\{\{BEAT3\}\}/g, sanitizeForPrompt(b.beat3?.trim() || blank))
+    .replace(/\{\{BEAT4\}\}/g, sanitizeForPrompt(b.beat4?.trim() || blank))
+    .replace(/\{\{BEAT5\}\}/g, sanitizeForPrompt(b.beat5?.trim() || blank))
 }
 
 // ───────────────────────── shared helpers ─────────────────────────
@@ -351,10 +301,20 @@ export async function POST(request: Request) {
   const referer =
     process.env.NEXT_PUBLIC_APP_URL?.trim() || "https://localhost:3000"
 
-  const reportSystem = await getReportSystemPrompt(
-    audience,
-    DEFAULT_REPORT_SYSTEM_PROMPT
-  )
+  // Fetch every admin-configurable prompt up front. They come from the same
+  // Cosmos cache so the additional reads are free. The score prompts are
+  // only needed when we don't have a precomputed score.
+  const [reportSystem, reportUserTemplate, scoreSystem, scoreUserTemplate] =
+    await Promise.all([
+      getReportSystemPrompt(audience, DEFAULT_REPORT_SYSTEM_PROMPT),
+      getReportUserPromptTemplate(audience, DEFAULT_REPORT_USER_PROMPT),
+      precomputedScore
+        ? Promise.resolve("")
+        : getScoreSystemPrompt(audience, DEFAULT_SCORE_SYSTEM_PROMPT),
+      precomputedScore
+        ? Promise.resolve("")
+        : getScoreUserPromptTemplate(audience, DEFAULT_SCORE_USER_PROMPT),
+    ])
 
   // If the caller already has a score (from the clarity-score page), reuse
   // it and skip the second LLM scoring call entirely. Otherwise run scoring
@@ -365,7 +325,7 @@ export async function POST(request: Request) {
     referer,
     title: "Honest Decision Challenge - Report Narrative",
     system: reportSystem,
-    user: buildReportUserPrompt(firstName, responses, beats),
+    user: applyReportUserTemplate(reportUserTemplate, firstName, responses, beats),
     temperature: 0.55,
     maxTokens: 2400,
   })
@@ -377,8 +337,8 @@ export async function POST(request: Request) {
         model,
         referer,
         title: "Honest Decision Challenge - Report Score",
-        system: SCORE_SYSTEM_PROMPT,
-        user: buildScoreUserPrompt(firstName, responses),
+        system: scoreSystem,
+        user: applyScoreUserTemplate(scoreUserTemplate, firstName, responses),
         temperature: 0.2,
         maxTokens: 700,
       })
@@ -404,11 +364,15 @@ export async function POST(request: Request) {
     if (jsonStr) {
       try {
         const obj: unknown = JSON.parse(jsonStr)
-        const v = scoreResponseSchema.safeParse(obj)
-        if (v.success) {
-          clarity = buildClarityScoreFromSubscores(v.data.subscores)
-          reasons = v.data.reasons
-          nsState = v.data.nsState
+        // Use the shared normalizer so this route accepts the same set of
+        // LLM output shapes as /api/challenge/score (legacy 4-subscore OR
+        // simple-eval { score: 1-10, ... }). Both routes therefore stay in
+        // sync with whatever shape the admin's Score prompt produces.
+        const norm = normalizeLlmScoreOutput(obj)
+        if (norm) {
+          clarity = buildClarityScoreFromSubscores(norm.subscores)
+          reasons = norm.reasons ?? {}
+          nsState = norm.nsState
           scoreSource = "llm"
         } else {
           clarity = scoreClarity(responses)

@@ -309,6 +309,113 @@ function comparisonLabelFor(overall: number): string {
   return "You are below average for leaders in your peer group. This is where the most leverage lives."
 }
 
+// ---------- LLM output normalization ----------
+
+/**
+ * Normalizes whatever JSON the score LLM returns into the 4-subscore shape
+ * the UI consumes. Supports two known shapes (more can be added as admins
+ * configure new prompts):
+ *
+ *   A. Legacy rubric  — { subscores: {dc, ia, dr, ea}, reasons?, nsState? }
+ *   B. Simple eval    — { score: 1-10 (or 0-100), confidence?, top3issues?, summary? }
+ *
+ * Returns null only when no usable signal can be extracted — in that case
+ * callers should fall back to the heuristic `scoreClarity`. When the LLM
+ * returns a single overall score (shape B), it fans out to all four
+ * subscores. This is intentional: we don't have per-pillar resolution from
+ * the simple eval, but the overall number is still driven by the user's
+ * answers (so it updates per-submission instead of being stuck on the
+ * heuristic baseline).
+ */
+export function normalizeLlmScoreOutput(raw: unknown): {
+  subscores: Subscores
+  reasons?: Partial<Record<keyof Subscores, string>>
+  nsState?: string
+} | null {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null
+  const o = raw as Record<string, unknown>
+
+  // Shape A: legacy 4-subscore rubric
+  const sub = o.subscores
+  if (sub && typeof sub === "object" && !Array.isArray(sub)) {
+    const s = sub as Record<string, unknown>
+    if (
+      typeof s.directionClarity === "number" &&
+      typeof s.identityAlignment === "number" &&
+      typeof s.decisionReadiness === "number" &&
+      typeof s.energyAlignment === "number"
+    ) {
+      const reasons =
+        o.reasons && typeof o.reasons === "object" && !Array.isArray(o.reasons)
+          ? (o.reasons as Partial<Record<keyof Subscores, string>>)
+          : undefined
+      return {
+        subscores: {
+          directionClarity: clamp(Math.round(s.directionClarity), 0, 100),
+          identityAlignment: clamp(Math.round(s.identityAlignment), 0, 100),
+          decisionReadiness: clamp(Math.round(s.decisionReadiness), 0, 100),
+          energyAlignment: clamp(Math.round(s.energyAlignment), 0, 100),
+        },
+        reasons,
+        nsState: typeof o.nsState === "string" ? o.nsState : undefined,
+      }
+    }
+  }
+
+  // Shape B: simple eval — a single overall score (1-10 or 0-100).
+  let overall: number | null = null
+  const candidates = [o.score, o.overall, o.rating, o.value]
+  for (const c of candidates) {
+    if (typeof c === "number" && !Number.isNaN(c)) {
+      overall = c
+      break
+    }
+    if (typeof c === "string") {
+      const n = parseFloat(c)
+      if (!Number.isNaN(n)) {
+        overall = n
+        break
+      }
+    }
+  }
+  if (overall === null) return null
+  // Heuristic: values <=10 are assumed to be 1-10 scale and get scaled up.
+  if (overall <= 10) overall = overall * 10
+  overall = clamp(Math.round(overall), 0, 100)
+
+  // Build a reason summary from whichever fields the prompt produced.
+  const issuesRaw =
+    o.top3issues ?? o.topIssues ?? o.top_issues ?? o.issues ?? o.topThreeIssues
+  let reasonText = ""
+  if (Array.isArray(issuesRaw)) {
+    reasonText = issuesRaw
+      .filter((x): x is string => typeof x === "string")
+      .join("; ")
+  }
+  if (!reasonText && typeof o.summary === "string") reasonText = o.summary
+  reasonText = reasonText.slice(0, 480)
+
+  const reasons = reasonText
+    ? {
+        directionClarity: reasonText,
+        identityAlignment: reasonText,
+        decisionReadiness: reasonText,
+        energyAlignment: reasonText,
+      }
+    : undefined
+
+  return {
+    subscores: {
+      directionClarity: overall,
+      identityAlignment: overall,
+      decisionReadiness: overall,
+      energyAlignment: overall,
+    },
+    reasons,
+    nsState: typeof o.nsState === "string" ? o.nsState : undefined,
+  }
+}
+
 // ---------- LLM-sourced subscore assembly ----------
 
 /**

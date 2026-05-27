@@ -30,7 +30,7 @@ type LlmScoreResponse = {
 }
 
 async function fetchClarityScoreFresh(
-  body: { firstName: string; responses: Record<string, string> },
+  body: { firstName: string; audience: Audience; responses: Record<string, string> },
   signal?: AbortSignal,
 ): Promise<LlmScoreResponse | null> {
   try {
@@ -69,7 +69,7 @@ async function fetchClarityScoreFresh(
 }
 
 async function streamSummary(
-  body: { firstName: string; beats: Record<string, string> },
+  body: { firstName: string; audience: Audience; beats: Record<string, string> },
   onDelta: (fullText: string) => void,
   signal?: AbortSignal,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
@@ -278,11 +278,15 @@ export function JourneySummaryScreen({ audience }: { audience: Audience }) {
     skippedRef.current = false
 
     if (state.summaryText && state.summaryText.trim()) {
+      // Summary was already streamed during /processing - render it in full
+      // immediately instead of re-running the 3-char-per-18ms typewriter,
+      // which would otherwise take 5-7s for a 200-word closing message.
       fullTextRef.current = state.summaryText
       setSummaryText(state.summaryText)
       setIsStreaming(false)
       setIsComplete(true)
-      startReveal()
+      skippedRef.current = true
+      setVisibleChars(state.summaryText.length)
       return
     }
 
@@ -292,6 +296,7 @@ export function JourneySummaryScreen({ audience }: { audience: Audience }) {
     void streamSummary(
       {
         firstName: state.firstName,
+        audience: state.audience ?? "individual",
         beats: {
           beat1: state.beats.beat1,
           beat2: state.beats.beat2,
@@ -329,6 +334,18 @@ export function JourneySummaryScreen({ audience }: { audience: Audience }) {
     const t = setTimeout(() => setCtaVisible(true), delay)
     return () => clearTimeout(t)
   }, [isComplete, hasFailed])
+
+  // Warm the next route's bundle as soon as the page mounts. By the time
+  // the CTA fades in and the user clicks it, Next has the RSC payload and
+  // any data hooks pre-resolved - the navigation feels instant.
+  useEffect(() => {
+    if (!audience) return
+    try {
+      router.prefetch(`/challenge/${audience}/offer`)
+    } catch {
+      /* ignore - prefetch is best-effort */
+    }
+  }, [router, audience])
 
   // Attempt autoplay once the audio element is primed. Modern Chrome
   // allows it after the user's funnel interaction (the "Continue"
@@ -384,6 +401,7 @@ export function JourneySummaryScreen({ audience }: { audience: Audience }) {
     void fetchClarityScoreFresh(
       {
         firstName: state.firstName,
+        audience: state.audience ?? "individual",
         responses: {
           question1: state.responses.question1,
           question2: state.responses.question2,

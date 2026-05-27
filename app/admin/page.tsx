@@ -6,7 +6,18 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
-import { DEFAULT_REPORT_SYSTEM_PROMPT } from "@/lib/default-report-prompt"
+import {
+  DEFAULT_REPORT_SYSTEM_PROMPT,
+  DEFAULT_REPORT_USER_PROMPT,
+} from "@/lib/default-report-prompt"
+import {
+  DEFAULT_SCORE_SYSTEM_PROMPT,
+  DEFAULT_SCORE_USER_PROMPT,
+} from "@/lib/default-score-prompt"
+import {
+  DEFAULT_SUMMARY_SYSTEM_PROMPT,
+  DEFAULT_SUMMARY_USER_PROMPT,
+} from "@/lib/default-summary-prompt"
 import {
   ChevronDown,
   Save,
@@ -45,6 +56,11 @@ type Beat = {
 type AudienceData = {
   systemPrompt: string
   reportSystemPrompt: string
+  reportUserPrompt: string
+  scoreSystemPrompt: string
+  scoreUserPrompt: string
+  summarySystemPrompt: string
+  summaryUserPrompt: string
   questions: Question[]
   beats: Beat[]
 }
@@ -70,6 +86,11 @@ const EMPTY_BEATS: Beat[] = Array.from({ length: 5 }, () => ({
 const emptyAudienceData = (): AudienceData => ({
   systemPrompt: "",
   reportSystemPrompt: DEFAULT_REPORT_SYSTEM_PROMPT,
+  reportUserPrompt: DEFAULT_REPORT_USER_PROMPT,
+  scoreSystemPrompt: DEFAULT_SCORE_SYSTEM_PROMPT,
+  scoreUserPrompt: DEFAULT_SCORE_USER_PROMPT,
+  summarySystemPrompt: DEFAULT_SUMMARY_SYSTEM_PROMPT,
+  summaryUserPrompt: DEFAULT_SUMMARY_USER_PROMPT,
   questions: structuredClone(EMPTY_QUESTIONS),
   beats: structuredClone(EMPTY_BEATS),
 })
@@ -91,7 +112,7 @@ export default function AdminPage() {
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null)
 
   const [audience, setAudience] = useState<Audience>("individual")
-  const [tab, setTab] = useState<"system" | "questions" | "beats" | "report" | "responses">("system")
+  const [tab, setTab] = useState<"system" | "questions" | "beats" | "score" | "report" | "summary" | "responses">("system")
 
   // Per-audience editor state. Both audiences persist in memory so switching
   // between them doesn't lose unsaved work.
@@ -151,6 +172,16 @@ export default function AdminPage() {
       next[aud].systemPrompt = raw[`system_prompt_${aud}`] || ""
       next[aud].reportSystemPrompt =
         raw[`report_system_prompt_${aud}`] || DEFAULT_REPORT_SYSTEM_PROMPT
+      next[aud].reportUserPrompt =
+        raw[`report_user_prompt_${aud}`] || DEFAULT_REPORT_USER_PROMPT
+      next[aud].scoreSystemPrompt =
+        raw[`score_system_prompt_${aud}`] || DEFAULT_SCORE_SYSTEM_PROMPT
+      next[aud].scoreUserPrompt =
+        raw[`score_user_prompt_${aud}`] || DEFAULT_SCORE_USER_PROMPT
+      next[aud].summarySystemPrompt =
+        raw[`summary_system_prompt_${aud}`] || DEFAULT_SUMMARY_SYSTEM_PROMPT
+      next[aud].summaryUserPrompt =
+        raw[`summary_user_prompt_${aud}`] || DEFAULT_SUMMARY_USER_PROMPT
       const qRaw = raw[`questions_${aud}`]
       if (qRaw) {
         try {
@@ -383,6 +414,11 @@ export default function AdminPage() {
       const ad = data[aud]
       payload[`system_prompt_${aud}`] = ad.systemPrompt
       payload[`report_system_prompt_${aud}`] = ad.reportSystemPrompt
+      payload[`report_user_prompt_${aud}`] = ad.reportUserPrompt
+      payload[`score_system_prompt_${aud}`] = ad.scoreSystemPrompt
+      payload[`score_user_prompt_${aud}`] = ad.scoreUserPrompt
+      payload[`summary_system_prompt_${aud}`] = ad.summarySystemPrompt
+      payload[`summary_user_prompt_${aud}`] = ad.summaryUserPrompt
       payload[`questions_${aud}`] = JSON.stringify(ad.questions)
       ad.beats.forEach((b, i) => {
         payload[`beat${i + 1}_prompt_${aud}`] = b.userPrompt
@@ -406,7 +442,18 @@ export default function AdminPage() {
         setSaveLabel("Save Changes")
         return
       }
-      if (!res.ok) throw new Error("HTTP " + res.status)
+      if (!res.ok) {
+        // Surface the actual server error so failures are diagnosable.
+        // The old "HTTP 5xx" wording hid the upstream Cosmos error string.
+        let detail = ""
+        try {
+          const body = await res.text()
+          if (body) detail = body.slice(0, 400)
+        } catch {
+          /* ignore */
+        }
+        throw new Error(`HTTP ${res.status}${detail ? ` - ${detail}` : ""}`)
+      }
       const savedIso = new Date().toISOString()
       setLastSavedAt(savedIso)
       try {
@@ -572,6 +619,21 @@ export default function AdminPage() {
   const updateReportSystemPrompt = (value: string) =>
     setData((prev) => ({ ...prev, [audience]: { ...prev[audience], reportSystemPrompt: value } }))
 
+  const updateScoreSystemPrompt = (value: string) =>
+    setData((prev) => ({ ...prev, [audience]: { ...prev[audience], scoreSystemPrompt: value } }))
+
+  const updateSummarySystemPrompt = (value: string) =>
+    setData((prev) => ({ ...prev, [audience]: { ...prev[audience], summarySystemPrompt: value } }))
+
+  const updateReportUserPrompt = (value: string) =>
+    setData((prev) => ({ ...prev, [audience]: { ...prev[audience], reportUserPrompt: value } }))
+
+  const updateScoreUserPrompt = (value: string) =>
+    setData((prev) => ({ ...prev, [audience]: { ...prev[audience], scoreUserPrompt: value } }))
+
+  const updateSummaryUserPrompt = (value: string) =>
+    setData((prev) => ({ ...prev, [audience]: { ...prev[audience], summaryUserPrompt: value } }))
+
   const updateQuestion = <K extends keyof Question>(idx: number, key: K, value: Question[K]) => {
     setData((prev) => ({
       ...prev,
@@ -620,7 +682,9 @@ export default function AdminPage() {
     { value: "system" as const, label: "System prompt", activeClass: "bg-ink text-background" },
     { value: "questions" as const, label: "Questions", activeClass: "bg-ink text-background" },
     { value: "beats" as const, label: "Beat prompts", activeClass: "bg-ink text-background" },
+    { value: "score" as const, label: "Score", activeClass: "bg-ink text-background" },
     { value: "report" as const, label: "Detailed scorecard", activeClass: "bg-ink text-background" },
+    { value: "summary" as const, label: "Closing summary", activeClass: "bg-ink text-background" },
     { value: "responses" as const, label: "Responses", activeClass: "bg-ink text-background" },
   ]
 
@@ -1057,22 +1121,120 @@ export default function AdminPage() {
               </div>
             )}
 
-            {/* ── Detailed Scorecard Tab ── */}
-            {tab === "report" && (
+            {/* ── Score Tab ── */}
+            {tab === "score" && (
               <div className="space-y-4">
                 <div className="rounded-md border border-border bg-secondary/40 p-4 text-[14px] leading-[1.7] text-foreground/85">
-                  Editing the <strong className="text-foreground capitalize">{audience}</strong> detailed scorecard
-                  prompt. Sent as the system message when generating the printable
-                  Clarity Readiness Report (headline, pillars, themes, takeaways,
-                  30-day reflection). Use <strong>Load default</strong> to drop the
-                  built-in baseline into the editor, then tweak and save.
+                  Editing the <strong className="text-foreground capitalize">{audience}</strong> score prompts.
+                  The <strong>System Prompt</strong> sets the model's role. The{" "}
+                  <strong>User Prompt</strong> is the template wrapping the
+                  user's answers — placeholders{" "}
+                  <code className="px-1.5 py-0.5 rounded bg-card border border-border font-mono text-xs">{"{{NAME}}"}</code>{" "}
+                  and{" "}
+                  <code className="px-1.5 py-0.5 rounded bg-card border border-border font-mono text-xs">{"{{Q1}}"}</code>-<code className="px-1.5 py-0.5 rounded bg-card border border-border font-mono text-xs">{"{{Q5}}"}</code>{" "}
+                  are substituted at request time.
                 </div>
 
                 <div className="bg-card rounded-md s-card-static overflow-hidden">
                   <div className="p-6">
                     <div className="flex justify-between items-center mb-2 gap-2 flex-wrap">
                       <label className="eyebrow text-foreground/65">
-                        Detailed Scorecard Prompt - {audience}
+                        Score System Prompt - {audience}
+                      </label>
+                      <div className="flex items-center gap-3">
+                        <span className="text-xs text-muted-foreground">
+                          {current.scoreSystemPrompt.length} chars
+                        </span>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => updateScoreSystemPrompt(DEFAULT_SCORE_SYSTEM_PROMPT)}
+                          className="h-8 rounded-full px-3 text-[10px] uppercase tracking-[0.18em] border-foreground/35 text-foreground hover:border-ink hover:text-ink"
+                          title="Replace the textarea content with the built-in default prompt"
+                        >
+                          Load default
+                        </Button>
+                      </div>
+                    </div>
+                    <Textarea
+                      rows={16}
+                      value={current.scoreSystemPrompt}
+                      onChange={(e) => updateScoreSystemPrompt(e.target.value)}
+                      placeholder="Score prompt that returns strict JSON with score, confidence, top 3 issues, and summary."
+                      className="min-h-[300px] font-mono text-sm s-input resize-y"
+                    />
+                  </div>
+                </div>
+
+                <div className="bg-card rounded-md s-card-static overflow-hidden">
+                  <div className="p-6">
+                    <div className="flex justify-between items-center mb-2 gap-2 flex-wrap">
+                      <label className="eyebrow text-foreground/65">
+                        Score User Prompt - {audience}
+                      </label>
+                      <div className="flex items-center gap-3">
+                        <span className="text-xs text-muted-foreground">
+                          {current.scoreUserPrompt.length} chars
+                        </span>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => updateScoreUserPrompt(DEFAULT_SCORE_USER_PROMPT)}
+                          className="h-8 rounded-full px-3 text-[10px] uppercase tracking-[0.18em] border-foreground/35 text-foreground hover:border-ink hover:text-ink"
+                          title="Replace the textarea content with the built-in default user prompt"
+                        >
+                          Load default
+                        </Button>
+                      </div>
+                    </div>
+                    <Textarea
+                      rows={14}
+                      value={current.scoreUserPrompt}
+                      onChange={(e) => updateScoreUserPrompt(e.target.value)}
+                      placeholder="User message template. Use {{NAME}} and {{Q1}}-{{Q5}} placeholders."
+                      className="min-h-[260px] font-mono text-sm s-input resize-y"
+                    />
+                    <div className="flex flex-wrap gap-2 mt-3">
+                      {["{{NAME}}", "{{Q1}}", "{{Q2}}", "{{Q3}}", "{{Q4}}", "{{Q5}}"].map((t) => (
+                        <button
+                          key={t}
+                          type="button"
+                          onClick={() => copyTag(t)}
+                          className="inline-flex items-center gap-1 font-mono text-xs text-primary bg-secondary px-2.5 py-1 rounded-lg border border-primary/15 hover:bg-primary/10 hover:border-primary/25 transition-all duration-200 active:scale-95"
+                        >
+                          {copiedTag === t ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                          {t}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* ── Detailed Scorecard Tab ── */}
+            {tab === "report" && (
+              <div className="space-y-4">
+                <div className="rounded-md border border-border bg-secondary/40 p-4 text-[14px] leading-[1.7] text-foreground/85">
+                  Editing the <strong className="text-foreground capitalize">{audience}</strong> detailed scorecard
+                  prompts. The <strong>System Prompt</strong> sets the model's
+                  role for the printable Clarity Readiness Report. The{" "}
+                  <strong>User Prompt</strong> is the template wrapping the
+                  user's answers and beats — placeholders{" "}
+                  <code className="px-1.5 py-0.5 rounded bg-card border border-border font-mono text-xs">{"{{NAME}}"}</code>,{" "}
+                  <code className="px-1.5 py-0.5 rounded bg-card border border-border font-mono text-xs">{"{{Q1}}"}</code>-<code className="px-1.5 py-0.5 rounded bg-card border border-border font-mono text-xs">{"{{Q5}}"}</code>{" "}
+                  and{" "}
+                  <code className="px-1.5 py-0.5 rounded bg-card border border-border font-mono text-xs">{"{{BEAT1}}"}</code>-<code className="px-1.5 py-0.5 rounded bg-card border border-border font-mono text-xs">{"{{BEAT5}}"}</code>{" "}
+                  are substituted at request time.
+                </div>
+
+                <div className="bg-card rounded-md s-card-static overflow-hidden">
+                  <div className="p-6">
+                    <div className="flex justify-between items-center mb-2 gap-2 flex-wrap">
+                      <label className="eyebrow text-foreground/65">
+                        Detailed Scorecard System Prompt - {audience}
                       </label>
                       <div className="flex items-center gap-3">
                         <span className="text-xs text-muted-foreground">
@@ -1097,6 +1259,145 @@ export default function AdminPage() {
                       placeholder="Detailed scorecard narrative prompt. Click 'Load default' to insert the built-in baseline."
                       className="min-h-[400px] font-mono text-sm s-input resize-y"
                     />
+                  </div>
+                </div>
+
+                <div className="bg-card rounded-md s-card-static overflow-hidden">
+                  <div className="p-6">
+                    <div className="flex justify-between items-center mb-2 gap-2 flex-wrap">
+                      <label className="eyebrow text-foreground/65">
+                        Detailed Scorecard User Prompt - {audience}
+                      </label>
+                      <div className="flex items-center gap-3">
+                        <span className="text-xs text-muted-foreground">
+                          {current.reportUserPrompt.length} chars
+                        </span>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => updateReportUserPrompt(DEFAULT_REPORT_USER_PROMPT)}
+                          className="h-8 rounded-full px-3 text-[10px] uppercase tracking-[0.18em] border-foreground/35 text-foreground hover:border-ink hover:text-ink"
+                          title="Replace the textarea content with the built-in default user prompt"
+                        >
+                          Load default
+                        </Button>
+                      </div>
+                    </div>
+                    <Textarea
+                      rows={20}
+                      value={current.reportUserPrompt}
+                      onChange={(e) => updateReportUserPrompt(e.target.value)}
+                      placeholder="User message template. Use {{NAME}}, {{Q1}}-{{Q5}}, {{BEAT1}}-{{BEAT5}} placeholders."
+                      className="min-h-[360px] font-mono text-sm s-input resize-y"
+                    />
+                    <div className="flex flex-wrap gap-2 mt-3">
+                      {["{{NAME}}", "{{Q1}}", "{{Q2}}", "{{Q3}}", "{{Q4}}", "{{Q5}}", "{{BEAT1}}", "{{BEAT2}}", "{{BEAT3}}", "{{BEAT4}}", "{{BEAT5}}"].map((t) => (
+                        <button
+                          key={t}
+                          type="button"
+                          onClick={() => copyTag(t)}
+                          className="inline-flex items-center gap-1 font-mono text-xs text-primary bg-secondary px-2.5 py-1 rounded-lg border border-primary/15 hover:bg-primary/10 hover:border-primary/25 transition-all duration-200 active:scale-95"
+                        >
+                          {copiedTag === t ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                          {t}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* ── Closing Summary Tab ── */}
+            {tab === "summary" && (
+              <div className="space-y-4">
+                <div className="rounded-md border border-border bg-secondary/40 p-4 text-[14px] leading-[1.7] text-foreground/85">
+                  Editing the <strong className="text-foreground capitalize">{audience}</strong> closing summary
+                  prompts. The <strong>System Prompt</strong> sets the model's
+                  role for the 200-280 word closing message. The{" "}
+                  <strong>User Prompt</strong> is the template wrapping the
+                  five beats — placeholders{" "}
+                  <code className="px-1.5 py-0.5 rounded bg-card border border-border font-mono text-xs">{"{{NAME}}"}</code>{" "}
+                  and{" "}
+                  <code className="px-1.5 py-0.5 rounded bg-card border border-border font-mono text-xs">{"{{BEAT1}}"}</code>-<code className="px-1.5 py-0.5 rounded bg-card border border-border font-mono text-xs">{"{{BEAT5}}"}</code>{" "}
+                  are substituted at request time.
+                </div>
+
+                <div className="bg-card rounded-md s-card-static overflow-hidden">
+                  <div className="p-6">
+                    <div className="flex justify-between items-center mb-2 gap-2 flex-wrap">
+                      <label className="eyebrow text-foreground/65">
+                        Closing Summary System Prompt - {audience}
+                      </label>
+                      <div className="flex items-center gap-3">
+                        <span className="text-xs text-muted-foreground">
+                          {current.summarySystemPrompt.length} chars
+                        </span>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => updateSummarySystemPrompt(DEFAULT_SUMMARY_SYSTEM_PROMPT)}
+                          className="h-8 rounded-full px-3 text-[10px] uppercase tracking-[0.18em] border-foreground/35 text-foreground hover:border-ink hover:text-ink"
+                          title="Replace the textarea content with the built-in default prompt"
+                        >
+                          Load default
+                        </Button>
+                      </div>
+                    </div>
+                    <Textarea
+                      rows={20}
+                      value={current.summarySystemPrompt}
+                      onChange={(e) => updateSummarySystemPrompt(e.target.value)}
+                      placeholder="Closing summary prompt. Click 'Load default' to insert the built-in baseline."
+                      className="min-h-[360px] font-mono text-sm s-input resize-y"
+                    />
+                  </div>
+                </div>
+
+                <div className="bg-card rounded-md s-card-static overflow-hidden">
+                  <div className="p-6">
+                    <div className="flex justify-between items-center mb-2 gap-2 flex-wrap">
+                      <label className="eyebrow text-foreground/65">
+                        Closing Summary User Prompt - {audience}
+                      </label>
+                      <div className="flex items-center gap-3">
+                        <span className="text-xs text-muted-foreground">
+                          {current.summaryUserPrompt.length} chars
+                        </span>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => updateSummaryUserPrompt(DEFAULT_SUMMARY_USER_PROMPT)}
+                          className="h-8 rounded-full px-3 text-[10px] uppercase tracking-[0.18em] border-foreground/35 text-foreground hover:border-ink hover:text-ink"
+                          title="Replace the textarea content with the built-in default user prompt"
+                        >
+                          Load default
+                        </Button>
+                      </div>
+                    </div>
+                    <Textarea
+                      rows={16}
+                      value={current.summaryUserPrompt}
+                      onChange={(e) => updateSummaryUserPrompt(e.target.value)}
+                      placeholder="User message template. Use {{NAME}} and {{BEAT1}}-{{BEAT5}} placeholders."
+                      className="min-h-[300px] font-mono text-sm s-input resize-y"
+                    />
+                    <div className="flex flex-wrap gap-2 mt-3">
+                      {["{{NAME}}", "{{BEAT1}}", "{{BEAT2}}", "{{BEAT3}}", "{{BEAT4}}", "{{BEAT5}}"].map((t) => (
+                        <button
+                          key={t}
+                          type="button"
+                          onClick={() => copyTag(t)}
+                          className="inline-flex items-center gap-1 font-mono text-xs text-primary bg-secondary px-2.5 py-1 rounded-lg border border-primary/15 hover:bg-primary/10 hover:border-primary/25 transition-all duration-200 active:scale-95"
+                        >
+                          {copiedTag === t ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                          {t}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 </div>
               </div>

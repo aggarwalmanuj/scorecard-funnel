@@ -126,3 +126,71 @@ export async function getReportSystemPrompt(
   if (!value) return fallback
   return value.replace(/\\n/g, "\n")
 }
+
+/**
+ * Read the admin-configured score system prompt. Falls back to the supplied
+ * default when admins haven't seeded a value — keeps the score endpoint
+ * working out of the box.
+ */
+export async function getScoreSystemPrompt(
+  audience: Audience,
+  fallback: string
+): Promise<string> {
+  const prompts = await getCachedPrompts()
+  const value = prompts[audienceKey("score_system_prompt", audience)]
+  if (!value) return fallback
+  return value.replace(/\\n/g, "\n")
+}
+
+/**
+ * Read the admin-configured closing-summary system prompt. Falls back to the
+ * supplied default when admins haven't seeded a value — keeps the summary
+ * endpoint working out of the box.
+ */
+export async function getSummarySystemPrompt(
+  audience: Audience,
+  fallback: string
+): Promise<string> {
+  const prompts = await getCachedPrompts()
+  const value = prompts[audienceKey("summary_system_prompt", audience)]
+  if (!value) return fallback
+  return value.replace(/\\n/g, "\n")
+}
+
+/**
+ * Generic per-audience prompt-template reader for the score / report /
+ * summary user-prompt templates. Falls back to the supplied default when no
+ * Cosmos value has been saved. Returns the raw template — callers apply
+ * placeholder substitution.
+ */
+async function getRawTemplate(
+  baseKey: string,
+  audience: Audience,
+  fallback: string
+): Promise<string> {
+  const prompts = await getCachedPrompts()
+  const value = prompts[audienceKey(baseKey, audience)]
+  if (!value) return fallback
+  return value.replace(/\\n/g, "\n")
+}
+
+export function getScoreUserPromptTemplate(
+  audience: Audience,
+  fallback: string
+): Promise<string> {
+  return getRawTemplate("score_user_prompt", audience, fallback)
+}
+
+export function getReportUserPromptTemplate(
+  audience: Audience,
+  fallback: string
+): Promise<string> {
+  return getRawTemplate("report_user_prompt", audience, fallback)
+}
+
+export function getSummaryUserPromptTemplate(
+  audience: Audience,
+  fallback: string
+): Promise<string> {
+  return getRawTemplate("summary_user_prompt", audience, fallback)
+}

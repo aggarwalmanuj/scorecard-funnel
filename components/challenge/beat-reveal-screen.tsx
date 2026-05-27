@@ -47,9 +47,19 @@ export function BeatRevealScreen({
   const beatKey = `beat${beatNumber}` as keyof ChallengeState["beats"]
   const beatContent = state.beats[beatKey]
 
-  const [isRevealed, setIsRevealed] = useState(false)
+  // If the beat content was already in state at first mount, this navigation
+  // is hitting a cached page - render fully instantly instead of replaying
+  // the typewriter. Live-streamed first visits (content arrives in chunks)
+  // still get the animated reveal.
+  const isPreloadedRef = useRef(false)
+  if (!isPreloadedRef.current) {
+    isPreloadedRef.current = (beatContent?.trim().length ?? 0) > 40
+  }
+  const skipReveal = isPreloadedRef.current
+
+  const [isRevealed, setIsRevealed] = useState(skipReveal)
   const [visibleTokenCount, setVisibleTokenCount] = useState(0)
-  const [isComplete, setIsComplete] = useState(false)
+  const [isComplete, setIsComplete] = useState(skipReveal)
   const [feedback, setFeedback] = useState<string | null>(null)
   const [pendingPartly, setPendingPartly] = useState(false)
   const [partlyReason, setPartlyReason] = useState("")
@@ -76,6 +86,19 @@ export function BeatRevealScreen({
   ]
 
   useEffect(() => {
+    if (skipReveal) {
+      // Instant render path: show every token immediately and treat the
+      // beat as already-complete. Subscribers to `isComplete` (audio
+      // autoplay, feedback panel) light up on the next tick.
+      setVisibleTokenCount(tokens.length)
+      setIsComplete(true)
+      setIsRevealed(true)
+      setFeedback(null)
+      setPendingPartly(false)
+      setPartlyReason("")
+      hasAutoplayedRef.current = false
+      return
+    }
     setVisibleTokenCount(0)
     setIsComplete(false)
     setFeedback(null)
@@ -83,9 +106,9 @@ export function BeatRevealScreen({
     setPartlyReason("")
     setIsRevealed(false)
     hasAutoplayedRef.current = false
-    const t = setTimeout(() => setIsRevealed(true), 300)
+    const t = setTimeout(() => setIsRevealed(true), 80)
     return () => clearTimeout(t)
-  }, [beatContent])
+  }, [beatContent, skipReveal, tokens.length])
 
   const fetchBeatBytes = useCallback(async (): Promise<ArrayBuffer | null> => {
     const text = beatContent?.trim()
@@ -111,6 +134,10 @@ export function BeatRevealScreen({
   }, [audio])
 
   useEffect(() => {
+    // Cached/preloaded visits skip the per-token animation entirely - the
+    // mount effect already filled in every token. Only the live-streamed
+    // first visit runs the typewriter.
+    if (skipReveal) return
     if (!isRevealed || tokens.length === 0) return
     let i = 0
     const id = setInterval(() => {
@@ -121,13 +148,13 @@ export function BeatRevealScreen({
         tokenTimerRef.current = null
         setIsComplete(true)
       }
-    }, 38)
+    }, 20)
     tokenTimerRef.current = id
     return () => {
       clearInterval(id)
       tokenTimerRef.current = null
     }
-  }, [isRevealed, tokens])
+  }, [isRevealed, tokens, skipReveal])
 
   // Double-click anywhere on the reflection card to skip the typewriter
   // straight to the end. Why: testers found the 38ms-per-token pace too
@@ -142,6 +169,19 @@ export function BeatRevealScreen({
     setVisibleTokenCount(tokens.length)
     setIsComplete(true)
   }
+
+  // Warm the next route's bundle/data as soon as the page mounts so the
+  // tap on the feedback button feels instantaneous - Next caches the RSC
+  // payload and any data hooks it depends on. Cheap to call repeatedly,
+  // and a no-op in static export builds.
+  useEffect(() => {
+    if (!nextRoute) return
+    try {
+      router.prefetch(nextRoute)
+    } catch {
+      /* ignore - prefetch is best-effort */
+    }
+  }, [router, nextRoute])
 
   // Opportunistic autoplay once the typewriter finishes and the audio
   // element is primed. Chrome typically allows it after page interaction;

@@ -199,11 +199,20 @@ export async function writePrompts(data: Record<string, string>): Promise<void> 
   await ensureInitialized()
   const container = promptsContainer()
 
-  const operations = Object.entries(data).map(([key, value]) =>
-    container.items.upsert({ id: key, value })
-  )
-
-  await Promise.all(operations)
+  const entries = Object.entries(data)
+  // Cosmos serverless / 400-RU containers throttle (429) when too many
+  // upserts land in the same instant. The admin save now ships 70+ keys
+  // (system + user prompts × 3 generators × 2 audiences + beats + questions),
+  // so a flat Promise.all over all of them hit RU limits and surfaced as
+  // "HTTP 502 / Failed to write prompts" in the UI with no save going through.
+  // Chunking to a small concurrent batch keeps every key, just paced.
+  const BATCH = 8
+  for (let i = 0; i < entries.length; i += BATCH) {
+    const slice = entries.slice(i, i + BATCH)
+    await Promise.all(
+      slice.map(([key, value]) => container.items.upsert({ id: key, value })),
+    )
+  }
 }
 
 /* ═══════════════════════════════════════════════

@@ -1,8 +1,17 @@
-import { redactError } from "@/lib/security"
+import { redactError, sanitizeForPrompt } from "@/lib/security"
 import { z } from "zod"
+import {
+  getSummarySystemPrompt,
+  getSummaryUserPromptTemplate,
+} from "@/lib/server/challenge-prompts"
+import {
+  DEFAULT_SUMMARY_SYSTEM_PROMPT,
+  DEFAULT_SUMMARY_USER_PROMPT,
+} from "@/lib/default-summary-prompt"
 
 const bodySchema = z.object({
   firstName: z.string().max(200).optional().default(""),
+  audience: z.enum(["individual", "team"]).optional().default("individual"),
   beats: z.object({
     beat1: z.string().max(50000).optional().default(""),
     beat2: z.string().max(50000).optional().default(""),
@@ -18,41 +27,20 @@ function sseData(obj: unknown): Uint8Array {
   return new TextEncoder().encode(`data: ${JSON.stringify(obj)}\n\n`)
 }
 
-function buildSummaryPrompt(firstName: string, beats: z.infer<typeof bodySchema>["beats"]): { system: string; user: string } {
-  const name = firstName.trim() || "you"
-
-  const system = `You are a deeply perceptive guide who has just witnessed someone go through a profound journey of self-reflection. Your role is to craft a closing message that feels like a quiet revelation - not a summary, but a mirror held up at the right moment.
-
-Your tone is: warm, direct, and unhurried. You do not use buzzwords, motivational language, or therapy-speak. You write in short, meaningful sentences. You trust silence. You never exaggerate.
-
-The message should feel like it was written specifically for this person and this moment - because it was. It should land in the chest, not the head. It should leave them feeling seen, steady, and ready for the next step.
-
-Structure: 3-4 paragraphs, no headers, no bullet points. The final paragraph should gently open the door to what comes next - not push, not sell. Just hold space for the possibility.
-
-Length: 200-280 words. Economy is everything.`
-
-  const user = `${name} just completed the Honest Decision Challenge. Here is what surfaced across their five beats of reflection:
-
-Beat 1 - The Pattern:
-${beats.beat1 || "(not available)"}
-
-Beat 2 - The Desired Future:
-${beats.beat2 || "(not available)"}
-
-Beat 3 - The Noise:
-${beats.beat3 || "(not available)"}
-
-Beat 4 - The Breakthrough Moment:
-${beats.beat4 || "(not available)"}
-
-Beat 5 - The Morning After Clarity:
-${beats.beat5 || "(not available)"}
-
-Now write a closing message for ${name}. It should weave the essence of what surfaced - the pattern, the clarity, the courage it took to look. It should feel like a final word from someone who truly read every line.
-
-Do not use their name more than once. Do not summarize each beat explicitly. Find the thread that runs through all five and name it quietly.`
-
-  return { system, user }
+function applySummaryUserTemplate(
+  template: string,
+  firstName: string,
+  beats: z.infer<typeof bodySchema>["beats"]
+): string {
+  const name = sanitizeForPrompt(firstName.trim()) || "you"
+  const blank = "(not available)"
+  return template
+    .replace(/\{\{NAME\}\}/g, name)
+    .replace(/\{\{BEAT1\}\}/g, sanitizeForPrompt(beats.beat1 || blank))
+    .replace(/\{\{BEAT2\}\}/g, sanitizeForPrompt(beats.beat2 || blank))
+    .replace(/\{\{BEAT3\}\}/g, sanitizeForPrompt(beats.beat3 || blank))
+    .replace(/\{\{BEAT4\}\}/g, sanitizeForPrompt(beats.beat4 || blank))
+    .replace(/\{\{BEAT5\}\}/g, sanitizeForPrompt(beats.beat5 || blank))
 }
 
 export async function POST(request: Request) {
@@ -82,8 +70,12 @@ export async function POST(request: Request) {
     )
   }
 
-  const { firstName, beats } = parsed.data
-  const { system, user } = buildSummaryPrompt(firstName, beats)
+  const { firstName, beats, audience } = parsed.data
+  const [system, userTemplate] = await Promise.all([
+    getSummarySystemPrompt(audience, DEFAULT_SUMMARY_SYSTEM_PROMPT),
+    getSummaryUserPromptTemplate(audience, DEFAULT_SUMMARY_USER_PROMPT),
+  ])
+  const user = applySummaryUserTemplate(userTemplate, firstName, beats)
 
   const model = process.env.OPENROUTER_MODEL?.trim() || "openai/gpt-4o-mini"
   const referer = process.env.NEXT_PUBLIC_APP_URL?.trim() || "https://localhost:3000"

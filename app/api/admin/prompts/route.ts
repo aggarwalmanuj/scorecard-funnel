@@ -88,8 +88,17 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: true }, { headers })
   } catch (e) {
     console.error("[admin/prompts POST]", redactError(e))
+    // Pass a short, sanitised reason back to the admin UI so save failures
+    // are actionable (e.g. Cosmos 429 throttling, network blip) instead of
+    // a generic "Failed to write prompts". `redactError` strips any secrets
+    // from the message before it leaves the server.
+    const reason = redactError(e)
     return NextResponse.json(
-      { ok: false, error: "Failed to write prompts" },
+      {
+        ok: false,
+        error: "Failed to write prompts",
+        detail: typeof reason === "string" ? reason.slice(0, 240) : undefined,
+      },
       { status: 502, headers }
     )
   }
