@@ -162,6 +162,10 @@ export default function AudienceSelectionPage() {
               <span className="eyebrow mb-2 block text-foreground/70">
                 First name
               </span>
+              {/* data-ph-unmask: reveal ONLY this field in PostHog session
+                  replays so we can identify which tester a recording belongs
+                  to. Email + all other inputs stay masked — see the
+                  maskInputFn in instrumentation-client.ts. */}
               <Input
                 id="firstName"
                 name="firstName-no-autofill"
@@ -170,6 +174,7 @@ export default function AudienceSelectionPage() {
                 autoComplete="off"
                 data-lpignore="true"
                 data-form-type="other"
+                data-ph-unmask="true"
                 value={firstNameValue}
                 onChange={(e) => {
                   setFirstNameValue(e.target.value)

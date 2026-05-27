@@ -64,6 +64,25 @@ if (typeof window !== "undefined" && POSTHOG_KEY && (!IS_DEV || POSTHOG_DEV_ENAB
     // Surface SDK logs in dev so "event captured" / "decide returned"
     // are visible in the browser console. Production stays quiet.
     debug: IS_DEV,
+    // Session replay input masking. The `2026-01-30` defaults turn on
+    // `maskAllInputs: true`, which masks EVERY input value — the secure
+    // default we want to keep. We override only the masked-value function
+    // so exactly ONE field is revealed: the tester's first name (carrying
+    // `data-ph-unmask="true"` / `#firstName` on the audience page). This
+    // lets us identify which tester a replay belongs to without recording
+    // any other PII — email, and every other input, stay fully masked.
+    session_recording: {
+      maskAllInputs: true,
+      maskInputFn: (text: string, element?: HTMLElement) => {
+        if (
+          element?.getAttribute("data-ph-unmask") === "true" ||
+          element?.id === "firstName"
+        ) {
+          return text
+        }
+        return "*".repeat(text.length)
+      },
+    },
     loaded: (ph) => {
       // Defensive: if a previous build called `opt_out_capturing()`,
       // the "NO" flag is sticky in localStorage and silently blocks

@@ -682,10 +682,11 @@ function UpsellModal({
 }) {
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto px-5 py-8 sm:px-8 animate-fade-in-up"
+      className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto overscroll-contain px-5 py-8 sm:px-8 animate-fade-in-up"
       style={{
         background: "color-mix(in srgb, var(--ink) 72%, transparent)",
         backdropFilter: "blur(6px)",
+        WebkitBackdropFilter: "blur(6px)",
       }}
       role="dialog"
       aria-modal="true"
@@ -796,10 +797,11 @@ function ContactModal({
 }) {
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center px-5 sm:px-8 animate-fade-in-up"
+      className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto overscroll-contain px-5 py-8 sm:px-8 animate-fade-in-up"
       style={{
         background: "color-mix(in srgb, var(--ink) 70%, transparent)",
         backdropFilter: "blur(6px)",
+        WebkitBackdropFilter: "blur(6px)",
       }}
       role="dialog"
       aria-modal="true"

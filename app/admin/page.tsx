@@ -31,9 +31,221 @@ import {
   Filter,
   User,
   Users,
+  FileText,
+  Volume2,
+  Loader2,
 } from "lucide-react"
+import {
+  ReportView,
+  downloadReportPdf,
+  reportFileSlug,
+  type ApiResponse as ReportApiResponse,
+} from "@/components/challenge/clarity-report"
+import type { ClarityScore } from "@/lib/scoring"
 
 type Audience = "individual" | "team"
+
+/** Shape of the persisted score_json blob written by the summary screen. */
+type PersistedScore = {
+  clarity: ClarityScore
+  reasons?: Partial<Record<string, string>>
+  nsState?: string
+  scoreSource?: "llm" | "fallback"
+}
+
+function tryParseJson<T>(raw?: string): T | null {
+  if (!raw) return null
+  try {
+    return JSON.parse(raw) as T
+  } catch {
+    return null
+  }
+}
+
+/** Plain-language explainer shown at the top of each prompt-editing tab, so
+ *  non-technical team members understand what they're editing, where it shows
+ *  up for the user, and the System-vs-User distinction. */
+function PromptHelp({
+  what,
+  where,
+  placeholders,
+}: {
+  what: React.ReactNode
+  where: React.ReactNode
+  placeholders?: string[]
+}) {
+  return (
+    <div className="rounded-md border border-border bg-secondary/40 p-4 space-y-2.5 text-[14px] leading-[1.65] text-foreground/85">
+      <p className="text-foreground">{what}</p>
+      <p>
+        <span className="font-semibold text-foreground">Where it shows up: </span>
+        <span className="text-foreground/75">{where}</span>
+      </p>
+      <p className="text-foreground/75">
+        Each box below is one half of the AI instruction. The{" "}
+        <strong className="text-foreground">System prompt</strong> is the AI&apos;s
+        rulebook — its role, the rules it follows, and the exact format it must
+        return. The <strong className="text-foreground">User prompt</strong> is the
+        message we fill in with this person&apos;s answers; the{" "}
+        <code className="px-1 py-0.5 rounded bg-card border border-border font-mono text-xs">{"{{tags}}"}</code>{" "}
+        are swapped in automatically.
+      </p>
+      {placeholders && placeholders.length > 0 && (
+        <p className="flex flex-wrap items-center gap-1.5 text-foreground/75">
+          <span className="font-semibold text-foreground">Placeholders:</span>
+          {placeholders.map((p) => (
+            <code
+              key={p}
+              className="px-1.5 py-0.5 rounded bg-card border border-border font-mono text-xs"
+            >
+              {p}
+            </code>
+          ))}
+        </p>
+      )}
+    </div>
+  )
+}
+
+/** Read-only render of a persisted score: overall, band, and the four
+ *  weighted subscores with their per-pillar reasons. */
+function ScoreBreakdown({ score }: { score: PersistedScore }) {
+  const c = score.clarity
+  const reasons = (score.reasons ?? {}) as Record<string, string | undefined>
+  return (
+    <div className="rounded-xl border border-border bg-muted/20 p-4 space-y-3">
+      <div className="flex flex-wrap items-center gap-3">
+        <span className="font-bold text-3xl tabular-nums text-ink">{c.overall}</span>
+        <span className="text-muted-foreground text-sm">/ 100</span>
+        <Badge variant="outline" className="rounded-full text-[10px] uppercase tracking-[0.18em] border-ink/20 text-ink">
+          {c.bandLabel}
+        </Badge>
+        {score.scoreSource && (
+          <Badge variant="secondary" className="rounded-lg text-[10px] uppercase tracking-[0.18em]">
+            {score.scoreSource === "llm" ? "LLM-scored" : "Heuristic fallback"}
+          </Badge>
+        )}
+        {score.nsState && score.nsState !== "UNKNOWN" && (
+          <Badge variant="outline" className="rounded-full text-[10px] uppercase tracking-[0.18em]">
+            {score.nsState}
+          </Badge>
+        )}
+      </div>
+      <div className="space-y-2">
+        {c.subscoreDetails?.map((s) => (
+          <div key={s.key} className="text-sm">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-foreground">
+                {s.label}
+                <span className="text-muted-foreground"> · {Math.round(s.weight * 100)}% weight</span>
+              </span>
+              <span className="font-bold tabular-nums text-ink">{s.value}</span>
+            </div>
+            {reasons[s.key] && (
+              <p className="mt-0.5 text-[13px] text-muted-foreground leading-relaxed">{reasons[s.key]}</p>
+            )}
+          </div>
+        ))}
+      </div>
+      {c.comparisonLabel && (
+        <p className="text-[13px] text-muted-foreground leading-relaxed border-t border-border/60 pt-2">
+          {c.comparisonLabel}
+        </p>
+      )}
+    </div>
+  )
+}
+
+/** The "Generated Outputs" block appended to each expanded response: score
+ *  breakdown, summary (text + audio), and a report preview/PDF launcher. */
+function ResponseOutputs({
+  r,
+  onViewReport,
+}: {
+  r: {
+    id: string
+    firstName: string
+    createdAt: string
+    score_json?: string
+    report_json?: string
+    summary_text?: string
+    summary_audio_url?: string
+  }
+  onViewReport: (data: ReportApiResponse, name: string, id: string, dateISO: string) => void
+}) {
+  const score = tryParseJson<PersistedScore>(r.score_json)
+  const report = tryParseJson<ReportApiResponse>(r.report_json)
+  const hasAny =
+    !!score?.clarity || !!report?.report || !!r.summary_text || !!r.summary_audio_url
+
+  return (
+    <>
+      <Separator />
+      <p className="eyebrow text-foreground/65 pb-1.5 border-b border-border">
+        Generated Outputs
+      </p>
+
+      {!hasAny && (
+        <p className="text-muted-foreground italic text-sm">
+          No outputs captured yet — the tester hasn&apos;t reached the summary
+          stage, or this submission predates output capture.
+        </p>
+      )}
+
+      {score?.clarity && (
+        <div>
+          <label className="block eyebrow text-foreground/65 mb-1.5">Unfair Advantage Score</label>
+          <ScoreBreakdown score={score} />
+        </div>
+      )}
+
+      {(r.summary_text || r.summary_audio_url) && (
+        <div>
+          <label className="block eyebrow text-foreground/65 mb-1.5">Summary</label>
+          {r.summary_text && (
+            <div className="text-sm text-foreground leading-relaxed whitespace-pre-wrap break-words max-h-72 overflow-y-auto bg-muted/30 border border-border rounded-xl p-3">
+              {r.summary_text}
+            </div>
+          )}
+          {r.summary_audio_url ? (
+            <div className="mt-2 flex flex-wrap items-center gap-3">
+              {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+              <audio controls preload="none" src={r.summary_audio_url} className="h-9 max-w-full" />
+              <a
+                href={r.summary_audio_url}
+                download
+                className="inline-flex items-center gap-1.5 text-xs text-ink hover:underline"
+              >
+                <Volume2 className="w-3.5 h-3.5" />
+                Download MP3
+              </a>
+            </div>
+          ) : (
+            <p className="mt-2 text-xs italic text-muted-foreground">
+              Audio not captured (Blob store not configured, or the tester never played it).
+            </p>
+          )}
+        </div>
+      )}
+
+      {report?.report && (
+        <div>
+          <label className="block eyebrow text-foreground/65 mb-1.5">Report</label>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => onViewReport(report, r.firstName, r.id, r.createdAt)}
+            className="h-9 rounded-full border border-foreground/35 text-foreground hover:border-ink hover:text-ink text-[10px] uppercase tracking-[0.2em] px-4"
+          >
+            <FileText className="w-3.5 h-3.5 mr-1.5" />
+            View report &amp; download PDF
+          </Button>
+        </div>
+      )}
+    </>
+  )
+}
 
 type Question = {
   stageFraming: string
@@ -134,6 +346,8 @@ export default function AdminPage() {
     question1_text?: string; question2_text?: string; question3_text?: string; question4_text?: string; question5_text?: string
     beat1_feedback: string; beat2_feedback: string; beat3_feedback: string; beat4_feedback: string; beat5_feedback: string
     beat1_output: string; beat2_output: string; beat3_output: string; beat4_output: string; beat5_output: string
+    // Final outputs persisted at generation time (optional — older docs lack them).
+    score_json?: string; report_json?: string; summary_text?: string; summary_audio_url?: string
   }
   const [responses, setResponses] = useState<UserResponse[]>([])
   const [responsesLoading, setResponsesLoading] = useState(false)
@@ -155,6 +369,14 @@ export default function AdminPage() {
   const [searchError, setSearchError] = useState("")
   const [showFilters, setShowFilters] = useState(false)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+
+  // Report preview modal (renders a persisted report_json via the shared
+  // ReportView and exports the same PDF the user got).
+  const [reportModal, setReportModal] = useState<
+    { id: string; name: string; dateISO: string; data: ReportApiResponse } | null
+  >(null)
+  const [reportPdfBusy, setReportPdfBusy] = useState(false)
+  const reportModalRef = useRef<HTMLDivElement>(null)
 
   const didAutoLoad = useRef(false)
   const current = data[audience]
@@ -324,6 +546,8 @@ export default function AdminPage() {
       beat3_feedback: r.beat3_feedback, beat4_feedback: r.beat4_feedback, beat5_feedback: r.beat5_feedback,
       beat1_output: r.beat1_output, beat2_output: r.beat2_output, beat3_output: r.beat3_output,
       beat4_output: r.beat4_output, beat5_output: r.beat5_output,
+      score_json: r.score_json ?? "", report_json: r.report_json ?? "",
+      summary_text: r.summary_text ?? "", summary_audio_url: r.summary_audio_url ?? "",
     }))
     const blob = new Blob([JSON.stringify(clean, null, 2)], { type: "application/json" })
     const url = URL.createObjectURL(blob)
@@ -546,7 +770,7 @@ export default function AdminPage() {
       }
 
       const confirmed = window.confirm(
-        `This will replace the System Prompt, Questions, and Beats for the ${audience.toUpperCase()} audience only.\n\n` +
+        `This will replace all prompts (AI persona, Score, PDF report, Closing summary), the 5 Questions, and the 5 Beats for the ${audience.toUpperCase()} audience only.\n\n` +
         (exportedAtLabel ? `Backup export timestamp: ${exportedAtLabel}\n\n` : "") +
         `A backup of the current ${audience} editor state will be downloaded first.\n\n` +
         `Nothing is saved to the database until you click Save Changes.\n\nProceed?`
@@ -565,15 +789,23 @@ export default function AdminPage() {
         userPrompt: b.userPrompt ?? "",
       }))
 
-      const importedReportPrompt =
-        typeof obj.reportSystemPrompt === "string" ? obj.reportSystemPrompt : ""
+      // Keep a field if the imported config omits it (older v2 backups only
+      // carried systemPrompt/reportSystemPrompt). Spreading prev[audience]
+      // first guarantees no field is ever dropped to undefined.
+      const keep = (v: unknown, fallback: string) =>
+        typeof v === "string" ? v : fallback
 
       setData((prev) => ({
         ...prev,
         [audience]: {
+          ...prev[audience],
           systemPrompt: obj.systemPrompt as string,
-          // Preserve current value when older configs (without this field) are imported.
-          reportSystemPrompt: importedReportPrompt || prev[audience].reportSystemPrompt,
+          reportSystemPrompt: keep(obj.reportSystemPrompt, prev[audience].reportSystemPrompt),
+          reportUserPrompt: keep(obj.reportUserPrompt, prev[audience].reportUserPrompt),
+          scoreSystemPrompt: keep(obj.scoreSystemPrompt, prev[audience].scoreSystemPrompt),
+          scoreUserPrompt: keep(obj.scoreUserPrompt, prev[audience].scoreUserPrompt),
+          summarySystemPrompt: keep(obj.summarySystemPrompt, prev[audience].summarySystemPrompt),
+          summaryUserPrompt: keep(obj.summaryUserPrompt, prev[audience].summaryUserPrompt),
           questions: newQuestions,
           beats: newBeats,
         },
@@ -588,10 +820,19 @@ export default function AdminPage() {
   const handleDownloadConfig = () => {
     const payload = {
       exportedAt: new Date().toISOString(),
-      version: 2,
+      version: 3,
       audience,
       systemPrompt: current.systemPrompt,
+      // Every editable prompt — keep this list in sync with AudienceData and
+      // handleSave so a config backup captures the full editor state. Older
+      // (v2) exports omitted the score/summary/user prompts; import below
+      // tolerates their absence.
       reportSystemPrompt: current.reportSystemPrompt,
+      reportUserPrompt: current.reportUserPrompt,
+      scoreSystemPrompt: current.scoreSystemPrompt,
+      scoreUserPrompt: current.scoreUserPrompt,
+      summarySystemPrompt: current.summarySystemPrompt,
+      summaryUserPrompt: current.summaryUserPrompt,
       questions: current.questions,
       beats: current.beats,
     }
@@ -679,13 +920,13 @@ export default function AdminPage() {
   // Editorial tab styling - every active state collapses to ink/background
   // so the admin chrome reads as one calm family, not four neon tags.
   const tabConfig = [
-    { value: "system" as const, label: "System prompt", activeClass: "bg-ink text-background" },
-    { value: "questions" as const, label: "Questions", activeClass: "bg-ink text-background" },
-    { value: "beats" as const, label: "Beat prompts", activeClass: "bg-ink text-background" },
-    { value: "score" as const, label: "Score", activeClass: "bg-ink text-background" },
-    { value: "report" as const, label: "Detailed scorecard", activeClass: "bg-ink text-background" },
+    { value: "system" as const, label: "AI persona", activeClass: "bg-ink text-background" },
+    { value: "questions" as const, label: "The 5 questions", activeClass: "bg-ink text-background" },
+    { value: "beats" as const, label: "Reflections (beats 1–5)", activeClass: "bg-ink text-background" },
+    { value: "score" as const, label: "Score (0–100)", activeClass: "bg-ink text-background" },
+    { value: "report" as const, label: "PDF report", activeClass: "bg-ink text-background" },
     { value: "summary" as const, label: "Closing summary", activeClass: "bg-ink text-background" },
-    { value: "responses" as const, label: "Responses", activeClass: "bg-ink text-background" },
+    { value: "responses" as const, label: "User responses", activeClass: "bg-ink text-background" },
   ]
 
   // ── Login Screen ──
@@ -1124,22 +1365,27 @@ export default function AdminPage() {
             {/* ── Score Tab ── */}
             {tab === "score" && (
               <div className="space-y-4">
-                <div className="rounded-md border border-border bg-secondary/40 p-4 text-[14px] leading-[1.7] text-foreground/85">
-                  Editing the <strong className="text-foreground capitalize">{audience}</strong> score prompts.
-                  The <strong>System Prompt</strong> sets the model's role. The{" "}
-                  <strong>User Prompt</strong> is the template wrapping the
-                  user's answers — placeholders{" "}
-                  <code className="px-1.5 py-0.5 rounded bg-card border border-border font-mono text-xs">{"{{NAME}}"}</code>{" "}
-                  and{" "}
-                  <code className="px-1.5 py-0.5 rounded bg-card border border-border font-mono text-xs">{"{{Q1}}"}</code>-<code className="px-1.5 py-0.5 rounded bg-card border border-border font-mono text-xs">{"{{Q5}}"}</code>{" "}
-                  are substituted at request time.
-                </div>
+                <PromptHelp
+                  what={
+                    <>
+                      This controls how the AI calculates the{" "}
+                      <strong className="text-foreground">{audience}</strong>{" "}
+                      <strong className="text-foreground">0–100 Unfair Advantage Score</strong>{" "}
+                      and its four sub-scores (Direction, Identity, Decision,
+                      Energy). It produces <em>numbers</em>, not writing — the
+                      written report lives on the{" "}
+                      <strong className="text-foreground">“PDF report”</strong> tab.
+                    </>
+                  }
+                  where="The big score and the four pillar bars on the results/summary page, and the score on the report cover."
+                  placeholders={["{{NAME}}", "{{Q1}}", "{{Q2}}", "{{Q3}}", "{{Q4}}", "{{Q5}}"]}
+                />
 
                 <div className="bg-card rounded-md s-card-static overflow-hidden">
                   <div className="p-6">
                     <div className="flex justify-between items-center mb-2 gap-2 flex-wrap">
                       <label className="eyebrow text-foreground/65">
-                        Score System Prompt - {audience}
+                        Score — System prompt ({audience})
                       </label>
                       <div className="flex items-center gap-3">
                         <span className="text-xs text-muted-foreground">
@@ -1171,7 +1417,7 @@ export default function AdminPage() {
                   <div className="p-6">
                     <div className="flex justify-between items-center mb-2 gap-2 flex-wrap">
                       <label className="eyebrow text-foreground/65">
-                        Score User Prompt - {audience}
+                        Score — User prompt ({audience})
                       </label>
                       <div className="flex items-center gap-3">
                         <span className="text-xs text-muted-foreground">
@@ -1214,27 +1460,42 @@ export default function AdminPage() {
               </div>
             )}
 
-            {/* ── Detailed Scorecard Tab ── */}
+            {/* ── PDF Report Tab ── */}
             {tab === "report" && (
               <div className="space-y-4">
-                <div className="rounded-md border border-border bg-secondary/40 p-4 text-[14px] leading-[1.7] text-foreground/85">
-                  Editing the <strong className="text-foreground capitalize">{audience}</strong> detailed scorecard
-                  prompts. The <strong>System Prompt</strong> sets the model's
-                  role for the printable Clarity Readiness Report. The{" "}
-                  <strong>User Prompt</strong> is the template wrapping the
-                  user's answers and beats — placeholders{" "}
-                  <code className="px-1.5 py-0.5 rounded bg-card border border-border font-mono text-xs">{"{{NAME}}"}</code>,{" "}
-                  <code className="px-1.5 py-0.5 rounded bg-card border border-border font-mono text-xs">{"{{Q1}}"}</code>-<code className="px-1.5 py-0.5 rounded bg-card border border-border font-mono text-xs">{"{{Q5}}"}</code>{" "}
-                  and{" "}
-                  <code className="px-1.5 py-0.5 rounded bg-card border border-border font-mono text-xs">{"{{BEAT1}}"}</code>-<code className="px-1.5 py-0.5 rounded bg-card border border-border font-mono text-xs">{"{{BEAT5}}"}</code>{" "}
-                  are substituted at request time.
-                </div>
+                <PromptHelp
+                  what={
+                    <>
+                      This writes the multi-page{" "}
+                      <strong className="text-foreground">{audience}</strong>{" "}
+                      <strong className="text-foreground">PDF report</strong>{" "}
+                      the buyer downloads — the headline, the four pillars, the
+                      themes, the beat reflections, and the action steps. The{" "}
+                      <em>number</em> on the cover comes from the{" "}
+                      <strong className="text-foreground">“Score (0–100)”</strong> tab.
+                    </>
+                  }
+                  where="The downloadable PDF report (and its on-screen preview) after a buyer completes checkout."
+                  placeholders={[
+                    "{{NAME}}",
+                    "{{Q1}}",
+                    "{{Q2}}",
+                    "{{Q3}}",
+                    "{{Q4}}",
+                    "{{Q5}}",
+                    "{{BEAT1}}",
+                    "{{BEAT2}}",
+                    "{{BEAT3}}",
+                    "{{BEAT4}}",
+                    "{{BEAT5}}",
+                  ]}
+                />
 
                 <div className="bg-card rounded-md s-card-static overflow-hidden">
                   <div className="p-6">
                     <div className="flex justify-between items-center mb-2 gap-2 flex-wrap">
                       <label className="eyebrow text-foreground/65">
-                        Detailed Scorecard System Prompt - {audience}
+                        PDF report — System prompt ({audience})
                       </label>
                       <div className="flex items-center gap-3">
                         <span className="text-xs text-muted-foreground">
@@ -1256,7 +1517,7 @@ export default function AdminPage() {
                       rows={24}
                       value={current.reportSystemPrompt}
                       onChange={(e) => updateReportSystemPrompt(e.target.value)}
-                      placeholder="Detailed scorecard narrative prompt. Click 'Load default' to insert the built-in baseline."
+                      placeholder="PDF report narrative prompt. Click 'Load default' to insert the built-in baseline."
                       className="min-h-[400px] font-mono text-sm s-input resize-y"
                     />
                   </div>
@@ -1266,7 +1527,7 @@ export default function AdminPage() {
                   <div className="p-6">
                     <div className="flex justify-between items-center mb-2 gap-2 flex-wrap">
                       <label className="eyebrow text-foreground/65">
-                        Detailed Scorecard User Prompt - {audience}
+                        PDF report — User prompt ({audience})
                       </label>
                       <div className="flex items-center gap-3">
                         <span className="text-xs text-muted-foreground">
@@ -1312,23 +1573,32 @@ export default function AdminPage() {
             {/* ── Closing Summary Tab ── */}
             {tab === "summary" && (
               <div className="space-y-4">
-                <div className="rounded-md border border-border bg-secondary/40 p-4 text-[14px] leading-[1.7] text-foreground/85">
-                  Editing the <strong className="text-foreground capitalize">{audience}</strong> closing summary
-                  prompts. The <strong>System Prompt</strong> sets the model's
-                  role for the 200-280 word closing message. The{" "}
-                  <strong>User Prompt</strong> is the template wrapping the
-                  five beats — placeholders{" "}
-                  <code className="px-1.5 py-0.5 rounded bg-card border border-border font-mono text-xs">{"{{NAME}}"}</code>{" "}
-                  and{" "}
-                  <code className="px-1.5 py-0.5 rounded bg-card border border-border font-mono text-xs">{"{{BEAT1}}"}</code>-<code className="px-1.5 py-0.5 rounded bg-card border border-border font-mono text-xs">{"{{BEAT5}}"}</code>{" "}
-                  are substituted at request time.
-                </div>
+                <PromptHelp
+                  what={
+                    <>
+                      This writes the{" "}
+                      <strong className="text-foreground">{audience}</strong>{" "}
+                      <strong className="text-foreground">closing summary</strong> —
+                      the warm 200–280 word message (and the audio version) that
+                      plays at the end of the journey.
+                    </>
+                  }
+                  where="The summary/results page — both the on-screen text and the “Listen” audio."
+                  placeholders={[
+                    "{{NAME}}",
+                    "{{BEAT1}}",
+                    "{{BEAT2}}",
+                    "{{BEAT3}}",
+                    "{{BEAT4}}",
+                    "{{BEAT5}}",
+                  ]}
+                />
 
                 <div className="bg-card rounded-md s-card-static overflow-hidden">
                   <div className="p-6">
                     <div className="flex justify-between items-center mb-2 gap-2 flex-wrap">
                       <label className="eyebrow text-foreground/65">
-                        Closing Summary System Prompt - {audience}
+                        Closing summary — System prompt ({audience})
                       </label>
                       <div className="flex items-center gap-3">
                         <span className="text-xs text-muted-foreground">
@@ -1360,7 +1630,7 @@ export default function AdminPage() {
                   <div className="p-6">
                     <div className="flex justify-between items-center mb-2 gap-2 flex-wrap">
                       <label className="eyebrow text-foreground/65">
-                        Closing Summary User Prompt - {audience}
+                        Closing summary — User prompt ({audience})
                       </label>
                       <div className="flex items-center gap-3">
                         <span className="text-xs text-muted-foreground">
@@ -1677,6 +1947,13 @@ export default function AdminPage() {
                                     </div>
                                   )
                                 })}
+
+                                <ResponseOutputs
+                                  r={r}
+                                  onViewReport={(data, name, id, dateISO) =>
+                                    setReportModal({ data, name, id, dateISO })
+                                  }
+                                />
                               </div>
                             )}
                           </div>
@@ -1704,6 +1981,87 @@ export default function AdminPage() {
           </div>
         )}
       </main>
+
+      {/* Report preview modal — renders a persisted report_json via the shared
+          ReportView and exports the same client-generated PDF the user got. */}
+      {reportModal && (
+        <div
+          className="fixed inset-0 z-[100] overflow-y-auto overscroll-contain bg-black/70 backdrop-blur-sm"
+          role="dialog"
+          aria-modal="true"
+          onClick={() => {
+            if (!reportPdfBusy) setReportModal(null)
+          }}
+        >
+          <div className="flex min-h-full flex-col items-center px-4 py-8">
+            <div
+              className="sticky top-0 z-10 mb-4 flex w-full max-w-3xl items-center justify-between gap-3 rounded-full border border-border bg-background/95 px-4 py-2 shadow-lg backdrop-blur"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <span className="truncate text-sm font-bold text-foreground">
+                Report · {reportModal.name || "—"} (#{reportModal.id})
+              </span>
+              <div className="flex shrink-0 items-center gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  disabled={reportPdfBusy}
+                  onClick={async () => {
+                    const root = reportModalRef.current
+                    if (!root) return
+                    setReportPdfBusy(true)
+                    try {
+                      await downloadReportPdf(
+                        root,
+                        `${reportFileSlug(reportModal.name)}-unfair-advantage-report.pdf`
+                      )
+                    } catch (err) {
+                      console.error("Admin PDF download failed:", err)
+                    } finally {
+                      setReportPdfBusy(false)
+                    }
+                  }}
+                  className="h-9 rounded-full bg-ink px-4 text-[10px] uppercase tracking-[0.2em] text-background hover:bg-ink/85"
+                >
+                  {reportPdfBusy ? (
+                    <>
+                      <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                      Preparing…
+                    </>
+                  ) : (
+                    <>
+                      <Download className="mr-1.5 h-3.5 w-3.5" />
+                      Download PDF
+                    </>
+                  )}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={reportPdfBusy}
+                  onClick={() => setReportModal(null)}
+                  className="h-9 w-9 rounded-full border border-foreground/35 p-0 text-foreground hover:border-destructive hover:text-destructive"
+                  title="Close"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+            <div
+              ref={reportModalRef}
+              className="w-full max-w-3xl overflow-x-auto rounded-md shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <ReportView
+                data={reportModal.data}
+                name={reportModal.name}
+                dateISO={reportModal.dateISO}
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

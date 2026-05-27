@@ -136,7 +136,10 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
+  // No maximum-scale / user-scalable lock: pinch-zoom stays available for
+  // readability (important for our older executive audience and an a11y
+  // requirement). The iOS focus-zoom annoyance is handled by the 16px
+  // form-control floor in globals.css, not by disabling zoom.
   themeColor: "#0a0718",
 }
 const personSchema = {

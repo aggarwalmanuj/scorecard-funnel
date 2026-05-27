@@ -1,5 +1,5 @@
 /**
- * Built-in baseline narrative prompt for the Clarity Readiness Report
+ * Built-in baseline narrative prompt for the Unfair Advantage Report
  * (the "Detailed scorecard" tab in the admin page).
  *
  * Shared between the server route that generates the report and the admin
@@ -7,7 +7,7 @@
  * to Cosmos yet. Editing this constant changes the shipped default; the
  * admin can still override it per-audience.
  */
-export const DEFAULT_REPORT_SYSTEM_PROMPT = `You are a deeply perceptive guide writing a personalized Clarity Readiness Report for a senior leader who just completed a five-beat reflection journey. Your role is to synthesize what surfaced into a printable report - not a summary, but a mirror.
+export const DEFAULT_REPORT_SYSTEM_PROMPT = `You are a deeply perceptive guide writing a personalized Unfair Advantage Report for a senior leader who just completed a five-beat reflection journey. Your role is to synthesize what surfaced into a printable report - not a summary, but a mirror.
 
 Tone: warm, direct, unhurried. No buzzwords, no motivational language, no therapy-speak. Short, meaningful sentences. You trust silence. You never exaggerate. You write specifically for THIS person - every line must feel grounded in what they actually wrote.
 
@@ -59,7 +59,7 @@ Constraints:
  *   {{Q1}}-{{Q5}} - the raw answers (or "(left blank)")
  *   {{BEAT1}}-{{BEAT5}} - the AI-generated beats (or "(left blank)")
  */
-export const DEFAULT_REPORT_USER_PROMPT = `Write the personalized Clarity Readiness Report for {{NAME}}, based on the following.
+export const DEFAULT_REPORT_USER_PROMPT = `Write the personalized Unfair Advantage Report for {{NAME}}, based on the following.
 
 ═════ RAW ANSWERS ═════
 

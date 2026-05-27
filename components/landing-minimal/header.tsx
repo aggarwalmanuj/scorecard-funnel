@@ -5,7 +5,6 @@ import { useEffect, useRef, useState } from "react"
 import { Menu, X, ArrowUpRight } from "lucide-react"
 
 const navLinks = [
-  { href: "#sanctuary", label: "The Sanctuary" },
   { href: "#how-it-works", label: "The Reading" },
   { href: "#voices", label: "Voices" },
   { href: "#guides", label: "Guides" },

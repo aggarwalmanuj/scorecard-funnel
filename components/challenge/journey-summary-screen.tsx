@@ -19,6 +19,12 @@ import {
   downloadArrayBufferAsFile,
   useAudioPlayback,
 } from "@/hooks/use-audio-playback"
+import {
+  persistScore,
+  persistReport,
+  persistSummaryText,
+  persistSummaryAudio,
+} from "@/lib/persist-outputs"
 
 type ScoreSource = "llm" | "fallback" | "pending"
 type ScoreReasons = Partial<Record<keyof Subscores, string>>
@@ -379,7 +385,7 @@ export function JourneySummaryScreen({ audience }: { audience: Audience }) {
 
   const isCursorVisible = isStreaming || visibleChars < summaryText.length
 
-  // ── Clarity Readiness score ─────────────────────────────────────────
+  // ── Unfair Advantage Score ──────────────────────────────────────────
   const [clarity, setClarity] = useState<ClarityScore | null>(null)
   const [scoreSource, setScoreSourceState] = useState<ScoreSource>("pending")
   const [scoreReasons, setScoreReasons] = useState<ScoreReasons>({})
@@ -437,6 +443,55 @@ export function JourneySummaryScreen({ audience }: { audience: Audience }) {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.clarityScore])
+
+  // ── Persist final outputs for admin review (best-effort, once each) ──
+  // The summary screen is the single point every completer lands on with all
+  // four artifacts available: the score, the pre-generated report, the
+  // closing summary, and (once it loads) the summary audio. We capture each
+  // exactly as the user received it. Each ref guards a single write; the
+  // server overwrites idempotently if a later mount re-fires.
+  const persistId = useMemo(
+    () => ({
+      serialNumber: state.serialNumber,
+      firstName: state.firstName,
+      email: state.email,
+    }),
+    [state.serialNumber, state.firstName, state.email],
+  )
+  const scoreSavedRef = useRef(false)
+  const reportSavedRef = useRef(false)
+  const summarySavedRef = useRef(false)
+  const audioSavedRef = useRef(false)
+
+  useEffect(() => {
+    if (scoreSavedRef.current || !clarity || scoreSource === "pending") return
+    scoreSavedRef.current = true
+    persistScore(persistId, { clarity, reasons: scoreReasons, nsState, scoreSource })
+  }, [clarity, scoreSource, scoreReasons, nsState, persistId])
+
+  useEffect(() => {
+    if (reportSavedRef.current || !state.reportData) return
+    reportSavedRef.current = true
+    persistReport(persistId, state.reportData)
+  }, [state.reportData, persistId])
+
+  useEffect(() => {
+    if (summarySavedRef.current || !isComplete) return
+    const text = summaryText || state.summaryText
+    if (!text.trim()) return
+    summarySavedRef.current = true
+    persistSummaryText(persistId, text)
+  }, [isComplete, summaryText, state.summaryText, persistId])
+
+  useEffect(() => {
+    if (audioSavedRef.current || !audio.isReady) return
+    const bytes = audio.getBytes()
+    if (!bytes) return
+    audioSavedRef.current = true
+    // Send a copy so forwarding the bytes can never detach the buffer the
+    // audio element is still playing from.
+    persistSummaryAudio(persistId, bytes.slice(0))
+  }, [audio, persistId])
 
   return (
     <div
@@ -512,7 +567,7 @@ export function JourneySummaryScreen({ audience }: { audience: Audience }) {
             />
           </div>
 
-          {/* 1. Clarity Readiness Index */}
+          {/* 1. Unfair Advantage Score */}
           <div
             className="mt-12"
             style={{
@@ -703,18 +758,18 @@ export function JourneySummaryScreen({ audience }: { audience: Audience }) {
   )
 }
 
-// ---------- Clarity Readiness Index card ----------
+// ---------- Unfair Advantage Score card ----------
 
 function ClarityScorePending() {
   return (
     <section
-      aria-label="Clarity Readiness Index — scoring"
+      aria-label="Unfair Advantage Score — scoring"
       className="s-card-static overflow-hidden"
     >
       <div className="flex items-center gap-3 px-6 py-9 sm:px-8">
         <Loader2 className="h-3.5 w-3.5 animate-spin text-ink" strokeWidth={1.6} />
         <span className="eyebrow text-foreground/70">
-          Scoring your Clarity Readiness Index…
+          Scoring your Unfair Advantage Score…
         </span>
       </div>
     </section>
@@ -740,7 +795,7 @@ function ClarityScoreCard({
 
   return (
     <section
-      aria-label="Clarity Readiness Index"
+      aria-label="Unfair Advantage Score"
       className="overflow-hidden rounded-md border border-border bg-card"
     >
       <div className="border-b border-border px-6 pb-5 pt-6 sm:px-8">
@@ -750,7 +805,7 @@ function ClarityScoreCard({
               className="h-1.5 w-1.5 rounded-full"
               style={{ background: bandColor }}
             />
-            Clarity Readiness Index
+            Unfair Advantage Score
           </p>
           {nsState && nsState !== "UNKNOWN" ? (
             <span

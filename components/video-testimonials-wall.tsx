@@ -8,7 +8,7 @@ import {
   type CSSProperties,
 } from "react"
 import { createPortal } from "react-dom"
-import { ArrowLeft, ArrowRight, Play, X } from "lucide-react"
+import { ArrowLeft, ArrowRight, Play, Volume2, X } from "lucide-react"
 
 type Voice = { src: string; poster: string }
 
@@ -280,16 +280,40 @@ function VideoModal({
   const [mounted, setMounted] = useState(false)
   const [loading, setLoading] = useState(true)
   const [errored, setErrored] = useState(false)
+  const [needsTapForSound, setNeedsTapForSound] = useState(false)
+  const videoRef = useRef<HTMLVideoElement>(null)
 
   // Mount marker for portal - guards against SSR/hydration mismatch.
   useEffect(() => {
     setMounted(true)
   }, [])
 
+  // Drive playback ourselves instead of via the `autoPlay` attribute, so we
+  // can catch the browser's autoplay-policy rejection. The modal opens from a
+  // user click (a user gesture), so an unmuted play() usually succeeds; if the
+  // browser still blocks unmuted autoplay, we fall back to a MUTED autoplay
+  // (always permitted) and surface a one-tap control to restore sound. This
+  // guarantees the clip always starts playing instead of sitting frozen on
+  // the poster — the "videos don't run" symptom. Re-runs when `mounted` flips
+  // (the <video> only exists after mount) and on every prev/next src change.
   useEffect(() => {
+    const video = videoRef.current
+    if (!video) return
     setLoading(true)
     setErrored(false)
-  }, [voice.src])
+    setNeedsTapForSound(false)
+    video.muted = false
+    const played = video.play()
+    if (played && typeof played.catch === "function") {
+      played.catch(() => {
+        video.muted = true
+        setNeedsTapForSound(true)
+        // Muted autoplay is always allowed; a genuine failure here surfaces
+        // through the <video> onError handler instead.
+        void video.play().catch(() => {})
+      })
+    }
+  }, [mounted, voice.src])
 
   // Lock the page in place + keyboard nav.
   useEffect(() => {
@@ -410,22 +434,52 @@ function VideoModal({
               </div>
             </div>
           ) : (
-            // eslint-disable-next-line jsx-a11y/media-has-caption
-            <video
-              key={voice.src}
-              src={voice.src}
-              poster={voice.poster}
-              autoPlay
-              controls
-              playsInline
-              preload="auto"
-              onCanPlay={() => setLoading(false)}
-              onError={() => {
-                setErrored(true)
-                setLoading(false)
-              }}
-              className="absolute inset-0 w-full h-full object-contain bg-transparent"
-            />
+            <>
+              {/* The spinner clears on the EARLIEST signal that playback can
+                  begin — loadeddata (first frame) usually beats canplay, and
+                  onPlaying covers the muted-fallback path; onWaiting re-shows
+                  it honestly if the stream stalls mid-buffer. */}
+              {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+              <video
+                key={voice.src}
+                ref={videoRef}
+                src={voice.src}
+                poster={voice.poster}
+                controls
+                playsInline
+                preload="auto"
+                onLoadedData={() => setLoading(false)}
+                onCanPlay={() => setLoading(false)}
+                onPlaying={() => setLoading(false)}
+                onWaiting={() => setLoading(true)}
+                onError={() => {
+                  setErrored(true)
+                  setLoading(false)
+                }}
+                className="absolute inset-0 w-full h-full object-contain bg-transparent"
+              />
+
+              {/* One-tap unmute, shown only when autoplay had to fall back to
+                  muted so the clip could start. */}
+              {needsTapForSound && (
+                <button
+                  type="button"
+                  aria-label="Tap for sound"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    const video = videoRef.current
+                    if (!video) return
+                    video.muted = false
+                    setNeedsTapForSound(false)
+                    void video.play().catch(() => {})
+                  }}
+                  className="absolute bottom-4 left-1/2 z-20 inline-flex -translate-x-1/2 items-center gap-2 rounded-full bg-white/95 px-4 py-2 text-[0.7rem] uppercase tracking-[0.18em] text-black shadow-[0_10px_30px_-10px_rgba(0,0,0,0.6)] transition-transform duration-300 hover:scale-105 active:scale-95"
+                >
+                  <Volume2 className="h-4 w-4" strokeWidth={1.8} />
+                  Tap for sound
+                </button>
+              )}
+            </>
           )}
         </div>
 

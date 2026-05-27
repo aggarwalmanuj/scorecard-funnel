@@ -5,6 +5,7 @@ import { Loader2, Download, AlertCircle, ArrowLeft } from "lucide-react"
 import Link from "next/link"
 import { useChallenge } from "@/context/challenge-context"
 import type { ClarityScore } from "@/lib/scoring"
+import { UPSELL_OFFERS, offerBookingUrl } from "@/lib/offers"
 
 type Pillar = {
   key:
@@ -17,7 +18,7 @@ type Pillar = {
   focus: string
 }
 
-type ReportData = {
+export type ReportData = {
   headline: string
   thread: string
   pillars: Pillar[]
@@ -31,7 +32,7 @@ type ReportData = {
   thirtyDay: string
 }
 
-type ApiResponse = {
+export type ApiResponse = {
   clarity: ClarityScore
   reasons: Partial<Record<Pillar["key"], string>>
   nsState?: string
@@ -89,8 +90,139 @@ function reportId(seed: string): string {
   return `CR-${stamp}-${(Math.abs(h) % 0xfff).toString(16).toUpperCase().padStart(3, "0")}`
 }
 
+/**
+ * Rasterize every `.page` inside `root` and stitch them into an A4 PDF, then
+ * trigger a download. Shared by the funnel report page and the admin panel so
+ * both produce byte-identical PDFs from the same rendered markup. The PDF libs
+ * (~400 KB) are dynamically imported so they only load on an actual download.
+ */
+export async function downloadReportPdf(
+  root: HTMLElement,
+  fileName: string
+): Promise<void> {
+  const [{ default: jsPDF }, html2canvasModule] = await Promise.all([
+    import("jspdf"),
+    import("html2canvas-pro"),
+  ])
+  const html2canvas = (
+    html2canvasModule as { default: typeof import("html2canvas-pro").default }
+  ).default
+
+  const pageElements = root.querySelectorAll<HTMLElement>(".page")
+  if (pageElements.length === 0) return
+
+  const pdf = new jsPDF({ format: "a4", unit: "mm", orientation: "portrait" })
+  const pageWidthMm = 210
+  const pageHeightMm = 297
+
+  for (let i = 0; i < pageElements.length; i++) {
+    const el = pageElements[i]
+    const canvas = await html2canvas(el, {
+      scale: 2,
+      useCORS: true,
+      backgroundColor: "#ffffff",
+      logging: false,
+    })
+    const imgData = canvas.toDataURL("image/jpeg", 0.94)
+    if (i > 0) pdf.addPage()
+    const imgHeightMm = (canvas.height / canvas.width) * pageWidthMm
+    const finalHeight = Math.min(imgHeightMm, pageHeightMm)
+    pdf.addImage(imgData, "JPEG", 0, 0, pageWidthMm, finalHeight)
+
+    // html2canvas rasterizes the page to an image, so any <a> tags are no
+    // longer clickable. Re-overlay real PDF link annotations for elements
+    // tagged with `data-pdf-link`, mapping their on-screen box into mm. The
+    // visible URL text underneath each link is the fallback if a viewer
+    // ignores annotations.
+    const pageRect = el.getBoundingClientRect()
+    const mmPerPx = pageRect.width > 0 ? pageWidthMm / pageRect.width : 0
+    if (mmPerPx > 0) {
+      el.querySelectorAll<HTMLElement>("[data-pdf-link]").forEach((linkEl) => {
+        const url = linkEl.getAttribute("data-pdf-link")
+        if (!url) return
+        const r = linkEl.getBoundingClientRect()
+        const y = (r.top - pageRect.top) * mmPerPx
+        if (y >= finalHeight) return // outside the clipped page area
+        pdf.link(
+          (r.left - pageRect.left) * mmPerPx,
+          y,
+          r.width * mmPerPx,
+          r.height * mmPerPx,
+          { url }
+        )
+      })
+    }
+  }
+
+  pdf.save(fileName)
+}
+
+/** Slug a name for use in a download filename. */
+export function reportFileSlug(name: string): string {
+  return (
+    (name || "your")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "")
+      .slice(0, 30) || "your"
+  )
+}
+
+/**
+ * Self-contained, prop-driven render of a report from an already-resolved
+ * `/api/challenge/report` payload — no context, no fetching. Used by the admin
+ * panel to render a persisted report and (via `downloadReportPdf`) export the
+ * same PDF the user got.
+ */
+export function ReportView({
+  data,
+  name,
+  dateISO,
+  showOffers = true,
+  audience,
+}: {
+  data: ApiResponse
+  name: string
+  dateISO?: string
+  /** Include the "Go deeper" offers page (default true — admin previews the
+   *  full Diagnostic-buyer report). */
+  showOffers?: boolean
+  audience?: string
+}) {
+  const today = dateISO ? new Date(dateISO) : new Date()
+  const rid = useMemo(() => reportId(name || "report"), [name])
+  return (
+    <div className="report-root" data-palette="marine">
+      <ReportStyles />
+      <ReportPages
+        name={name}
+        today={today}
+        rid={rid}
+        clarity={data.clarity}
+        reasons={data.reasons}
+        nsState={data.nsState}
+        report={data.report}
+        showOffers={showOffers}
+        audience={audience}
+      />
+    </div>
+  )
+}
+
 export function ClarityReport() {
   const { state, isHydrated } = useChallenge()
+  const reportRootRef = useRef<HTMLDivElement>(null)
+
+  // The "go deeper" offers page is for Diagnostic-only buyers. Session /
+  // Transformation buyers already bought the deeper tiers, so suppress it
+  // when the report is opened with their tier in the URL. Default true so a
+  // plain $47 (or unknown) download still gets the upsell.
+  const [showOffers, setShowOffers] = useState(true)
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    const t = new URLSearchParams(window.location.search).get("tier")
+    setShowOffers(t !== "session" && t !== "transformation")
+  }, [])
   const [data, setData] = useState<ApiResponse | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
@@ -164,56 +296,14 @@ export function ClarityReport() {
   const handleDownload = async () => {
     if (loading || error || !data) return
     if (isDownloading) return
+    const root = reportRootRef.current
+    if (!root) return
     setIsDownloading(true)
     try {
-      // Lazy-load the PDF libs - they're ~400KB combined and we only
-      // need them on this single click path.
-      const [{ default: jsPDF }, html2canvasModule] = await Promise.all([
-        import("jspdf"),
-        import("html2canvas-pro"),
-      ])
-      const html2canvas = (html2canvasModule as { default: typeof import("html2canvas-pro").default })
-        .default
-
-      const pageElements = document.querySelectorAll<HTMLElement>(
-        ".report-root .page"
+      await downloadReportPdf(
+        root,
+        `${reportFileSlug(state.firstName)}-unfair-advantage-report.pdf`
       )
-      if (pageElements.length === 0) return
-
-      const pdf = new jsPDF({
-        format: "a4",
-        unit: "mm",
-        orientation: "portrait",
-      })
-      const pageWidthMm = 210
-      const pageHeightMm = 297
-
-      for (let i = 0; i < pageElements.length; i++) {
-        const el = pageElements[i]
-        const canvas = await html2canvas(el, {
-          scale: 2,
-          useCORS: true,
-          backgroundColor: "#ffffff",
-          logging: false,
-        })
-        const imgData = canvas.toDataURL("image/jpeg", 0.94)
-
-        if (i > 0) pdf.addPage()
-
-        // Fit to page width, preserve aspect ratio. If a page somehow
-        // exceeds the A4 height, clip - our layout is tuned to fit.
-        const imgHeightMm = (canvas.height / canvas.width) * pageWidthMm
-        const finalHeight = Math.min(imgHeightMm, pageHeightMm)
-        pdf.addImage(imgData, "JPEG", 0, 0, pageWidthMm, finalHeight)
-      }
-
-      const safeName =
-        (state.firstName || "your")
-          .toLowerCase()
-          .replace(/[^a-z0-9]+/g, "-")
-          .replace(/^-|-$/g, "")
-          .slice(0, 30) || "your"
-      pdf.save(`${safeName}-clarity-report.pdf`)
     } catch (e) {
       console.error("PDF download failed:", e)
     } finally {
@@ -250,7 +340,7 @@ export function ClarityReport() {
     )
 
   return (
-    <div className="report-root" data-palette="marine">
+    <div className="report-root" data-palette="marine" ref={reportRootRef}>
       <ReportStyles />
 
       {/* Top toolbar - hidden in print. Wordmark is omitted until the new
@@ -270,7 +360,7 @@ export function ClarityReport() {
         <div className="toolbar-title">
           <span className="brand-mark brand-mark-sm" aria-hidden />
           <span style={{ fontFamily: "var(--font-serif)", fontWeight: 400, letterSpacing: "0.18em", textTransform: "uppercase", fontSize: 11, color: "var(--ink-soft)" }}>
-            Clarity Readiness Report
+            Unfair Advantage Report
           </span>
         </div>
         <button
@@ -341,6 +431,8 @@ export function ClarityReport() {
           reasons={data.reasons}
           nsState={data.nsState}
           report={data.report}
+          showOffers={showOffers}
+          audience={state.audience ?? undefined}
         />
       )}
     </div>
@@ -357,6 +449,8 @@ function ReportPages({
   reasons,
   nsState,
   report,
+  showOffers = false,
+  audience,
 }: {
   name: string
   today: Date
@@ -365,12 +459,17 @@ function ReportPages({
   reasons: Partial<Record<Pillar["key"], string>>
   nsState?: string
   report: ReportData
+  /** Append the "Go deeper" upsell page (for Diagnostic-only buyers). */
+  showOffers?: boolean
+  audience?: string
 }) {
   const subBy = useMemo(() => {
     const map = new Map<Pillar["key"], number>()
     clarity.subscoreDetails.forEach((s) => map.set(s.key, s.value))
     return map
   }, [clarity])
+
+  const totalPages = showOffers ? 5 : 4
 
   return (
     <>
@@ -413,7 +512,7 @@ function ReportPages({
           ))}
         </div>
 
-        <ReportFooter page={1} of={4} name={name} />
+        <ReportFooter page={1} of={totalPages} name={name} />
       </section>
 
       {/* Page 2 - Per-pillar deep dive */}
@@ -441,7 +540,7 @@ function ReportPages({
           })}
         </div>
 
-        <ReportFooter page={2} of={4} name={name} />
+        <ReportFooter page={2} of={totalPages} name={name} />
       </section>
 
       {/* Page 3 - Benchmark + themes + beats */}
@@ -483,7 +582,7 @@ function ReportPages({
             ))}
         </div>
 
-        <ReportFooter page={3} of={4} name={name} />
+        <ReportFooter page={3} of={totalPages} name={name} />
       </section>
 
       {/* Page 4 - Takeaways + 30-day */}
@@ -514,8 +613,148 @@ function ReportPages({
           <p>{report.thirtyDay}</p>
         </div>
 
-        <ReportFooter page={4} of={4} name={name} />
+        <ReportFooter page={4} of={totalPages} name={name} />
       </section>
+
+      {/* Page 5 (Diagnostic buyers only) - the two "go deeper" offers. Each
+          card is an <a> tagged data-pdf-link so downloadReportPdf overlays a
+          real clickable annotation over the rasterized page; the visible URL
+          beneath is the fallback for viewers that ignore annotations. */}
+      {showOffers && (
+        <section className="page">
+          <ReportHeader name={name} today={today} rid={rid} compact />
+
+          <div className="eyebrow">Go deeper</div>
+          <h1 className="title small">Two ways to move what you just saw</h1>
+          <p className="lede" style={{ marginBottom: 18 }}>
+            Your report names the pattern. These take it further — from seeing
+            it, to moving it, to making the shift part of how you operate.
+          </p>
+
+          <div style={{ display: "grid", gap: 16 }}>
+            {UPSELL_OFFERS.map((offer) => {
+              const url = offerBookingUrl(offer.id, audience)
+              return (
+                <a
+                  key={offer.id}
+                  href={url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  data-pdf-link={url}
+                  style={{
+                    display: "block",
+                    textDecoration: "none",
+                    color: "var(--ink)",
+                    border: "1px solid var(--line)",
+                    borderRadius: 8,
+                    padding: "18px 20px",
+                    background: "var(--surface)",
+                  }}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "baseline",
+                      justifyContent: "space-between",
+                      gap: 12,
+                    }}
+                  >
+                    <span
+                      style={{
+                        fontFamily: "var(--font-serif)",
+                        fontSize: 18,
+                        fontWeight: 500,
+                      }}
+                    >
+                      {offer.label}
+                    </span>
+                    <span
+                      style={{
+                        fontFamily: "var(--font-serif)",
+                        fontSize: 20,
+                        color: "var(--brand-dark)",
+                      }}
+                    >
+                      ${offer.price}
+                    </span>
+                  </div>
+                  <p
+                    style={{
+                      fontStyle: "italic",
+                      color: "var(--ink-soft)",
+                      margin: "4px 0 10px",
+                      fontSize: 13.5,
+                    }}
+                  >
+                    {offer.tagline}
+                  </p>
+                  <ul
+                    style={{
+                      listStyle: "none",
+                      padding: 0,
+                      margin: "0 0 12px",
+                      display: "grid",
+                      gap: 5,
+                    }}
+                  >
+                    {offer.bullets.map((b, i) => (
+                      <li
+                        key={i}
+                        style={{
+                          fontSize: 12.5,
+                          color: "var(--ink-soft)",
+                          paddingLeft: 14,
+                          position: "relative",
+                        }}
+                      >
+                        <span
+                          style={{
+                            position: "absolute",
+                            left: 0,
+                            color: "var(--brand)",
+                          }}
+                        >
+                          ·
+                        </span>
+                        {b}
+                      </li>
+                    ))}
+                  </ul>
+                  <span
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 6,
+                      fontSize: 11,
+                      letterSpacing: "0.18em",
+                      textTransform: "uppercase",
+                      color: "var(--brand-dark)",
+                      fontWeight: 600,
+                    }}
+                  >
+                    {offer.id === "session"
+                      ? "Book your session"
+                      : "Begin the transformation"}{" "}
+                    →
+                  </span>
+                  <div
+                    style={{
+                      marginTop: 6,
+                      fontSize: 10,
+                      color: "var(--muted)",
+                      wordBreak: "break-all",
+                    }}
+                  >
+                    {url}
+                  </div>
+                </a>
+              )
+            })}
+          </div>
+
+          <ReportFooter page={5} of={totalPages} name={name} />
+        </section>
+      )}
     </>
   )
 }
@@ -540,7 +779,7 @@ function ReportHeader({
           legible; html2canvas-pro renders CSS mask correctly into the PDF. */}
       <div className="logo">
         <span className="brand-mark brand-mark-sm" aria-hidden />
-        <span className="report-name">Clarity Readiness Report</span>
+        <span className="report-name">Unfair Advantage Report</span>
       </div>
       {compact ? (
         <div className="meta">
@@ -571,7 +810,7 @@ function ReportFooter({
   return (
     <div className="foot">
       <span>
-        Clarity Readiness Report · Page {page} of {of}
+        Unfair Advantage Report · Page {page} of {of}
       </span>
       <span>Confidential · prepared for {name || "you"}</span>
     </div>
@@ -588,7 +827,7 @@ function ScoreDonut({ value }: { value: number }) {
     <svg
       className="donut"
       viewBox="0 0 120 120"
-      aria-label={`Overall clarity score ${v} of 100`}
+      aria-label={`Overall Unfair Advantage Score ${v} of 100`}
     >
       <defs>
         <linearGradient id="ringGrad" x1="0" y1="0" x2="1" y2="1">
@@ -700,7 +939,7 @@ function BenchmarkBlock({ overall, mean }: { overall: number; mean: number }) {
     <div className="bench">
       <div className="bench-head">
         <div>
-          <h3>Overall Clarity Readiness</h3>
+          <h3>Overall Unfair Advantage Score</h3>
           <small>Peer set · leaders carrying unresolved clarity gaps</small>
         </div>
         <div className="bench-num">

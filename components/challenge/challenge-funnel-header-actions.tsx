@@ -16,7 +16,6 @@ type Variant = "light" | "dark"
 
 const NAV_LINKS: Array<{ href: string; label: string }> = [
   { href: "/", label: "Home" },
-  { href: "/#sanctuary", label: "The Sanctuary" },
   { href: "/#how-it-works", label: "The Reading" },
   { href: "/#voices", label: "Voices" },
   { href: "/#notes", label: "Notes" },

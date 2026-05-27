@@ -84,8 +84,29 @@ export type UserDocument = {
   beat3_output: string
   beat4_output: string
   beat5_output: string
+  // Final user-facing outputs, persisted at generation time so the admin can
+  // review/download exactly what each tester received. All four are optional
+  // because they only exist once the user reaches the summary/report stage,
+  // and older documents predate this feature.
+  //   score_json   — JSON of { overall, subscores, band, reasons, nsState, scoreSource }
+  //   report_json  — JSON of the full /api/challenge/report payload
+  //   summary_text — the closing summary prose
+  //   summary_audio_url — Vercel Blob URL of the summary MP3 (audio is too
+  //                       large for a Cosmos item, so only the URL is stored)
+  score_json?: string
+  report_json?: string
+  summary_text?: string
+  summary_audio_url?: string
   createdAt: string
 }
+
+/** Output fields the summary/report stage persists. Kept narrow so callers
+ *  can't accidentally patch arbitrary columns through the outputs endpoint. */
+export type UserOutputField =
+  | "score_json"
+  | "report_json"
+  | "summary_text"
+  | "summary_audio_url"
 
 // Maximum bytes we accept for the prompt-text snapshot. Guards against an
 // abusive client inflating documents past the 2 MB Cosmos item limit.
@@ -489,4 +510,30 @@ export async function updateBeatOutputCell(
 ): Promise<void> {
   const field = `beat${beatNumber}_output`
   await updateUserField(serialNumber, firstName, email, field, output)
+}
+
+/**
+ * Persist one or more final user-facing outputs (score / report / summary /
+ * audio URL) onto the user document, so the admin can review exactly what a
+ * tester received. Unknown keys are dropped defensively — only the four
+ * whitelisted output columns can be written through here.
+ */
+export async function updateUserOutputs(
+  serialNumber: number,
+  firstName: string,
+  email: string,
+  outputs: Partial<Record<UserOutputField, string>>
+): Promise<void> {
+  const allowed: UserOutputField[] = [
+    "score_json",
+    "report_json",
+    "summary_text",
+    "summary_audio_url",
+  ]
+  const fields: Record<string, string> = {}
+  for (const key of allowed) {
+    const value = outputs[key]
+    if (typeof value === "string" && value.length > 0) fields[key] = value
+  }
+  await updateUserFields(serialNumber, firstName, email, fields)
 }

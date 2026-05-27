@@ -165,8 +165,8 @@ export default function ThankYouPage() {
               eyebrow="Diagnostic report · PDF"
               title="Your full reading"
               titleItalic="across all seven pillars."
-              description="Four-page PDF — your scores, the specific pattern identified in plain language, three immediate behavioral shifts, and a 90-day benchmark to measure progress."
-              actionHref="/challenge/report?paid=1&autosave=1"
+              description="Your full PDF reading — your scores, the specific pattern identified in plain language, three immediate behavioral shifts, and a 90-day benchmark to measure progress."
+              actionHref={`/challenge/report?paid=1&autosave=1&tier=${tier}`}
               actionLabel="Download report"
               primary
             />

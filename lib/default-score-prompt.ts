@@ -76,7 +76,7 @@ Each reason MUST reference something specific the person actually wrote. Do not 
  *   {{NAME}} - first name (or "The user")
  *   {{Q1}}-{{Q5}} - the raw answers (or "(left blank)")
  */
-export const DEFAULT_SCORE_USER_PROMPT = `{{NAME}} just completed the Clarity Readiness reflection. Here are the FIVE RAW ANSWERS they wrote. Score them.
+export const DEFAULT_SCORE_USER_PROMPT = `{{NAME}} just completed the Unfair Advantage reflection. Here are the FIVE RAW ANSWERS they wrote. Score them.
 
 Q1 - The Present / what's not moving the way it should:
 {{Q1}}
