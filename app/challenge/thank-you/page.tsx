@@ -1,13 +1,16 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { ArrowRight, Download, Loader2, Shield } from "lucide-react"
 import { useChallenge } from "@/context/challenge-context"
+import { isFunnelEnforced } from "@/lib/funnel-guard"
 import {
   getCachedSummaryAudio,
   preloadSummaryAudio,
 } from "@/lib/client/summary-audio-cache"
+import { FB_PIXEL_ID, trackWhenReady } from "@/lib/fbpixel"
 
 // Thank-you page — confirms successful transactions from both
 // Stripe ($47 Diagnostic) and Calendly ($497 Session / $997
@@ -24,33 +27,73 @@ type SuccessTier = "diagnostic" | "session" | "transformation"
 
 interface TierCopy {
   eyebrow: string
-  headlinePrefix: string
-  headlineItalic: string
-  body: (email: string) => string
+  headLead: string
+  headEmphasis: string
+  body: string[]
+  /** Report download card copy (per-tier framing per the spec). */
+  reportTitle: string
+  reportTitleItalic: string
+  reportCta: string
+  reportNote: string
+  /** Optional low-key footer pointer — diagnostic tier only. */
+  footerLine?: string
 }
 
+// Copy is per the "Thank-you pages" spec. Tone differs by tier; the report is
+// the single deliverable framed on every page (no on-page upsell).
 const TIER_COPY: Record<SuccessTier, TierCopy> = {
   diagnostic: {
-    eyebrow: "Payment received · $47 · one-time",
-    headlinePrefix: "your downloads are",
-    headlineItalic: "ready.",
-    body: (email) =>
-      `A receipt is on its way to ${email}. Both files below are yours to keep.`,
+    eyebrow: "Your reading is ready",
+    headLead: "Your reading is",
+    headEmphasis: "composed.",
+    body: [
+      "What you felt but couldn't name is now on the page — the specific pattern running quietly underneath your effort, read across all seven dimensions.",
+      "Take your time with it. The reading does not need to be repeated to be remembered.",
+    ],
+    reportTitle: "Download your report",
+    reportTitleItalic: "your full reading.",
+    reportCta: "Download your report",
+    reportNote:
+      "A copy is also on its way to your inbox. If it hasn't arrived in a few minutes, check your spam folder — then add us to your contacts so the next one lands.",
+    footerLine:
+      "When you're ready to go deeper, there's a conversation available. No hurry.",
   },
   session: {
-    eyebrow: "Session booked · $497",
-    headlinePrefix: "your session is",
-    headlineItalic: "locked in.",
-    body: (email) =>
-      `We've sent the calendar invite to ${email}. Your diagnostic report is included — download it below before we meet.`,
+    eyebrow: "Payment received · Your session is reserved",
+    headLead: "Thank you.",
+    headEmphasis: "Your seat is held.",
+    body: [
+      "This is where the reading stops being a page and becomes a conversation — your pattern named, met, and worked through with Manuj directly.",
+      "First, your report. Download it below and read it before we meet — it's what your session is built around. Bring it with you; it's the starting point for the in-depth discussion.",
+    ],
+    reportTitle: "Your report —",
+    reportTitleItalic: "what your session is built around.",
+    reportCta: "Download your report",
+    reportNote:
+      "Your session details and a copy of the report are on their way to your inbox. If anything needs to change, the reschedule link is in that email — and check your spam folder if it hasn't arrived in a few minutes.",
   },
   transformation: {
-    eyebrow: "Transformation booked · $997",
-    headlinePrefix: "the work",
-    headlineItalic: "begins.",
-    body: (email) =>
-      `We've sent the calendar invite to ${email}. Your diagnostic report and audio summary are below; your personalized audio protocol arrives after the session.`,
+    eyebrow: "Payment received · This time is yours",
+    headLead: "Thank you.",
+    headEmphasis: "This time is yours.",
+    body: [
+      "What you've reserved is undivided attention — the reading taken all the way down, to the pattern beneath the pattern, and the first concrete move out of it.",
+      "Start with your report. Download it below and sit with it before we meet; it's the map we'll work from together. Bring it to the session — there's nothing else to prepare.",
+    ],
+    reportTitle: "Your report —",
+    reportTitleItalic: "the map we'll work from.",
+    reportCta: "Download your report",
+    reportNote:
+      "Your session details and a copy of the report are on their way to your inbox. If the timing needs to shift, the reschedule link is in that email — and check your spam folder if it hasn't arrived shortly.",
   },
+}
+
+// Facebook "Purchase" value per tier (USD). Firing this on the thank-you page
+// is what lets the ad algorithm learn which clicks convert — see the spec.
+const TIER_VALUE: Record<SuccessTier, number> = {
+  diagnostic: 47,
+  session: 497,
+  transformation: 997,
 }
 
 function resolveTier(): SuccessTier {
@@ -62,21 +105,80 @@ function resolveTier(): SuccessTier {
 }
 
 export default function ThankYouPage() {
+  const router = useRouter()
   const { state, markComplete } = useChallenge()
   const [isDownloadingAudio, setIsDownloadingAudio] = useState(false)
   const [audioError, setAudioError] = useState<string | null>(null)
   const [tier, setTier] = useState<SuccessTier>("diagnostic")
+  // Stripe's session_id is forwarded to the report so it can verify payment
+  // server-side (the report no longer trusts a bare ?paid=1).
+  const [sessionId, setSessionId] = useState<string | null>(null)
 
   // Resolved on mount so SSR hydration doesn't mismatch.
   useEffect(() => {
     setTier(resolveTier())
+    setSessionId(new URLSearchParams(window.location.search).get("session_id"))
   }, [])
+
+  // Direct-access guard: this is a post-transaction confirmation page. When
+  // funnel enforcement is on, a visit without a payment/booking signal is
+  // someone typing the URL — send them home. (The paid report itself is
+  // separately protected by server-side verification, so this is just order
+  // hygiene, not the security boundary.)
+  useEffect(() => {
+    if (!isFunnelEnforced()) return
+    const params = new URLSearchParams(window.location.search)
+    const hasSignal =
+      params.get("paid") === "1" || params.get("booked") === "1"
+    if (!hasSignal) router.replace("/")
+  }, [router])
 
   const copy = TIER_COPY[tier]
 
   useEffect(() => {
     markComplete()
   }, [markComplete])
+
+  // Fire the Facebook "Purchase" pixel once, with the tier's value — this is
+  // what lets the ad algorithm learn which clicks convert (per the spec).
+  // This page is reached only via a post-payment redirect (?paid=1 from
+  // Stripe / ?booked=1 from Calendly); we require one of those flags so a
+  // direct visit can never log a false purchase. Deduped per purchase (Stripe
+  // session_id, else tier) for the tab session so a refresh doesn't recount.
+  const purchaseFiredRef = useRef(false)
+  useEffect(() => {
+    if (purchaseFiredRef.current || !FB_PIXEL_ID) return
+    const params = new URLSearchParams(window.location.search)
+    // Calendly bookings have no Stripe session; Stripe success always carries
+    // session_id. Requiring it for the paid (Stripe) path means a forged bare
+    // ?paid=1 can't fire a false Purchase and pollute ad optimization.
+    const sid = params.get("session_id")
+    const confirmed =
+      params.get("booked") === "1" ||
+      (params.get("paid") === "1" && !!sid)
+    if (!confirmed) return
+    const resolved = resolveTier()
+    const dedupKey = `fb-purchase:${params.get("session_id") || resolved}`
+    try {
+      if (sessionStorage.getItem(dedupKey)) {
+        purchaseFiredRef.current = true
+        return
+      }
+    } catch {
+      /* sessionStorage blocked — fall through and fire once per mount */
+    }
+    purchaseFiredRef.current = true
+    trackWhenReady("Purchase", {
+      value: TIER_VALUE[resolved],
+      currency: "USD",
+      content_name: `unfair-advantage-${resolved}`,
+    })
+    try {
+      sessionStorage.setItem(dedupKey, "1")
+    } catch {
+      /* ignore */
+    }
+  }, [])
 
   const safeName = useMemo(() => {
     const base = (state.firstName || "your")
@@ -142,18 +244,20 @@ export default function ThankYouPage() {
             className="stagger-enter mb-6 font-serif text-[1.9rem] leading-[1.1] text-ink sm:text-[2.3rem] sm:leading-[1.06] md:text-[2.7rem]"
             style={{ animationDelay: "300ms" }}
           >
-            {state.firstName ? `${state.firstName}, ${copy.headlinePrefix}` : `Your ${copy.headlinePrefix}`}
+            {copy.headLead}
             <span className="block font-serif-italic text-foreground">
-              {copy.headlineItalic}
+              {copy.headEmphasis}
             </span>
           </h1>
 
-          <p
-            className="stagger-enter mb-12 max-w-xl text-[16px] leading-[1.8] text-foreground/85"
+          <div
+            className="stagger-enter mb-12 max-w-xl space-y-4 text-[16px] leading-[1.8] text-foreground/85"
             style={{ animationDelay: "400ms" }}
           >
-            {copy.body(state.email || "your inbox")}
-          </p>
+            {copy.body.map((paragraph, i) => (
+              <p key={i}>{paragraph}</p>
+            ))}
+          </div>
 
           {/* Downloads */}
           <div
@@ -162,12 +266,14 @@ export default function ThankYouPage() {
           >
             <DownloadCard
               preview={<PdfPreview />}
-              eyebrow="Diagnostic report · PDF"
-              title="Your full reading"
-              titleItalic="across all seven pillars."
-              description="Your full PDF reading — your scores, the specific pattern identified in plain language, three immediate behavioral shifts, and a 90-day benchmark to measure progress."
-              actionHref={`/challenge/report?paid=1&autosave=1&tier=${tier}`}
-              actionLabel="Download report"
+              eyebrow="Your report · PDF"
+              title={copy.reportTitle}
+              titleItalic={copy.reportTitleItalic}
+              description="Your full PDF reading — your scores, the specific pattern named in plain language, three immediate behavioral shifts, and a 90-day benchmark to measure progress."
+              actionHref={`/challenge/report?autosave=1&tier=${tier}${
+                sessionId ? `&session_id=${encodeURIComponent(sessionId)}` : ""
+              }`}
+              actionLabel={copy.reportCta}
               primary
             />
 
@@ -186,16 +292,41 @@ export default function ThankYouPage() {
             />
           </div>
 
+          {/* Per-tier inbox/spam note (replaces the old generic line). */}
           <p
-            className="stagger-enter mt-8 flex items-center gap-2 text-[11px] uppercase tracking-[0.22em]"
+            className="stagger-enter mt-6 max-w-xl font-serif-italic text-[13.5px] leading-[1.7]"
             style={{
               animationDelay: "620ms",
+              color: "color-mix(in srgb, var(--foreground) 62%, transparent)",
+            }}
+          >
+            {copy.reportNote}
+          </p>
+
+          <p
+            className="stagger-enter mt-5 flex items-center gap-2 text-[11px] uppercase tracking-[0.22em]"
+            style={{
+              animationDelay: "660ms",
               color: "color-mix(in srgb, var(--foreground) 55%, transparent)",
             }}
           >
             <Shield className="h-3 w-3" strokeWidth={1.5} />
             Yours to keep · download any time
           </p>
+
+          {/* The single, low-key "go deeper" pointer allowed on the $47 page —
+              no upsell cards, per the spec. */}
+          {copy.footerLine && (
+            <p
+              className="stagger-enter mt-8 max-w-xl border-t pt-6 font-serif-italic text-[15px] leading-[1.7] text-foreground/70"
+              style={{
+                animationDelay: "720ms",
+                borderColor: "color-mix(in srgb, var(--ink) 12%, transparent)",
+              }}
+            >
+              {copy.footerLine}
+            </p>
+          )}
 
           <div
             className="stagger-enter mt-12 border-t pt-8"

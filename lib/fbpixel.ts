@@ -18,6 +18,28 @@ export function track(name: string, data: PixelData = {}) {
   window.fbq("track", name, data)
 }
 
+/**
+ * Fire a standard pixel event, retrying briefly until `fbq` is initialized.
+ * The thank-you page is reached via a full-page redirect (Stripe/Calendly),
+ * so the base pixel snippet in the <head> has usually run — but the snippet
+ * loads `fbevents.js` async, so on a slow connection `fbq` can still be a
+ * stub for a moment. This poll guarantees the Purchase event isn't dropped,
+ * which is what the ad algorithm optimizes against.
+ */
+export function trackWhenReady(
+  name: string,
+  data: PixelData = {},
+  attempts = 30,
+) {
+  if (typeof window === "undefined") return
+  if (window.fbq) {
+    window.fbq("track", name, data)
+    return
+  }
+  if (attempts <= 0) return
+  setTimeout(() => trackWhenReady(name, data, attempts - 1), 150)
+}
+
 export function trackCustom(name: string, data: PixelData = {}) {
   if (typeof window === "undefined" || !window.fbq) return
   window.fbq("trackCustom", name, data)
