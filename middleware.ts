@@ -106,6 +106,10 @@ export async function middleware(request: NextRequest) {
     isDev ? "'unsafe-eval'" : "",
     "https://assets.calendly.com",
     "https://connect.facebook.net",
+    // Google Analytics (gtag.js). Modern browsers honour strict-dynamic
+    // and ignore this host entry, but it's the fallback allowlist for
+    // browsers that don't support strict-dynamic.
+    "https://www.googletagmanager.com",
   ]
     .filter(Boolean)
     .join(" ")
@@ -114,13 +118,13 @@ export async function middleware(request: NextRequest) {
     "default-src 'self'",
     `script-src ${scriptSrc}`,
     "style-src 'self' 'unsafe-inline' https://assets.calendly.com",
-    "img-src 'self' data: blob: https://hebbkx1anhila5yf.public.blob.vercel-storage.com https://bfyvfetxtgsgzjci.public.blob.vercel-storage.com https://www.facebook.com",
+    "img-src 'self' data: blob: https://hebbkx1anhila5yf.public.blob.vercel-storage.com https://bfyvfetxtgsgzjci.public.blob.vercel-storage.com https://www.facebook.com https://www.googletagmanager.com https://www.google-analytics.com",
     // The Vercel blob host serves the testimonial videos. Without
     // explicit media-src, the browser silently CSP-blocks the <video>
     // element with an empty player and no console error.
     "media-src 'self' blob: https://bfyvfetxtgsgzjci.public.blob.vercel-storage.com",
     "font-src 'self' data:",
-    "connect-src 'self' https://openrouter.ai https://www.googleapis.com https://calendly.com https://connect.facebook.net https://www.facebook.com https://bfyvfetxtgsgzjci.public.blob.vercel-storage.com",
+    "connect-src 'self' https://openrouter.ai https://www.googleapis.com https://calendly.com https://connect.facebook.net https://www.facebook.com https://bfyvfetxtgsgzjci.public.blob.vercel-storage.com https://www.googletagmanager.com https://www.google-analytics.com https://*.google-analytics.com https://*.analytics.google.com",
     "worker-src 'self' blob:",
     "frame-src 'self' https://calendly.com",
     "frame-ancestors 'none'",
