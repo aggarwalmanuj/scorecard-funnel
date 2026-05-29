@@ -38,6 +38,16 @@ const RAW_FB_PIXEL_ID = process.env.NEXT_PUBLIC_FACEBOOK_PIXEL_ID
 const FB_PIXEL_ID =
   RAW_FB_PIXEL_ID && /^\d{6,20}$/.test(RAW_FB_PIXEL_ID) ? RAW_FB_PIXEL_ID : null
 
+// Google Analytics 4 measurement ID. Env-overridable for non-prod
+// properties; defaults to the production tag. Format-validated (G-XXXX…)
+// for the same template-injection reason as the FB pixel above — the value
+// is interpolated into an inline <script>.
+const RAW_GA_ID =
+  process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID ?? "G-J4575YSZQH"
+const GA_MEASUREMENT_ID = /^G-[A-Z0-9]{4,15}$/i.test(RAW_GA_ID)
+  ? RAW_GA_ID
+  : null
+
 // Canonical site origin. Set NEXT_PUBLIC_SITE_URL in production env so absolute
 // URLs in metadata, OG tags, and JSON-LD all resolve correctly. The fallback is
 // a placeholder — replace before shipping if the env var isn't wired up.
@@ -241,6 +251,32 @@ export default async function RootLayout({
             __html: `(function(){function s(n){n&&n.removeAttribute&&n.removeAttribute('bis_skin_checked')}new MutationObserver(function(ms){ms.forEach(function(m){if(m.attributeName==='bis_skin_checked')s(m.target);m.addedNodes&&m.addedNodes.forEach(function(n){s(n);n.querySelectorAll&&n.querySelectorAll('[bis_skin_checked]').forEach(s)})})}).observe(document.documentElement,{attributes:true,subtree:true,childList:true,attributeFilter:['bis_skin_checked']})})();`,
           }}
         />
+        {/*
+          Google Analytics (gtag.js). The external loader carries the CSP
+          nonce so 'strict-dynamic' trusts it and the scripts it injects;
+          the inline config block is nonce'd + suppressHydrationWarning for
+          the same reason as the other inline <head> scripts above.
+        */}
+        {GA_MEASUREMENT_ID ? (
+          <>
+            <script
+              async
+              src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`}
+              nonce={nonce}
+            />
+            <script
+              id="ga-gtag"
+              nonce={nonce}
+              suppressHydrationWarning
+              dangerouslySetInnerHTML={{
+                __html: `window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+gtag('config', '${GA_MEASUREMENT_ID}');`,
+              }}
+            />
+          </>
+        ) : null}
         <script
           id="ld-person"
           type="application/ld+json"
