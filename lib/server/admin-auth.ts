@@ -51,24 +51,19 @@ export function corsHeaders(request: Request): HeadersInit {
   }
 }
 
-/** Check the X-Admin-Password header against the server-only ADMIN_API_PASSWORD env var.
- *  Uses a constant-time comparison to prevent timing attacks. */
-export function isAdminAuthorized(request: Request): boolean {
-  const expected = process.env.ADMIN_API_PASSWORD?.trim()
-  if (!expected) return false // no password configured — block access entirely
-
-  const provided = request.headers.get("x-admin-password")?.trim() ?? ""
-  if (!provided) return false
+/** Constant-time compare of a provided secret against an expected env value.
+ *  Returns false when the expected value is unset (fail closed). */
+function timingSafeMatch(provided: string, expected: string | undefined): boolean {
+  const exp = expected?.trim()
+  if (!exp || !provided) return false
 
   const a = Buffer.from(provided, "utf8")
-  const b = Buffer.from(expected, "utf8")
-  // timingSafeEqual requires equal-length buffers. Pad the shorter one, then
-  // also compare lengths — both checks combined are still constant-time w.r.t.
-  // the actual secret contents.
+  const b = Buffer.from(exp, "utf8")
+  // timingSafeEqual requires equal-length buffers. Compare lengths too — both
+  // checks combined stay constant-time w.r.t. the actual secret contents.
   if (a.length !== b.length) {
-    // Still run a dummy compare of equal length to normalize timing.
     try {
-      timingSafeEqual(b, b)
+      timingSafeEqual(b, b) // dummy compare to normalize timing
     } catch {
       /* noop */
     }
@@ -79,4 +74,30 @@ export function isAdminAuthorized(request: Request): boolean {
   } catch {
     return false
   }
+}
+
+/**
+ * Admin access. Accepts EITHER the standard admin password OR the tech-admin
+ * password — tech is an elevated, superset role, so the tech credential can
+ * use every admin route (prompts, responses) the shared console calls. Uses a
+ * constant-time comparison to prevent timing attacks.
+ */
+export function isAdminAuthorized(request: Request): boolean {
+  const provided = request.headers.get("x-admin-password")?.trim() ?? ""
+  if (!provided) return false
+  return (
+    timingSafeMatch(provided, process.env.ADMIN_API_PASSWORD) ||
+    timingSafeMatch(provided, process.env.TECHADMIN_API_PASSWORD)
+  )
+}
+
+/**
+ * Tech-admin access. Accepts ONLY the dedicated TECHADMIN_API_PASSWORD — gates
+ * the /techadmin-exclusive surfaces (analytics, telemetry). The regular admin
+ * password does NOT pass here, which is what keeps the two consoles separate.
+ */
+export function isTechAuthorized(request: Request): boolean {
+  const provided = request.headers.get("x-admin-password")?.trim() ?? ""
+  if (!provided) return false
+  return timingSafeMatch(provided, process.env.TECHADMIN_API_PASSWORD)
 }

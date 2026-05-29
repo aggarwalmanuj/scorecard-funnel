@@ -865,16 +865,23 @@ export default function AdminPage() {
     downloadResponses(displayed)
   }
 
-  const validatePassword = useCallback(async (pw: string): Promise<boolean> => {
-    try {
-      const res = await fetch("/api/admin/prompts", {
-        headers: { "X-Admin-Password": pw },
-      })
-      return res.ok
-    } catch {
-      return false
-    }
-  }, [])
+  const validatePassword = useCallback(
+    async (pw: string): Promise<boolean> => {
+      try {
+        // On /techadmin require the tech password (scope=tech); on /admin the
+        // standard one. This is what keeps the two consoles' logins distinct —
+        // the regular admin password can't unlock /techadmin.
+        const scope = isTech ? "tech" : "admin"
+        const res = await fetch(`/api/admin/auth-check?scope=${scope}`, {
+          headers: { "X-Admin-Password": pw },
+        })
+        return res.ok
+      } catch {
+        return false
+      }
+    },
+    [isTech],
+  )
 
   useEffect(() => {
     if (typeof window === "undefined") return

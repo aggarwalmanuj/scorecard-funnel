@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import { isCosmosConfigured, fetchFunnelStats } from "@/lib/server/cosmos-db"
 import { redactError } from "@/lib/security"
-import { corsHeaders, isAdminAuthorized } from "@/lib/server/admin-auth"
+import { corsHeaders, isTechAuthorized } from "@/lib/server/admin-auth"
 
 /** CORS preflight */
 export async function OPTIONS(request: Request) {
@@ -16,7 +16,7 @@ export async function OPTIONS(request: Request) {
 export async function GET(request: Request) {
   const headers = corsHeaders(request)
 
-  if (!isAdminAuthorized(request)) {
+  if (!isTechAuthorized(request)) {
     return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401, headers })
   }
   if (!isCosmosConfigured()) {
