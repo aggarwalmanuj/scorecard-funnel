@@ -11,6 +11,7 @@ import {
   preloadSummaryAudio,
 } from "@/lib/client/summary-audio-cache"
 import { FB_PIXEL_ID, trackWhenReady } from "@/lib/fbpixel"
+import { persistPurchase, persistTelemetry } from "@/lib/persist-outputs"
 
 // Thank-you page — confirms successful transactions from both
 // Stripe ($47 Diagnostic) and Calendly ($497 Session / $997
@@ -138,6 +139,28 @@ export default function ThankYouPage() {
   useEffect(() => {
     markComplete()
   }, [markComplete])
+
+  // Record the purchase + refresh PostHog telemetry for /techadmin analytics.
+  // Reached only post-transaction; uses the buyer's serial number from context
+  // (same browser as the funnel). The Stripe webhook also records purchases
+  // authoritatively — both writes are idempotent.
+  const recordedRef = useRef(false)
+  useEffect(() => {
+    if (recordedRef.current) return
+    if (!state.serialNumber || !state.email) return
+    const params = new URLSearchParams(window.location.search)
+    const confirmed = params.get("paid") === "1" || params.get("booked") === "1"
+    if (!confirmed) return
+    recordedRef.current = true
+    const resolved = resolveTier()
+    const identity = {
+      serialNumber: state.serialNumber,
+      firstName: state.firstName,
+      email: state.email,
+    }
+    persistPurchase(identity, resolved, TIER_VALUE[resolved])
+    persistTelemetry(identity)
+  }, [state.serialNumber, state.email, state.firstName])
 
   // Fire the Facebook "Purchase" pixel once, with the tier's value — this is
   // what lets the ad algorithm learn which clicks convert (per the spec).

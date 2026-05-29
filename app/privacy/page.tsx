@@ -49,7 +49,8 @@ export default function PrivacyPolicyPage() {
             </h2>
             <p>
               AIMerge (&quot;we,&quot; &quot;us,&quot; or &quot;our&quot;) operates the AIMerge
-              platform, including The Inner Light Experience. This Privacy
+              platform, including the Unfair Advantage Score assessment
+              (&quot;The Reading&quot;). This Privacy
               Policy explains how we collect, use, disclose, and safeguard
               your information when you visit our website and use our
               services. Please read this policy carefully. By accessing or

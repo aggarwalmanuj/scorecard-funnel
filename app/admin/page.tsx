@@ -1,6 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useRef, useState } from "react"
+import { usePathname } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -42,6 +43,7 @@ import {
   type ApiResponse as ReportApiResponse,
 } from "@/components/challenge/clarity-report"
 import type { ClarityScore } from "@/lib/scoring"
+import type { FunnelStats } from "@/lib/server/cosmos-db"
 
 type Audience = "individual" | "team"
 
@@ -311,6 +313,291 @@ const TAGS = ["{{NAME}}", "{{Q1}}", "{{Q2}}", "{{Q3}}", "{{Q4}}", "{{Q5}}", "{{G
 
 const wordCount = (text: string) => text.trim().split(/\s+/).filter(Boolean).length
 
+// ── /techadmin analytics ──────────────────────────────────────────────
+
+const cellFilled = (v?: string) => typeof v === "string" && v.trim().length > 0
+
+const FUNNEL_STEPS: Array<{ key: keyof FunnelStats["stages"]; label: string }> = [
+  { key: "signedUp", label: "Signed up" },
+  { key: "answeredQ1", label: "Started (Q1)" },
+  { key: "answeredAll", label: "Finished Qs" },
+  { key: "reachedBeats", label: "Reflections" },
+  { key: "scored", label: "Scored" },
+  { key: "reported", label: "Report" },
+  { key: "summarized", label: "Summary" },
+  { key: "purchased", label: "Purchased" },
+]
+
+const pctOf = (n: number, of: number) =>
+  of ? `${Math.round((n / of) * 1000) / 10}%` : "0%"
+
+const phHost = (process.env.NEXT_PUBLIC_POSTHOG_HOST ?? "").replace(/\/$/, "")
+const phProject = process.env.NEXT_PUBLIC_POSTHOG_PROJECT_ID
+function posthogReplayUrl(sessionId?: string): string | null {
+  if (!phHost) return null
+  if (phProject && sessionId) return `${phHost}/project/${phProject}/replay/${sessionId}`
+  return `${phHost}/replay`
+}
+
+/** Click-to-copy chip for an id (session/distinct). */
+function CopyChip({ label, value }: { label: string; value: string }) {
+  const [copied, setCopied] = useState(false)
+  return (
+    <button
+      type="button"
+      title={`Copy ${label}`}
+      onClick={() => {
+        navigator.clipboard?.writeText(value).catch(() => {})
+        setCopied(true)
+        setTimeout(() => setCopied(false), 1500)
+      }}
+      className="inline-flex min-w-0 max-w-full items-center gap-1.5 rounded-lg border border-border bg-card px-2.5 py-1 font-mono text-[11px] text-foreground/85 transition-colors hover:border-ink"
+    >
+      <span className="shrink-0 text-foreground/50">{label}:</span>
+      <span className="truncate">{value}</span>
+      {copied ? (
+        <Check className="h-3 w-3 shrink-0 text-green-600" />
+      ) : (
+        <Copy className="h-3 w-3 shrink-0 opacity-60" />
+      )}
+    </button>
+  )
+}
+
+function Kpi({ label, value, sub }: { label: string; value: string; sub?: string }) {
+  return (
+    <div className="rounded-md border border-border bg-card p-4">
+      <p className="eyebrow text-foreground/60">{label}</p>
+      <p className="mt-1 font-serif text-2xl tabular-nums text-ink">{value}</p>
+      {sub && <p className="text-[12px] text-foreground/60">{sub}</p>}
+    </div>
+  )
+}
+
+/** Funnel analytics dashboard (tech console only). */
+function AnalyticsPanel() {
+  const [stats, setStats] = useState<FunnelStats | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState("")
+
+  const load = useCallback(async () => {
+    setLoading(true)
+    setError("")
+    try {
+      const headers: Record<string, string> = {}
+      const pw = sessionStorage.getItem("admin-api-password")
+      if (pw) headers["X-Admin-Password"] = pw
+      const res = await fetch("/api/admin/stats", { headers })
+      if (res.status === 401) throw new Error("Unauthorized")
+      if (!res.ok) throw new Error("HTTP " + res.status)
+      const json = await res.json()
+      if (json.ok && json.stats) setStats(json.stats as FunnelStats)
+      else throw new Error(json.error || "Failed to load stats")
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e))
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    void load()
+  }, [load])
+
+  const total = stats?.total ?? 0
+
+  return (
+    <div className="space-y-4">
+      <div className="rounded-md border border-border bg-secondary/40 p-4">
+        <div className="flex items-center justify-between gap-3">
+          <p className="font-medium text-foreground">Funnel analytics</p>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => void load()}
+            disabled={loading}
+            className="h-8 rounded-full border-foreground/35 px-3 text-[10px] uppercase tracking-[0.18em] hover:border-ink hover:text-ink"
+          >
+            {loading ? "Refreshing…" : "Refresh"}
+          </Button>
+        </div>
+        <p className="mt-1 text-[14px] leading-[1.65] text-foreground/70">
+          Stage-by-stage conversion across all testers. Granular per-page paths
+          live in PostHog — use the session link on each response (User
+          responses tab).
+        </p>
+      </div>
+
+      {error && (
+        <div className="rounded-xl border border-destructive/20 bg-destructive/5 p-3 text-sm text-destructive">
+          {error}
+        </div>
+      )}
+
+      {!stats && loading && (
+        <div className="py-8 text-center text-sm text-muted-foreground">Loading analytics…</div>
+      )}
+
+      {stats && (
+        <>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <Kpi label="Total testers" value={String(stats.total)} />
+            <Kpi
+              label="Completed funnel"
+              value={String(stats.stages.summarized)}
+              sub={pctOf(stats.stages.summarized, total)}
+            />
+            <Kpi
+              label="Purchases"
+              value={String(stats.stages.purchased)}
+              sub={pctOf(stats.stages.purchased, total)}
+            />
+            <Kpi label="Revenue" value={`$${stats.revenue.toLocaleString()}`} />
+          </div>
+
+          <div className="space-y-3 rounded-md border border-border bg-card p-5">
+            <p className="eyebrow mb-1 text-foreground/65">Conversion funnel</p>
+            {FUNNEL_STEPS.map((step, i) => {
+              const count = stats.stages[step.key]
+              const prev = i === 0 ? count : stats.stages[FUNNEL_STEPS[i - 1].key]
+              const widthPct = total ? Math.max(2, Math.round((count / total) * 100)) : 0
+              return (
+                <div key={step.key}>
+                  <div className="mb-1 flex items-center justify-between text-[13px]">
+                    <span className="text-foreground">{step.label}</span>
+                    <span className="tabular-nums text-foreground/70">
+                      <strong className="text-ink">{count}</strong> · {pctOf(count, total)} of all
+                      {i > 0 && (
+                        <span className="text-foreground/50"> · {pctOf(count, prev)} step</span>
+                      )}
+                    </span>
+                  </div>
+                  <div className="h-2.5 w-full overflow-hidden rounded-full bg-secondary">
+                    <div
+                      className="h-full rounded-full bg-ink transition-all"
+                      style={{ width: `${widthPct}%` }}
+                    />
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+
+          {stats.stages.purchased > 0 && (
+            <div className="rounded-md border border-border bg-card p-5">
+              <p className="eyebrow mb-3 text-foreground/65">Purchases by tier</p>
+              <div className="flex flex-wrap gap-2">
+                {Object.entries(stats.byTier).map(([tier, n]) => (
+                  <Badge key={tier} variant="outline" className="rounded-full border-ink/20 text-ink">
+                    {tier}: {n}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  )
+}
+
+/** Per-response tech block: journey progress, purchase, PostHog session link. */
+function ResponseTechDetails({
+  r,
+}: {
+  r: {
+    question1?: string
+    question5?: string
+    beat5_output?: string
+    score_json?: string
+    report_json?: string
+    summary_text?: string
+    ph_session_id?: string
+    ph_distinct_id?: string
+    paid_tier?: string
+    paid_amount?: string
+    paid_at?: string
+  }
+}) {
+  const journey: Array<{ label: string; done: boolean }> = [
+    { label: "Signed up", done: true },
+    { label: "Q1", done: cellFilled(r.question1) },
+    { label: "Q5", done: cellFilled(r.question5) },
+    { label: "Reflections", done: cellFilled(r.beat5_output) },
+    { label: "Score", done: cellFilled(r.score_json) },
+    { label: "Report", done: cellFilled(r.report_json) },
+    { label: "Summary", done: cellFilled(r.summary_text) },
+    { label: "Purchased", done: cellFilled(r.paid_tier) },
+  ]
+  const replay = posthogReplayUrl(r.ph_session_id)
+
+  return (
+    <>
+      <Separator />
+      <p className="eyebrow border-b border-border pb-1.5 text-foreground/65">
+        Tech / Analytics
+      </p>
+
+      <div>
+        <label className="mb-2 block eyebrow text-foreground/65">Journey</label>
+        <div className="flex flex-wrap items-center gap-1.5">
+          {journey.map((s, i) => (
+            <span key={i} className="flex items-center gap-1.5">
+              <span
+                className={`rounded-full px-2.5 py-0.5 text-[11px] ${
+                  s.done ? "bg-ink text-background" : "bg-secondary text-foreground/45"
+                }`}
+              >
+                {s.label}
+              </span>
+              {i < journey.length - 1 && <span className="text-foreground/30">→</span>}
+            </span>
+          ))}
+        </div>
+      </div>
+
+      {cellFilled(r.paid_tier) && (
+        <div>
+          <label className="mb-1 block eyebrow text-foreground/65">Purchase</label>
+          <Badge variant="outline" className="rounded-full border-green-500/30 text-green-600">
+            {r.paid_tier}
+            {r.paid_amount ? ` · $${r.paid_amount}` : ""}
+            {r.paid_at ? ` · ${new Date(r.paid_at).toLocaleString()}` : ""}
+          </Badge>
+        </div>
+      )}
+
+      <div>
+        <label className="mb-2 block eyebrow text-foreground/65">PostHog session</label>
+        {r.ph_session_id || r.ph_distinct_id ? (
+          <div className="flex flex-col gap-2">
+            <div className="flex flex-wrap gap-2">
+              {r.ph_distinct_id && <CopyChip label="distinct_id" value={r.ph_distinct_id} />}
+              {r.ph_session_id && <CopyChip label="session_id" value={r.ph_session_id} />}
+            </div>
+            {replay && (
+              <a
+                href={replay}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex w-fit items-center gap-1.5 text-xs text-ink hover:underline"
+              >
+                Open recording in PostHog →
+              </a>
+            )}
+          </div>
+        ) : (
+          <p className="text-xs italic text-muted-foreground">
+            No PostHog session captured (tester predates telemetry, or PostHog is
+            disabled in this environment).
+          </p>
+        )}
+      </div>
+    </>
+  )
+}
+
 export default function AdminPage() {
   const [authed, setAuthed] = useState(false)
   const [password, setPassword] = useState("")
@@ -324,7 +611,11 @@ export default function AdminPage() {
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null)
 
   const [audience, setAudience] = useState<Audience>("individual")
-  const [tab, setTab] = useState<"system" | "questions" | "beats" | "score" | "report" | "summary" | "responses">("system")
+  const [tab, setTab] = useState<"system" | "questions" | "beats" | "score" | "report" | "summary" | "responses" | "analytics">("system")
+  // The same console powers /admin and /techadmin. On /techadmin we unlock the
+  // Analytics tab + per-user telemetry (PostHog session, purchase, journey).
+  const pathname = usePathname()
+  const isTech = (pathname ?? "").startsWith("/techadmin")
 
   // Per-audience editor state. Both audiences persist in memory so switching
   // between them doesn't lose unsaved work.
@@ -348,6 +639,9 @@ export default function AdminPage() {
     beat1_output: string; beat2_output: string; beat3_output: string; beat4_output: string; beat5_output: string
     // Final outputs persisted at generation time (optional — older docs lack them).
     score_json?: string; report_json?: string; summary_text?: string; summary_audio_url?: string
+    // Tech-analytics telemetry + purchase (/techadmin only).
+    ph_session_id?: string; ph_distinct_id?: string
+    paid_tier?: string; paid_amount?: string; paid_at?: string
   }
   const [responses, setResponses] = useState<UserResponse[]>([])
   const [responsesLoading, setResponsesLoading] = useState(false)
@@ -927,6 +1221,9 @@ export default function AdminPage() {
     { value: "report" as const, label: "PDF report", activeClass: "bg-ink text-background" },
     { value: "summary" as const, label: "Closing summary", activeClass: "bg-ink text-background" },
     { value: "responses" as const, label: "User responses", activeClass: "bg-ink text-background" },
+    ...(isTech
+      ? [{ value: "analytics" as const, label: "Analytics", activeClass: "bg-ink text-background" }]
+      : []),
   ]
 
   // ── Login Screen ──
@@ -1954,6 +2251,7 @@ export default function AdminPage() {
                                     setReportModal({ data, name, id, dateISO })
                                   }
                                 />
+                                {isTech && <ResponseTechDetails r={r} />}
                               </div>
                             )}
                           </div>
@@ -1978,6 +2276,8 @@ export default function AdminPage() {
                 })()}
               </div>
             )}
+
+            {tab === "analytics" && isTech && <AnalyticsPanel />}
           </div>
         )}
       </main>

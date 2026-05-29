@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server"
 import { z } from "zod"
-import { isCosmosConfigured, appendSignupRow, updateQuestionCell, updateFeedbackCell, updateBeatOutputCell, updateUserOutputs } from "@/lib/server/cosmos-db"
+import { isCosmosConfigured, appendSignupRow, updateQuestionCell, updateFeedbackCell, updateBeatOutputCell, updateUserOutputs, updateUserTelemetry, recordPurchase } from "@/lib/server/cosmos-db"
 import { redactError } from "@/lib/security"
 
 const bodySchema = z.object({
-  action: z.enum(["signup", "answer", "feedback", "beat_output", "score", "report", "summary"]),
+  action: z.enum(["signup", "answer", "feedback", "beat_output", "score", "report", "summary", "telemetry", "purchase"]),
   firstName: z.preprocess(
     (v) => (v == null ? "" : String(v).trim().slice(0, 200)),
     z.string().max(200)
@@ -32,6 +32,11 @@ const bodySchema = z.object({
   scoreJson: z.string().max(20000).optional(),
   reportJson: z.string().max(120000).optional(),
   summaryText: z.string().max(20000).optional(),
+  // Tech-analytics telemetry + purchase recording.
+  phSessionId: z.string().max(200).optional(),
+  phDistinctId: z.string().max(200).optional(),
+  paidTier: z.enum(["diagnostic", "session", "transformation"]).optional(),
+  paidAmount: z.string().max(20).optional(),
 })
 
 export async function POST(request: Request) {
@@ -55,7 +60,7 @@ export async function POST(request: Request) {
     )
   }
 
-  const { action, firstName, email, audience, serialNumber, questionNumber, answer, questionText, beatNumber, feedback, output, scoreJson, reportJson, summaryText } = parsed.data
+  const { action, firstName, email, audience, serialNumber, questionNumber, answer, questionText, beatNumber, feedback, output, scoreJson, reportJson, summaryText, phSessionId, phDistinctId, paidTier, paidAmount } = parsed.data
 
   try {
     if (action === "signup") {
@@ -106,6 +111,28 @@ export async function POST(request: Request) {
         )
       }
       await updateUserOutputs(serialNumber, firstName, email, outputs)
+    } else if (action === "telemetry") {
+      if (!serialNumber) {
+        return NextResponse.json(
+          { ok: false, error: "Missing serialNumber for telemetry action" },
+          { status: 400 }
+        )
+      }
+      await updateUserTelemetry(serialNumber, firstName, email, {
+        ph_session_id: phSessionId,
+        ph_distinct_id: phDistinctId,
+      })
+    } else if (action === "purchase") {
+      if (!serialNumber || !paidTier) {
+        return NextResponse.json(
+          { ok: false, error: "Missing serialNumber or paidTier for purchase action" },
+          { status: 400 }
+        )
+      }
+      await recordPurchase(serialNumber, firstName, email, {
+        paid_tier: paidTier,
+        paid_amount: paidAmount,
+      })
     }
   } catch (e) {
     console.error("[sheets/append]", redactError(e))

@@ -48,6 +48,9 @@ const Body = z.object({
   lastName: z.string().trim().max(80).optional(),
   audience: z.enum(["individual", "team"]).optional(),
   tier: z.enum(["diagnostic"]).default("diagnostic"),
+  // Forwarded into Stripe metadata so the webhook can record the purchase
+  // against the exact user row (for /techadmin analytics).
+  serialNumber: z.number().int().positive().optional(),
 })
 
 export async function POST(req: Request) {
@@ -66,7 +69,7 @@ export async function POST(req: Request) {
     )
   }
 
-  const { email, firstName, lastName, audience, tier } = parsed.data
+  const { email, firstName, lastName, audience, tier, serialNumber } = parsed.data
 
   let diagnosticConfig: ReturnType<typeof getDiagnosticConfig>
   try {
@@ -141,6 +144,7 @@ export async function POST(req: Request) {
         firstName,
         lastName: lastName ?? "",
         fullName,
+        serialNumber: serialNumber ? String(serialNumber) : "",
       },
       payment_intent_data: {
         metadata: {

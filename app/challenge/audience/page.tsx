@@ -7,6 +7,7 @@ import { ArrowLeft, ArrowRight, User, Users, Check } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { useChallenge, type Audience } from "@/context/challenge-context"
 import { submitSignup } from "@/lib/submit-to-google-sheet"
+import { persistTelemetry } from "@/lib/persist-outputs"
 import { ChallengeMenuButton } from "@/components/challenge/challenge-funnel-header-actions"
 import { ChallengeNavHome } from "@/components/challenge/challenge-nav-home"
 import { PrivacyNotice } from "@/components/privacy-notice"
@@ -47,6 +48,18 @@ const cards: Array<{
   },
 ]
 
+// Proper format check (the old `.includes("@")` accepted "a@"). Mirrors the
+// offer-screen validator: something@something.tld with a 2+ char TLD.
+function isValidEmail(email: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email.trim())
+}
+
+/** "a", "a and b", "a, b and c" — for the gentle requirements hint. */
+function joinWithAnd(parts: string[]): string {
+  if (parts.length <= 1) return parts[0] ?? ""
+  return `${parts.slice(0, -1).join(", ")} and ${parts[parts.length - 1]}`
+}
+
 export default function AudienceSelectionPage() {
   const router = useRouter()
   const { state, setEmail, setFirstName, setAudience, setSerialNumber, reset, isHydrated } =
@@ -55,7 +68,10 @@ export default function AudienceSelectionPage() {
   const [firstNameValue, setFirstNameValue] = useState("")
   const [emailValue, setEmailValue] = useState("")
   const [selected, setSelected] = useState<Audience | null>(null)
-  const [error, setError] = useState("")
+  // Per-field "has the user interacted with this yet" — so validation hints
+  // only appear after a field is touched (or on a submit attempt), never as
+  // accusatory red text on a pristine form.
+  const [touched, setTouched] = useState({ firstName: false, email: false })
   const [isNavigating, setIsNavigating] = useState(false)
   const [isVisible, setIsVisible] = useState(false)
 
@@ -83,16 +99,53 @@ export default function AudienceSelectionPage() {
     if (e) setEmailValue(e)
   }, [])
 
+  const trimmedName = firstNameValue.trim()
+  const trimmedEmail = emailValue.trim()
+  const emailValid = isValidEmail(trimmedEmail)
+
+  // Inline, per-field messages — only after the field is touched.
+  const nameMessage = touched.firstName && !trimmedName ? "Please enter your first name." : ""
+  const emailMessage = !touched.email
+    ? ""
+    : !trimmedEmail
+      ? "Please enter your email."
+      : !emailValid
+        ? "That doesn't look like a valid email — try the format name@email.com."
+        : ""
+
+  const formInvalid = !trimmedName || !emailValid || !selected
+
+  // What's still missing, for the gentle hint beside the disabled button so the
+  // greyed state is never a mystery.
+  const missing: string[] = []
+  if (!trimmedName) missing.push("your first name")
+  if (!emailValid) missing.push("a valid email")
+  if (!selected) missing.push("a path below")
+
   const handleContinue = async () => {
     if (isNavigating) return
-    const trimmedName = firstNameValue.trim()
-    const trimmedEmail = emailValue.trim()
-    if (!trimmedName) return setError("Please enter your first name.")
-    if (!trimmedEmail || !trimmedEmail.includes("@"))
-      return setError("Please enter a valid email address.")
-    if (!selected) return setError("Pick a path: Individual or Team.")
+    if (formInvalid) {
+      // Surface the inline hints so the user can see exactly why nothing
+      // happened, instead of a dead grey button.
+      setTouched({ firstName: true, email: true })
+      // The user may have scrolled down to the path cards, far from the
+      // inputs — so just revealing an off-screen inline error isn't enough.
+      // Bring the first unmet requirement into view and focus it.
+      if (typeof document !== "undefined") {
+        const targetId = !trimmedName
+          ? "firstName"
+          : !emailValid
+            ? "email"
+            : !selected
+              ? "path-cards"
+              : null
+        const el = targetId ? document.getElementById(targetId) : null
+        el?.scrollIntoView({ behavior: "smooth", block: "center" })
+        if (el instanceof HTMLInputElement) el.focus({ preventScroll: true })
+      }
+      return
+    }
 
-    setError("")
     setIsNavigating(true)
 
     reset()
@@ -101,14 +154,15 @@ export default function AudienceSelectionPage() {
     setAudience(selected)
 
     // Fire-and-forget: the funnel is resilient to a missing serialNumber.
-    const sno = await submitSignup(trimmedName, trimmedEmail, selected)
-    if (sno !== null) setSerialNumber(sno)
+    const sno = await submitSignup(trimmedName, trimmedEmail, selected!)
+    if (sno !== null) {
+      setSerialNumber(sno)
+      // Tie this tester to their PostHog session for /techadmin.
+      persistTelemetry({ serialNumber: sno, firstName: trimmedName, email: trimmedEmail })
+    }
 
     router.push(`/challenge/${selected}/question-1`)
   }
-
-  const formInvalid =
-    !firstNameValue.trim() || !emailValue.trim() || !emailValue.includes("@") || !selected
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -176,12 +230,21 @@ export default function AudienceSelectionPage() {
                 data-form-type="other"
                 data-ph-unmask="true"
                 value={firstNameValue}
-                onChange={(e) => {
-                  setFirstNameValue(e.target.value)
-                  if (error) setError("")
-                }}
-                className="s-input h-12"
+                onChange={(e) => setFirstNameValue(e.target.value)}
+                onBlur={() => setTouched((t) => ({ ...t, firstName: true }))}
+                aria-invalid={!!nameMessage}
+                aria-describedby={nameMessage ? "firstName-error" : undefined}
+                className={`s-input h-12 ${nameMessage ? "ring-1 ring-destructive/60" : ""}`}
               />
+              {nameMessage && (
+                <p
+                  id="firstName-error"
+                  role="alert"
+                  className="mt-1.5 text-[12.5px] leading-snug text-destructive"
+                >
+                  {nameMessage}
+                </p>
+              )}
             </label>
             <label className="block">
               <span className="eyebrow mb-2 block text-foreground/70">
@@ -192,21 +255,31 @@ export default function AudienceSelectionPage() {
                 name="email-no-autofill"
                 placeholder="name@email.com"
                 type="email"
+                inputMode="email"
                 autoComplete="off"
                 data-lpignore="true"
                 data-form-type="other"
                 value={emailValue}
-                onChange={(e) => {
-                  setEmailValue(e.target.value)
-                  if (error) setError("")
-                }}
-                className="s-input h-12"
+                onChange={(e) => setEmailValue(e.target.value)}
+                onBlur={() => setTouched((t) => ({ ...t, email: true }))}
+                aria-invalid={!!emailMessage}
+                aria-describedby={emailMessage ? "email-error" : undefined}
+                className={`s-input h-12 ${emailMessage ? "ring-1 ring-destructive/60" : ""}`}
               />
+              {emailMessage && (
+                <p
+                  id="email-error"
+                  role="alert"
+                  className="mt-1.5 text-[12.5px] leading-snug text-destructive"
+                >
+                  {emailMessage}
+                </p>
+              )}
             </label>
           </form>
 
           {/* Pick path - eyebrow + two editorial cards */}
-          <div className="mx-auto max-w-3xl">
+          <div id="path-cards" className="mx-auto max-w-3xl scroll-mt-24">
             <p className="eyebrow mb-5 text-center text-foreground/70">
               II · Pick your path
             </p>
@@ -219,10 +292,7 @@ export default function AudienceSelectionPage() {
                   <button
                     key={card.id}
                     type="button"
-                    onClick={() => {
-                      setSelected(card.id)
-                      if (error) setError("")
-                    }}
+                    onClick={() => setSelected(card.id)}
                     aria-pressed={isActive}
                     className={`group relative rounded-md p-7 text-left transition-all duration-500 sm:p-8 ${
                       isActive
@@ -279,14 +349,16 @@ export default function AudienceSelectionPage() {
             </div>
           </div>
 
-          {error && (
-            <div
-              role="alert"
+          {/* Gentle, neutral hint that explains the disabled button — updates
+              live as each requirement is met, so "why is the button grey?" is
+              never a mystery. Per-field red messages handle format errors. */}
+          {formInvalid && (
+            <p
               aria-live="polite"
-              className="mt-7 text-center font-serif-italic text-[15px] text-foreground/85"
+              className="mt-7 text-center text-[13px] leading-[1.7] text-foreground/55"
             >
-              {error}
-            </div>
+              To begin, add {joinWithAnd(missing)}.
+            </p>
           )}
 
           <div
@@ -302,11 +374,19 @@ export default function AudienceSelectionPage() {
               Back to home
             </Link>
 
+            {/* Intentionally NOT disabled on an incomplete form: a dead grey
+                button gives no feedback (the reported bug). Clicking while
+                invalid reveals the per-field messages via handleContinue so
+                the user always learns what's missing. Only disabled mid-submit.
+                `aria-disabled` keeps the "not ready" signal for assistive tech. */}
             <button
               type="button"
               onClick={handleContinue}
-              disabled={formInvalid || isNavigating}
-              className="s-btn group min-w-44 justify-center"
+              disabled={isNavigating}
+              aria-disabled={formInvalid || isNavigating}
+              className={`s-btn group min-w-44 justify-center ${
+                formInvalid ? "opacity-60" : ""
+              }`}
             >
               {isNavigating ? (
                 <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border border-current border-t-transparent" />

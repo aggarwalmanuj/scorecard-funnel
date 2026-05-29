@@ -417,7 +417,7 @@ export function QuestionScreen({
         <div className="px-5 sm:px-8 pb-8">
           <div className="mx-auto grid max-w-5xl grid-cols-1 items-start gap-8 md:grid-cols-[1.1fr_1fr] md:gap-14">
             {/* LEFT - question + textarea + mic */}
-            <div className="animate-fade-in-up md:sticky md:top-24 md:self-start">
+            <div className="min-w-0 animate-fade-in-up md:sticky md:top-24 md:self-start">
               <p className="eyebrow mb-5 flex items-center gap-3 text-foreground/70">
                 <span className="h-px w-6 bg-foreground/40" aria-hidden />
                 {stageFraming}
@@ -528,7 +528,7 @@ export function QuestionScreen({
             </div>
 
             {/* RIGHT - image + quote + hint */}
-            <div className="order-first flex flex-col gap-5 md:order-none">
+            <div className="order-first flex min-w-0 flex-col gap-5 md:order-none">
               <figure className="relative">
                 <div className="img-hover-zoom relative aspect-video w-full overflow-hidden rounded-md">
                   <Image

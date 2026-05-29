@@ -3,7 +3,13 @@
 import Image from "next/image"
 import { ParallaxImage, Reveal } from "./motion"
 
-const items = [
+const items: ReadonlyArray<{
+  number: string
+  title: string
+  body: string
+  /** Paid add-on (unlocks after the assessment) — flagged with an asterisk. */
+  paid?: boolean
+}> = [
   {
     number: "I",
     title: "Your Unfair Advantage Score",
@@ -23,8 +29,9 @@ const items = [
     number: "IV",
     title: "The full diagnostic PDF",
     body: "Your complete personalised report - composed specifically around your inputs, not a templated archetype.",
+    paid: true,
   },
-] as const
+]
 
 export function TakeHomeSection() {
   return (
@@ -148,7 +155,18 @@ export function TakeHomeSection() {
                 <div className="col-span-10">
                   <h3 className="flex items-baseline gap-3 font-serif text-2xl leading-snug text-ink sm:text-[28px]">
                     <span className="row-mark" aria-hidden />
-                    {it.title}
+                    <span>
+                      {it.title}
+                      {it.paid && (
+                        <sup
+                          className="ml-0.5 align-super font-sans text-[0.5em] font-semibold not-italic text-foreground/55"
+                          title="Paid — unlocks after your assessment"
+                          aria-label="paid add-on"
+                        >
+                          *
+                        </sup>
+                      )}
+                    </span>
                   </h3>
                   <p className="mt-3 text-[15px] leading-[1.8] text-foreground/80 sm:text-base">
                     {it.body}
@@ -156,6 +174,15 @@ export function TakeHomeSection() {
                 </div>
               </Reveal>
             ))}
+            <Reveal
+              as="li"
+              delay={300 + items.length * 80}
+              className="pt-6 text-[13px] leading-[1.7] text-foreground/55"
+            >
+              <span className="text-foreground/70">*</span> The full diagnostic
+              PDF is a paid add-on, available to unlock after your assessment.
+              Your score, audio composition, and summary are free.
+            </Reveal>
           </ol>
         </div>
       </div>

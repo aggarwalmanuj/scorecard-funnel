@@ -10,6 +10,8 @@
  * harmless.
  */
 
+import posthog from "posthog-js"
+
 type Identity = {
   serialNumber: number | null
   firstName: string
@@ -85,6 +87,45 @@ export function persistSummaryAudio(id: Identity, bytes: ArrayBuffer): void {
   } catch {
     /* best-effort — swallow */
   }
+}
+
+/**
+ * Capture the tester's PostHog session + distinct id so /techadmin can jump
+ * straight to their session recording. Distinct id is the durable handle (it
+ * links every session for that person); session id pins the current recording.
+ */
+export function persistTelemetry(id: Identity): void {
+  if (!id.serialNumber || !id.email) return
+  let phSessionId: string | undefined
+  let phDistinctId: string | undefined
+  try {
+    phSessionId = posthog.get_session_id?.() || undefined
+    phDistinctId = posthog.get_distinct_id?.() || undefined
+  } catch {
+    /* PostHog not initialized (e.g. dev without opt-in) — nothing to capture */
+  }
+  if (!phSessionId && !phDistinctId) return
+  void postAppend({
+    action: "telemetry",
+    serialNumber: id.serialNumber,
+    firstName: id.firstName,
+    email: id.email,
+    phSessionId,
+    phDistinctId,
+  })
+}
+
+/** Record a completed purchase (tier + dollar amount) for funnel analytics. */
+export function persistPurchase(id: Identity, tier: string, amount?: number): void {
+  if (!id.serialNumber || !id.email || !tier) return
+  void postAppend({
+    action: "purchase",
+    serialNumber: id.serialNumber,
+    firstName: id.firstName,
+    email: id.email,
+    paidTier: tier,
+    paidAmount: typeof amount === "number" ? String(amount) : undefined,
+  })
 }
 
 function safeStringify(value: unknown, max: number): string {

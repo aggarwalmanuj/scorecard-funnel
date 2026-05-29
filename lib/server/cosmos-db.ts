@@ -97,6 +97,15 @@ export type UserDocument = {
   report_json?: string
   summary_text?: string
   summary_audio_url?: string
+  // Tech-analytics telemetry (/techadmin). Captured client-side so a session
+  // recording in PostHog can be tied back to a specific tester.
+  ph_session_id?: string
+  ph_distinct_id?: string
+  // Purchase record. Written by the Stripe webhook (authoritative) and/or the
+  // thank-you page (covers Calendly tiers, which never hit the Stripe webhook).
+  paid_tier?: string
+  paid_amount?: string
+  paid_at?: string
   createdAt: string
 }
 
@@ -536,4 +545,103 @@ export async function updateUserOutputs(
     if (typeof value === "string" && value.length > 0) fields[key] = value
   }
   await updateUserFields(serialNumber, firstName, email, fields)
+}
+
+/** Persist the tester's PostHog session/distinct id so /techadmin can link a
+ *  response straight to its session recording. */
+export async function updateUserTelemetry(
+  serialNumber: number,
+  firstName: string,
+  email: string,
+  telemetry: { ph_session_id?: string; ph_distinct_id?: string }
+): Promise<void> {
+  const fields: Record<string, string> = {}
+  if (telemetry.ph_session_id) fields.ph_session_id = telemetry.ph_session_id.slice(0, 200)
+  if (telemetry.ph_distinct_id) fields.ph_distinct_id = telemetry.ph_distinct_id.slice(0, 200)
+  await updateUserFields(serialNumber, firstName, email, fields)
+}
+
+/** Record a completed purchase against the user document. */
+export async function recordPurchase(
+  serialNumber: number,
+  firstName: string,
+  email: string,
+  purchase: { paid_tier: string; paid_amount?: string }
+): Promise<void> {
+  await updateUserFields(serialNumber, firstName, email, {
+    paid_tier: purchase.paid_tier.slice(0, 40),
+    paid_amount: (purchase.paid_amount ?? "").slice(0, 20),
+    paid_at: new Date().toISOString(),
+  })
+}
+
+/* ═══════════════════════════════════════════════
+   Funnel analytics (/techadmin)
+   ═══════════════════════════════════════════════ */
+
+export interface FunnelStats {
+  total: number
+  stages: {
+    signedUp: number
+    answeredQ1: number
+    answeredAll: number
+    reachedBeats: number
+    scored: number
+    reported: number
+    summarized: number
+    purchased: number
+  }
+  byTier: Record<string, number>
+  revenue: number
+}
+
+/**
+ * Aggregate the whole users container into a funnel. Reads a thin projection
+ * (not full documents) and counts in JS — fine for admin-panel volumes and far
+ * simpler than a fan-out of COUNT queries. The "stages" are derived from data
+ * we already store, so there's no separate page-tracking pipeline to maintain;
+ * PostHog remains the source of truth for granular per-page paths.
+ */
+export async function fetchFunnelStats(): Promise<FunnelStats> {
+  await ensureInitialized()
+  const container = usersContainer()
+  const { resources } = await container.items
+    .query(
+      "SELECT c.question1, c.question5, c.beat5_output, c.score_json, c.report_json, c.summary_text, c.paid_tier, c.paid_amount FROM c"
+    )
+    .fetchAll()
+
+  const rows = resources ?? []
+  const nonEmpty = (v: unknown) => typeof v === "string" && v.trim().length > 0
+
+  const stages = {
+    signedUp: rows.length,
+    answeredQ1: 0,
+    answeredAll: 0,
+    reachedBeats: 0,
+    scored: 0,
+    reported: 0,
+    summarized: 0,
+    purchased: 0,
+  }
+  const byTier: Record<string, number> = {}
+  let revenue = 0
+
+  for (const r of rows) {
+    if (nonEmpty(r.question1)) stages.answeredQ1++
+    if (nonEmpty(r.question5)) stages.answeredAll++
+    if (nonEmpty(r.beat5_output)) stages.reachedBeats++
+    if (nonEmpty(r.score_json)) stages.scored++
+    if (nonEmpty(r.report_json)) stages.reported++
+    if (nonEmpty(r.summary_text)) stages.summarized++
+    if (nonEmpty(r.paid_tier)) {
+      stages.purchased++
+      const tier = String(r.paid_tier)
+      byTier[tier] = (byTier[tier] ?? 0) + 1
+      const amt = Number.parseFloat(String(r.paid_amount ?? ""))
+      if (Number.isFinite(amt)) revenue += amt
+    }
+  }
+
+  return { total: rows.length, stages, byTier, revenue }
 }

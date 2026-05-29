@@ -12,8 +12,8 @@ const sections: Array<{ heading: string; body: React.ReactNode }> = [
     heading: "1 · Acceptance of terms",
     body: (
       <p>
-        By accessing or using the AIMerge platform and The Inner Light
-        Experience (&quot;Service&quot;), operated by TetraNoodle Technologies
+        By accessing or using the AIMerge platform and the Unfair Advantage
+        Score assessment (&quot;Service&quot;), operated by TetraNoodle Technologies
         (&quot;Company,&quot; &quot;we,&quot; &quot;us,&quot; or &quot;our&quot;), you agree to be bound by these
         Terms of Service (&quot;Terms&quot;). If you do not agree to these Terms, do
         not use the Service.
@@ -24,8 +24,9 @@ const sections: Array<{ heading: string; body: React.ReactNode }> = [
     heading: "2 · Description of service",
     body: (
       <p>
-        AIMerge provides an AI-powered self-reflection experience called The
-        Inner Light Experience. The Service asks users a series of questions
+        AIMerge provides an AI-powered self-reflection experience called the
+        Unfair Advantage Score assessment (also referred to as &quot;The
+        Reading&quot;). The Service asks users a series of questions
         and uses artificial intelligence to generate personalised reflections
         based on their answers. The Service is designed for personal insight
         and self-reflection purposes only.

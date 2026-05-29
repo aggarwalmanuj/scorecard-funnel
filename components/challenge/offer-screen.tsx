@@ -140,6 +140,8 @@ export function OfferScreen({ audience }: { audience: Audience }) {
           firstName: firstName || undefined,
           audience,
           tier,
+          // Lets the Stripe webhook record the purchase against this row.
+          serialNumber: state.serialNumber ?? undefined,
         }),
       })
       const data = (await res.json()) as {
