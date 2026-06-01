@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import type Stripe from "stripe"
 import { getStripe } from "@/lib/stripe"
 import { isCosmosConfigured, recordPurchase } from "@/lib/server/cosmos-db"
+import { sendPurchaseEvent } from "@/lib/server/meta-capi"
 import { redactError } from "@/lib/security"
 
 export const runtime = "nodejs"
@@ -60,21 +61,37 @@ export async function POST(req: Request) {
         audience: session.metadata?.audience,
       })
 
+      const md = session.metadata ?? {}
+      const sno = Number.parseInt(md.serialNumber ?? "", 10)
+      const tier = md.tier ?? ""
+      const paid = session.payment_status === "paid"
+      const email =
+        session.customer_details?.email ?? session.customer_email ?? ""
+
+      // Server-side Purchase to the Meta Conversions API — a backstop for the
+      // browser pixel (ad-blockers / no-JS). Deduped against the browser event
+      // via event_id = the Stripe session id (the thank-you page sends the same
+      // id). No-ops if CAPI isn't configured.
+      if (paid && session.amount_total != null) {
+        await sendPurchaseEvent({
+          eventId: session.id,
+          email,
+          value: session.amount_total / 100,
+          contentName: tier ? `unfair-advantage-${tier}` : undefined,
+        })
+      }
+
       // Record the purchase against the user row for /techadmin analytics.
       // Authoritative (server-verified) — complements the thank-you client
       // write which also covers Calendly tiers. Best-effort: never fail the
       // webhook (Stripe would retry) on an analytics write hiccup.
-      const md = session.metadata ?? {}
-      const sno = Number.parseInt(md.serialNumber ?? "", 10)
-      const tier = md.tier ?? ""
       if (
         isCosmosConfigured() &&
         Number.isInteger(sno) &&
         sno > 0 &&
         tier &&
-        session.payment_status === "paid"
+        paid
       ) {
-        const email = session.customer_details?.email ?? session.customer_email ?? ""
         const dollars =
           session.amount_total != null ? String(session.amount_total / 100) : ""
         try {

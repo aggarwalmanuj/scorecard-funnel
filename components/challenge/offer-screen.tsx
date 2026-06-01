@@ -13,8 +13,18 @@ import { useChallenge, type Audience } from "@/context/challenge-context"
 import { ChallengeNavHome } from "@/components/challenge/challenge-nav-home"
 import { ChallengeMenuButton } from "@/components/challenge/challenge-funnel-header-actions"
 import { VideoTestimonialsWall } from "@/components/video-testimonials-wall"
+import { track } from "@/lib/fbpixel"
 
 type Tier = "diagnostic" | "session" | "transformation"
+
+// Facebook value per tier (USD) — used for the InitiateCheckout pixel event
+// fired at the payment/booking handoff. Mirrors TIER_VALUE on the thank-you
+// page (which fires the matching Purchase event).
+const TIER_VALUE: Record<Tier, number> = {
+  diagnostic: 47,
+  session: 497,
+  transformation: 997,
+}
 
 interface TierConfig {
   id: Tier
@@ -169,6 +179,15 @@ export function OfferScreen({ audience }: { audience: Audience }) {
   // (Calendly's hosted booking page handles payment via its own
   // Stripe integration), so they skip our checkout entirely.
   const proceedToTier = (tier: Tier) => {
+    // Single chokepoint just before the payment/booking handoff (reached
+    // after any upsell decision), so InitiateCheckout fires exactly once per
+    // purchase intent regardless of which tier the user lands on. The matching
+    // Purchase event fires on the thank-you page.
+    track("InitiateCheckout", {
+      value: TIER_VALUE[tier],
+      currency: "USD",
+      content_name: `unfair-advantage-${tier}`,
+    })
     if (tier === "diagnostic") {
       proceedToStripe(tier)
     } else {
@@ -221,6 +240,11 @@ export function OfferScreen({ audience }: { audience: Audience }) {
       const url = new URL(config.url)
       url.searchParams.set("utm_source", "ai-merge-challenge")
       url.searchParams.set("utm_medium", tier)
+      // Carry the serial number through Calendly's UTM passthrough so the
+      // invitee.created webhook can record the purchase against this user row
+      // (Calendly surfaces utm_content in its webhook payload's `tracking`).
+      if (state.serialNumber != null)
+        url.searchParams.set("utm_content", String(state.serialNumber))
       if (state.firstName) url.searchParams.set("name", state.firstName)
       if (state.email) url.searchParams.set("email", state.email)
 

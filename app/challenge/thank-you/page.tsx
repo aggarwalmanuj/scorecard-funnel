@@ -181,7 +181,15 @@ export default function ThankYouPage() {
       (params.get("paid") === "1" && !!sid)
     if (!confirmed) return
     const resolved = resolveTier()
-    const dedupKey = `fb-purchase:${params.get("session_id") || resolved}`
+    // Shared id for Meta deduplication: the Stripe webhook fires CAPI with the
+    // checkout session id; the Calendly webhook fires CAPI with the invitee
+    // uuid (which Calendly also appends to this redirect as `invitee_uuid`).
+    // Passing the same id on the browser pixel lets Meta collapse the two into
+    // one Purchase. Falls back to the tier when no id is present (e.g. a
+    // Calendly plan that strips the param) — still fires, just not deduped.
+    const eventId =
+      sid ?? params.get("invitee_uuid") ?? `unfair-advantage-${resolved}`
+    const dedupKey = `fb-purchase:${eventId}`
     try {
       if (sessionStorage.getItem(dedupKey)) {
         purchaseFiredRef.current = true
@@ -191,11 +199,15 @@ export default function ThankYouPage() {
       /* sessionStorage blocked — fall through and fire once per mount */
     }
     purchaseFiredRef.current = true
-    trackWhenReady("Purchase", {
-      value: TIER_VALUE[resolved],
-      currency: "USD",
-      content_name: `unfair-advantage-${resolved}`,
-    })
+    trackWhenReady(
+      "Purchase",
+      {
+        value: TIER_VALUE[resolved],
+        currency: "USD",
+        content_name: `unfair-advantage-${resolved}`,
+      },
+      eventId,
+    )
     try {
       sessionStorage.setItem(dedupKey, "1")
     } catch {

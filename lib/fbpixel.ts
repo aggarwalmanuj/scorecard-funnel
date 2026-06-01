@@ -25,19 +25,27 @@ export function track(name: string, data: PixelData = {}) {
  * loads `fbevents.js` async, so on a slow connection `fbq` can still be a
  * stub for a moment. This poll guarantees the Purchase event isn't dropped,
  * which is what the ad algorithm optimizes against.
+ *
+ * `eventID`, when supplied, is forwarded to `fbq` so Meta can deduplicate
+ * this browser event against the matching server-side Conversions API event
+ * (see lib/server/meta-capi.ts) that carries the same id. For Purchases we
+ * pass the Stripe checkout session id (Stripe path) or the Calendly invitee
+ * uuid (Calendly path) — the server fires CAPI with the identical id.
  */
 export function trackWhenReady(
   name: string,
   data: PixelData = {},
+  eventID?: string,
   attempts = 30,
 ) {
   if (typeof window === "undefined") return
   if (window.fbq) {
-    window.fbq("track", name, data)
+    if (eventID) window.fbq("track", name, data, { eventID })
+    else window.fbq("track", name, data)
     return
   }
   if (attempts <= 0) return
-  setTimeout(() => trackWhenReady(name, data, attempts - 1), 150)
+  setTimeout(() => trackWhenReady(name, data, eventID, attempts - 1), 150)
 }
 
 export function trackCustom(name: string, data: PixelData = {}) {
@@ -58,7 +66,26 @@ export const ROUTE_EVENT_MAP: Record<string, string> = {
   "/challenge/beat-4": "Beat 4",
   "/challenge/beat-5": "Beat 5",
   "/challenge/processing": "Processing",
+  "/challenge/summary": "Summary",
   "/challenge/offer": "Offer",
   "/privacy": "Privacy",
   "/terms": "Terms",
+}
+
+/**
+ * Resolve the custom funnel-event name for a pathname.
+ *
+ * The funnel steps live under the dynamic `[audience]` segment, so real
+ * paths look like `/challenge/individual/offer` or `/challenge/team/question-1`.
+ * ROUTE_EVENT_MAP is keyed without that segment, so we strip the audience
+ * prefix before the lookup. (Previously the raw pathname was used as the key
+ * directly, which never matched — so none of these custom events ever fired.)
+ */
+export function routeEventName(pathname: string | null): string | undefined {
+  if (!pathname) return undefined
+  const normalized = pathname.replace(
+    /^\/challenge\/(?:individual|team)(?=\/|$)/,
+    "/challenge",
+  )
+  return ROUTE_EVENT_MAP[normalized]
 }

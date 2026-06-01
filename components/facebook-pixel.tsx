@@ -4,14 +4,14 @@ import { useEffect, useRef } from "react"
 import { usePathname, useSearchParams } from "next/navigation"
 import {
   FB_PIXEL_ID,
-  ROUTE_EVENT_MAP,
   pageview,
+  routeEventName,
   trackCustom,
 } from "@/lib/fbpixel"
 
 function fireRouteEvents(pathname: string | null) {
   pageview()
-  const eventName = pathname ? ROUTE_EVENT_MAP[pathname] : undefined
+  const eventName = routeEventName(pathname)
   if (eventName) trackCustom(eventName, { path: pathname })
 }
 
@@ -36,7 +36,7 @@ export default function FacebookPixelTracker() {
     if (isFirstLoad.current) {
       isFirstLoad.current = false
       whenFbqReady(() => {
-        const eventName = pathname ? ROUTE_EVENT_MAP[pathname] : undefined
+        const eventName = routeEventName(pathname)
         if (eventName) trackCustom(eventName, { path: pathname })
       })
       return
