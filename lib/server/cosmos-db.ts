@@ -101,12 +101,59 @@ export type UserDocument = {
   // recording in PostHog can be tied back to a specific tester.
   ph_session_id?: string
   ph_distinct_id?: string
+  // First-touch acquisition attribution, captured client-side at the landing
+  // and persisted at signup. All optional — direct/organic visits and
+  // documents that predate this feature simply omit them.
+  utm_source?: string
+  utm_medium?: string
+  utm_campaign?: string
+  utm_term?: string
+  utm_content?: string
+  referrer?: string
+  landing_page?: string
   // Purchase record. Written by the Stripe webhook (authoritative) and/or the
   // thank-you page (covers Calendly tiers, which never hit the Stripe webhook).
   paid_tier?: string
   paid_amount?: string
   paid_at?: string
   createdAt: string
+}
+
+/** First-touch acquisition attribution captured at signup. */
+export type Attribution = {
+  utm_source?: string
+  utm_medium?: string
+  utm_campaign?: string
+  utm_term?: string
+  utm_content?: string
+  referrer?: string
+  landing_page?: string
+}
+
+// Per-field cap for attribution values. URLs/UTM tags are short; this guards
+// against an abusive client inflating the document.
+const MAX_ATTRIBUTION_LEN = 500
+
+/** Trim attribution values to the whitelisted keys, dropping empties + capping length. */
+function sanitizeAttribution(attribution?: Attribution): Record<string, string> {
+  const keys: (keyof Attribution)[] = [
+    "utm_source",
+    "utm_medium",
+    "utm_campaign",
+    "utm_term",
+    "utm_content",
+    "referrer",
+    "landing_page",
+  ]
+  const out: Record<string, string> = {}
+  if (!attribution) return out
+  for (const key of keys) {
+    const value = attribution[key]
+    if (typeof value === "string" && value.trim().length > 0) {
+      out[key] = value.slice(0, MAX_ATTRIBUTION_LEN)
+    }
+  }
+  return out
 }
 
 /** Output fields the summary/report stage persists. Kept narrow so callers
@@ -338,7 +385,8 @@ async function getNextSerialNumber(): Promise<number> {
 export async function appendSignupRow(
   firstName: string,
   email: string,
-  audience: Audience | "" = ""
+  audience: Audience | "" = "",
+  attribution?: Attribution
 ): Promise<number> {
   await ensureInitialized()
   const sno = await getNextSerialNumber()
@@ -349,6 +397,9 @@ export async function appendSignupRow(
     firstName,
     email,
     audience,
+    // First-touch acquisition attribution (utm_* / referrer / landing_page),
+    // spread in only for the keys that are present.
+    ...sanitizeAttribution(attribution),
     question1: "",
     question2: "",
     question3: "",

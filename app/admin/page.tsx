@@ -339,6 +339,16 @@ function posthogReplayUrl(sessionId?: string): string | null {
   return `${phHost}/replay`
 }
 
+/** True when a referrer string is a clickable http(s) URL. */
+function isHttpUrl(value: string): boolean {
+  try {
+    const u = new URL(value)
+    return u.protocol === "http:" || u.protocol === "https:"
+  } catch {
+    return false
+  }
+}
+
 /** Click-to-copy chip for an id (session/distinct). */
 function CopyChip({ label, value }: { label: string; value: string }) {
   const [copied, setCopied] = useState(false)
@@ -502,7 +512,135 @@ function AnalyticsPanel() {
   )
 }
 
-/** Per-response tech block: journey progress, purchase, PostHog session link. */
+/** PostHog session link (distinct/session id + replay). Shown on BOTH /admin
+ *  and /techadmin so any admin can jump to a tester's session recording. */
+function PostHogSessionBlock({
+  r,
+}: {
+  r: { ph_session_id?: string; ph_distinct_id?: string }
+}) {
+  const replay = posthogReplayUrl(r.ph_session_id)
+  return (
+    <div>
+      <label className="mb-2 block eyebrow text-foreground/65">PostHog session</label>
+      {r.ph_session_id || r.ph_distinct_id ? (
+        <div className="flex flex-col gap-2">
+          <div className="flex flex-wrap gap-2">
+            {r.ph_distinct_id && <CopyChip label="distinct_id" value={r.ph_distinct_id} />}
+            {r.ph_session_id && <CopyChip label="session_id" value={r.ph_session_id} />}
+          </div>
+          {replay && (
+            <a
+              href={replay}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex w-fit items-center gap-1.5 text-xs text-ink hover:underline"
+            >
+              Open recording in PostHog →
+            </a>
+          )}
+        </div>
+      ) : (
+        <p className="text-xs italic text-muted-foreground">
+          No PostHog session captured (tester predates telemetry, or PostHog is
+          disabled in this environment).
+        </p>
+      )}
+    </div>
+  )
+}
+
+/** Per-response Source / Session block: first-touch attribution (utm_* /
+ *  referrer / landing page) + PostHog session link. Shown on BOTH consoles. */
+function ResponseSourceDetails({
+  r,
+}: {
+  r: {
+    ph_session_id?: string
+    ph_distinct_id?: string
+    utm_source?: string
+    utm_medium?: string
+    utm_campaign?: string
+    utm_term?: string
+    utm_content?: string
+    referrer?: string
+    landing_page?: string
+  }
+}) {
+  const utmRows: Array<{ label: string; value?: string }> = [
+    { label: "Source", value: r.utm_source },
+    { label: "Medium", value: r.utm_medium },
+    { label: "Campaign", value: r.utm_campaign },
+    { label: "Term", value: r.utm_term },
+    { label: "Content", value: r.utm_content },
+  ].filter((row) => cellFilled(row.value))
+
+  const hasAttribution =
+    utmRows.length > 0 || cellFilled(r.referrer) || cellFilled(r.landing_page)
+
+  return (
+    <>
+      <Separator />
+      <p className="eyebrow border-b border-border pb-1.5 text-foreground/65">
+        Source / Session
+      </p>
+
+      <div>
+        <label className="mb-2 block eyebrow text-foreground/65">
+          Referral / UTM
+        </label>
+        {hasAttribution ? (
+          <div className="flex flex-col gap-2">
+            {utmRows.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {utmRows.map((row) => (
+                  <Badge
+                    key={row.label}
+                    variant="outline"
+                    className="rounded-full border-ink/20 font-normal text-foreground/85"
+                  >
+                    <span className="text-foreground/50">{row.label}:</span>&nbsp;
+                    {row.value}
+                  </Badge>
+                ))}
+              </div>
+            )}
+            {cellFilled(r.referrer) && (
+              <p className="break-all text-xs text-foreground/75">
+                <span className="text-foreground/50">Referrer:</span>{" "}
+                {isHttpUrl(r.referrer!) ? (
+                  <a
+                    href={r.referrer}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-ink hover:underline"
+                  >
+                    {r.referrer}
+                  </a>
+                ) : (
+                  r.referrer
+                )}
+              </p>
+            )}
+            {cellFilled(r.landing_page) && (
+              <p className="break-all text-xs text-foreground/60">
+                <span className="text-foreground/50">Landing:</span> {r.landing_page}
+              </p>
+            )}
+          </div>
+        ) : (
+          <p className="text-xs italic text-muted-foreground">
+            Direct / no referral captured (or tester predates attribution tracking).
+          </p>
+        )}
+      </div>
+
+      <PostHogSessionBlock r={r} />
+    </>
+  )
+}
+
+/** Per-response tech block: journey progress + purchase record (/techadmin). */
 function ResponseTechDetails({
   r,
 }: {
@@ -513,8 +651,6 @@ function ResponseTechDetails({
     score_json?: string
     report_json?: string
     summary_text?: string
-    ph_session_id?: string
-    ph_distinct_id?: string
     paid_tier?: string
     paid_amount?: string
     paid_at?: string
@@ -530,7 +666,6 @@ function ResponseTechDetails({
     { label: "Summary", done: cellFilled(r.summary_text) },
     { label: "Purchased", done: cellFilled(r.paid_tier) },
   ]
-  const replay = posthogReplayUrl(r.ph_session_id)
 
   return (
     <>
@@ -567,33 +702,6 @@ function ResponseTechDetails({
           </Badge>
         </div>
       )}
-
-      <div>
-        <label className="mb-2 block eyebrow text-foreground/65">PostHog session</label>
-        {r.ph_session_id || r.ph_distinct_id ? (
-          <div className="flex flex-col gap-2">
-            <div className="flex flex-wrap gap-2">
-              {r.ph_distinct_id && <CopyChip label="distinct_id" value={r.ph_distinct_id} />}
-              {r.ph_session_id && <CopyChip label="session_id" value={r.ph_session_id} />}
-            </div>
-            {replay && (
-              <a
-                href={replay}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex w-fit items-center gap-1.5 text-xs text-ink hover:underline"
-              >
-                Open recording in PostHog →
-              </a>
-            )}
-          </div>
-        ) : (
-          <p className="text-xs italic text-muted-foreground">
-            No PostHog session captured (tester predates telemetry, or PostHog is
-            disabled in this environment).
-          </p>
-        )}
-      </div>
     </>
   )
 }
@@ -642,6 +750,10 @@ export default function AdminPage() {
     // Tech-analytics telemetry + purchase (/techadmin only).
     ph_session_id?: string; ph_distinct_id?: string
     paid_tier?: string; paid_amount?: string; paid_at?: string
+    // First-touch acquisition attribution (shown on both /admin and /techadmin).
+    utm_source?: string; utm_medium?: string; utm_campaign?: string
+    utm_term?: string; utm_content?: string
+    referrer?: string; landing_page?: string
   }
   const [responses, setResponses] = useState<UserResponse[]>([])
   const [responsesLoading, setResponsesLoading] = useState(false)
@@ -842,6 +954,11 @@ export default function AdminPage() {
       beat4_output: r.beat4_output, beat5_output: r.beat5_output,
       score_json: r.score_json ?? "", report_json: r.report_json ?? "",
       summary_text: r.summary_text ?? "", summary_audio_url: r.summary_audio_url ?? "",
+      // First-touch acquisition attribution.
+      utm_source: r.utm_source ?? "", utm_medium: r.utm_medium ?? "",
+      utm_campaign: r.utm_campaign ?? "", utm_term: r.utm_term ?? "",
+      utm_content: r.utm_content ?? "", referrer: r.referrer ?? "",
+      landing_page: r.landing_page ?? "",
     }))
     const blob = new Blob([JSON.stringify(clean, null, 2)], { type: "application/json" })
     const url = URL.createObjectURL(blob)
@@ -2258,6 +2375,7 @@ export default function AdminPage() {
                                     setReportModal({ data, name, id, dateISO })
                                   }
                                 />
+                                <ResponseSourceDetails r={r} />
                                 {isTech && <ResponseTechDetails r={r} />}
                               </div>
                             )}

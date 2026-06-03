@@ -37,6 +37,19 @@ const bodySchema = z.object({
   phDistinctId: z.string().max(200).optional(),
   paidTier: z.enum(["diagnostic", "session", "transformation"]).optional(),
   paidAmount: z.string().max(20).optional(),
+  // First-touch acquisition attribution (signup action only). Capped so a
+  // signup can't bloat the document; server re-trims via sanitizeAttribution.
+  attribution: z
+    .object({
+      utm_source: z.string().max(500).optional(),
+      utm_medium: z.string().max(500).optional(),
+      utm_campaign: z.string().max(500).optional(),
+      utm_term: z.string().max(500).optional(),
+      utm_content: z.string().max(500).optional(),
+      referrer: z.string().max(500).optional(),
+      landing_page: z.string().max(500).optional(),
+    })
+    .optional(),
 })
 
 export async function POST(request: Request) {
@@ -60,12 +73,12 @@ export async function POST(request: Request) {
     )
   }
 
-  const { action, firstName, email, audience, serialNumber, questionNumber, answer, questionText, beatNumber, feedback, output, scoreJson, reportJson, summaryText, phSessionId, phDistinctId, paidTier, paidAmount } = parsed.data
+  const { action, firstName, email, audience, serialNumber, questionNumber, answer, questionText, beatNumber, feedback, output, scoreJson, reportJson, summaryText, phSessionId, phDistinctId, paidTier, paidAmount, attribution } = parsed.data
 
   try {
     if (action === "signup") {
       // Always appends a new row, even for repeat emails. Returns the new S.No.
-      const sno = await appendSignupRow(firstName, email, audience ?? "")
+      const sno = await appendSignupRow(firstName, email, audience ?? "", attribution)
       return NextResponse.json({ ok: true, serialNumber: sno })
     } else if (action === "answer" && questionNumber && answer !== undefined) {
       if (!serialNumber) {
