@@ -1,4 +1,10 @@
 import posthog from "posthog-js"
+import { captureAttribution } from "@/lib/client/attribution"
+
+// Capture first-touch acquisition attribution (utm_* / referrer) as early as
+// possible at boot — the landing URL carries the query string that's gone by
+// the time signup happens. Idempotent and independent of PostHog being on.
+captureAttribution()
 
 /**
  * PostHog client-side initialization (Next.js 15.3+ pattern).

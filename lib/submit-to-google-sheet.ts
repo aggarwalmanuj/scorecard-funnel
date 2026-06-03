@@ -1,3 +1,5 @@
+import { getAttribution } from "@/lib/client/attribution"
+
 export type Audience = "individual" | "team"
 
 type SignupPayload = {
@@ -5,6 +7,7 @@ type SignupPayload = {
   firstName: string
   email: string
   audience?: Audience
+  attribution?: ReturnType<typeof getAttribution>
 }
 
 type AnswerPayload = {
@@ -56,10 +59,18 @@ export async function submitSignup(
   audience?: Audience
 ): Promise<number | null> {
   try {
+    // First-touch attribution (utm_* / referrer) captured at the landing.
+    const attribution = getAttribution()
     const res = await fetch("/api/sheets/append", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "signup", firstName, email, audience }),
+      body: JSON.stringify({
+        action: "signup",
+        firstName,
+        email,
+        audience,
+        ...(Object.keys(attribution).length > 0 ? { attribution } : {}),
+      }),
       keepalive: true,
     })
     if (!res.ok) {

@@ -51,7 +51,7 @@ export function VoicesSection() {
           className="grid items-end gap-10 lg:grid-cols-12 lg:gap-16"
         >
           <div className="lg:col-span-7">
-            <p className="eyebrow mb-6 text-foreground/70">IV · Voices</p>
+            <p className="eyebrow mb-6 text-foreground/70">V · Voices</p>
             <h2 className="font-serif text-[2rem] leading-[1.08] text-ink sm:text-5xl lg:text-6xl">
               Words from those who
               <span className="block font-serif-italic text-foreground">

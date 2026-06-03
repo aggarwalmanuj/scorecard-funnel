@@ -1,5 +1,6 @@
 import { MinimalHeader } from "@/components/landing-minimal/header"
 import { MinimalHero } from "@/components/landing-minimal/hero"
+import { WalkthroughSection } from "@/components/landing-minimal/walkthrough"
 import { SanctuarySection } from "@/components/landing-minimal/sanctuary"
 import { DimensionsSection } from "@/components/landing-minimal/dimensions"
 import { TakeHomeSection } from "@/components/landing-minimal/take-home"
@@ -24,6 +25,7 @@ export default function Home() {
       <MinimalHeader />
       <main>
         <MinimalHero />
+        <WalkthroughSection />
         <CredentialsSection />
         <TakeHomeSection />
         <VoicesSection />
