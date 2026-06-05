@@ -28,11 +28,10 @@ export function MinimalHero() {
             <h1 className="wrap-break-word font-serif text-[2.15rem] leading-[1.06] text-ink sm:text-6xl sm:leading-[1.02] lg:text-7xl xl:text-[5.6rem]">
               <WordReveal
                 segments={[
-                  { kind: "text", text: "Something is quietly" },
+                  { kind: "text", text: "There's an AI" },
+                  { kind: "italic", text: "poverty line." },
                   { kind: "br" },
-                  { kind: "italic", text: "limiting" },
-                  { kind: "br" },
-                  { kind: "text", text: "you." },
+                  { kind: "text", text: "Find out which side you're on." },
                 ]}
               />
             </h1>
@@ -43,16 +42,9 @@ export function MinimalHero() {
               className="mt-7 max-w-xl space-y-4 text-[15.5px] leading-[1.7] text-foreground/90 sm:mt-10 sm:space-y-5 sm:text-[1.05rem] sm:leading-[1.75]"
             >
               <p>
-                You can&apos;t always name it. But you feel it. The ceiling
-                that keeps appearing. The work that won&apos;t fully click.
-                The sense that you&apos;re functioning - but not fully
-                present in your own life.
-              </p>
-              <p className="text-foreground/70">
-                Your Unfair Advantage Score is a ten-minute reading across
-                seven dimensions of life and work. A precise, honest
-                reflection of the specific pattern running quietly underneath
-                your effort.
+                A 10-minute reading that surfaces precisely where you stand in
+                the AI era &mdash; and the architectural decisions that separate
+                the people getting wealthier from the ones getting hollowed.
               </p>
             </Reveal>
 
@@ -64,6 +56,7 @@ export function MinimalHero() {
               <ReservationForm
                 eyebrow="Begin your free reading"
                 title="Five quiet questions. One personal preview."
+                ctaLabel="Get Your Score — Free"
               />
             </Reveal>
 
