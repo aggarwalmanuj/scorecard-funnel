@@ -32,5 +32,5 @@ const nextConfig = {
     ]
   },
 }
-//patch 5.0
+//patch 6.0
 export default nextConfig
