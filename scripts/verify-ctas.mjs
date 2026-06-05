@@ -37,7 +37,7 @@ async function getHrefByText(scope, text) {
 
   // Hero CTA
   const heroSection = await page.$('#hero');
-  report.hero = heroSection ? await getHrefByText(heroSection, 'Begin the reading') : null;
+  report.hero = heroSection ? await getHrefByText(heroSection, 'Get Your Score — Free') : null;
 
   // Sanctuary CTA
   const sanctuarySection = await page.$('#sanctuary');

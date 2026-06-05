@@ -17,10 +17,12 @@ export function ReservationForm({
   id,
   eyebrow = "Reserve your reading",
   title = "Five quiet questions. One personal preview.",
+  ctaLabel = "Begin the reading",
 }: {
   id?: string
   eyebrow?: string
   title?: string
+  ctaLabel?: string
 }) {
   return (
     <div
@@ -64,7 +66,7 @@ export function ReservationForm({
             href="/challenge/audience"
             className="s-btn group w-full justify-center whitespace-nowrap"
           >
-            Begin the reading
+            {ctaLabel}
             <ArrowRight
               className="h-3.5 w-3.5 transition-transform duration-[420ms] ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:translate-x-1"
               strokeWidth={1.6}
