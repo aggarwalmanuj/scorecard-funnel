@@ -24,7 +24,7 @@ export function HeroSection() {
               <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-primary" />
             </span>
             <span className="text-foreground font-bold tracking-wide uppercase text-xs">
-              Your Unfair Advantage Score
+              Your Belief Score
             </span>
             <span className="hidden sm:inline text-foreground/20 font-bold">|</span>
             <span className="hidden sm:inline text-primary font-bold text-xs uppercase tracking-wide">
@@ -53,11 +53,10 @@ export function HeroSection() {
                 Mensa Research Journal · Peer-reviewed
               </div>
 
-              {/* Headline - sized so "Your Unfair" stays one line at every breakpoint.
+              {/* Headline - sized so "Your Belief" stays one line at every breakpoint.
                   whitespace-nowrap pins it; font-size capped below the wrap point. */}
               <h1 className="font-black tracking-tighter text-foreground leading-[0.95] text-[44px] sm:text-[56px] md:text-[64px] lg:text-[60px] xl:text-[72px]">
-                <span className="block whitespace-nowrap">Your Unfair</span>
-                <span className="block">Advantage</span>
+                <span className="block whitespace-nowrap">Your Belief</span>
                 <span className="inline-block mt-2 relative">
                   <span className="text-primary">Score.</span>
                   <svg

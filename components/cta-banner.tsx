@@ -68,7 +68,7 @@ export function CtaBanner() {
             </span>
             <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black tracking-tighter text-foreground leading-[1.02]">
               Find your
-              <span className="block text-primary mt-2">unfair advantage.</span>
+              <span className="block text-primary mt-2">belief score.</span>
             </h2>
 
             <p className="mt-6 sm:mt-8 text-lg sm:text-xl text-muted-foreground leading-relaxed">

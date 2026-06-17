@@ -2,7 +2,7 @@ import type { Metadata } from "next"
 import { ClarityReportShell } from "./shell"
 
 export const metadata: Metadata = {
-  title: "Your Unfair Advantage Report",
+  title: "Your Belief Score Report",
   description:
     "A printable, personalized report of what surfaced during your Honest Decision Challenge.",
   robots: { index: false, follow: false },

@@ -27,7 +27,7 @@ const cards: Array<{
     description:
       "Unlock your personal performance. Find the specific pattern quietly limiting your results.",
     bullets: [
-      "Personal Unfair Advantage Score",
+      "Personal Belief Score",
       "Tuned to your private context",
       "Ten quiet minutes",
     ],
@@ -40,7 +40,7 @@ const cards: Array<{
     description:
       "Optimize your leadership team. Identify the structural constraint quietly limiting collective performance.",
     bullets: [
-      "Team-level Unfair Advantage Score",
+      "Team-level Belief Score",
       "Cross-functional pattern lens",
       "Built for senior leadership",
     ],

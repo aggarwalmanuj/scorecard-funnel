@@ -302,7 +302,7 @@ export function ClarityReport() {
     try {
       await downloadReportPdf(
         root,
-        `${reportFileSlug(state.firstName)}-unfair-advantage-report.pdf`
+        `${reportFileSlug(state.firstName)}-belief-score-report.pdf`
       )
     } catch (e) {
       console.error("PDF download failed:", e)
@@ -360,7 +360,7 @@ export function ClarityReport() {
         <div className="toolbar-title">
           <span className="brand-mark brand-mark-sm" aria-hidden />
           <span style={{ fontFamily: "var(--font-serif)", fontWeight: 400, letterSpacing: "0.18em", textTransform: "uppercase", fontSize: 11, color: "var(--ink-soft)" }}>
-            Unfair Advantage Report
+            Belief Score Report
           </span>
         </div>
         <button
@@ -779,7 +779,7 @@ function ReportHeader({
           legible; html2canvas-pro renders CSS mask correctly into the PDF. */}
       <div className="logo">
         <span className="brand-mark brand-mark-sm" aria-hidden />
-        <span className="report-name">Unfair Advantage Report</span>
+        <span className="report-name">Belief Score Report</span>
       </div>
       {compact ? (
         <div className="meta">
@@ -810,7 +810,7 @@ function ReportFooter({
   return (
     <div className="foot">
       <span>
-        Unfair Advantage Report · Page {page} of {of}
+        Belief Score Report · Page {page} of {of}
       </span>
       <span>Confidential · prepared for {name || "you"}</span>
     </div>
@@ -827,7 +827,7 @@ function ScoreDonut({ value }: { value: number }) {
     <svg
       className="donut"
       viewBox="0 0 120 120"
-      aria-label={`Overall Unfair Advantage Score ${v} of 100`}
+      aria-label={`Overall Belief Score ${v} of 100`}
     >
       <defs>
         <linearGradient id="ringGrad" x1="0" y1="0" x2="1" y2="1">
@@ -939,7 +939,7 @@ function BenchmarkBlock({ overall, mean }: { overall: number; mean: number }) {
     <div className="bench">
       <div className="bench-head">
         <div>
-          <h3>Overall Unfair Advantage Score</h3>
+          <h3>Overall Belief Score</h3>
           <small>Peer set · leaders carrying unresolved clarity gaps</small>
         </div>
         <div className="bench-num">

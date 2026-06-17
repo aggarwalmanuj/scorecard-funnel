@@ -175,7 +175,7 @@ export function SevenDimensionsSection() {
             className="group h-12 sm:h-14 px-8 text-base font-extrabold rounded-xl neu-border-primary neu-shadow-primary-sm neu-btn-press"
           >
             <Link href="/challenge/audience">
-              Find My Unfair Advantage Score
+              Find My Belief Score
               <ArrowRight className="ml-2 h-4 w-4 transition-transform duration-300 group-hover:translate-x-0.5" />
             </Link>
           </Button>

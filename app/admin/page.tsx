@@ -196,7 +196,7 @@ function ResponseOutputs({
 
       {score?.clarity && (
         <div>
-          <label className="block eyebrow text-foreground/65 mb-1.5">Unfair Advantage Score</label>
+          <label className="block eyebrow text-foreground/65 mb-1.5">Belief Score</label>
           <ScoreBreakdown score={score} />
         </div>
       )}
@@ -1479,7 +1479,7 @@ export default function AdminPage() {
         <div className="mb-7 animate-fade-in-up">
           <p className="eyebrow mb-3 flex items-center gap-3 text-foreground/65">
             <span className="h-px w-6 bg-foreground/40" aria-hidden />
-            Your Unfair Advantage · Prompt configuration
+            Your Belief Score · Prompt configuration
           </p>
           <h2 className="mb-3 font-serif text-[24px] leading-snug text-ink sm:text-[28px]">
             Edit prompts for both
@@ -1791,7 +1791,7 @@ export default function AdminPage() {
                     <>
                       This controls how the AI calculates the{" "}
                       <strong className="text-foreground">{audience}</strong>{" "}
-                      <strong className="text-foreground">0–100 Unfair Advantage Score</strong>{" "}
+                      <strong className="text-foreground">0–100 Belief Score</strong>{" "}
                       and its four sub-scores (Direction, Identity, Decision,
                       Energy). It produces <em>numbers</em>, not writing — the
                       written report lives on the{" "}
@@ -2438,7 +2438,7 @@ export default function AdminPage() {
                     try {
                       await downloadReportPdf(
                         root,
-                        `${reportFileSlug(reportModal.name)}-unfair-advantage-report.pdf`
+                        `${reportFileSlug(reportModal.name)}-belief-score-report.pdf`
                       )
                     } catch (err) {
                       console.error("Admin PDF download failed:", err)

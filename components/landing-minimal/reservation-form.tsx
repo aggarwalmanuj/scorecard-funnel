@@ -51,7 +51,7 @@ export function ReservationForm({
         className="mt-4 text-[13.5px] leading-[1.7] sm:text-[14px]"
         style={{ color: "color-mix(in srgb, var(--foreground) 82%, transparent)" }}
       >
-        Take the assessment and receive your Unfair Advantage Score, a
+        Take the assessment and receive your Belief Score, a
         personalized audio summary, and key insights{" "}
         <span style={{ color: "var(--ink)" }}>
           — all free, no credit card required.

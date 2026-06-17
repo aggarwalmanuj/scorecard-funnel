@@ -12,7 +12,7 @@ const items: ReadonlyArray<{
 }> = [
   {
     number: "I",
-    title: "Your Unfair Advantage Score",
+    title: "Your Belief Score",
     body: "A precise read across all seven dimensions - and the one quietly running underneath the others.",
   },
   {

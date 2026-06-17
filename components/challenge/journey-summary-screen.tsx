@@ -385,7 +385,7 @@ export function JourneySummaryScreen({ audience }: { audience: Audience }) {
 
   const isCursorVisible = isStreaming || visibleChars < summaryText.length
 
-  // ── Unfair Advantage Score ──────────────────────────────────────────
+  // ── Belief Score ──────────────────────────────────────────
   const [clarity, setClarity] = useState<ClarityScore | null>(null)
   const [scoreSource, setScoreSourceState] = useState<ScoreSource>("pending")
   const [scoreReasons, setScoreReasons] = useState<ScoreReasons>({})
@@ -567,7 +567,7 @@ export function JourneySummaryScreen({ audience }: { audience: Audience }) {
             />
           </div>
 
-          {/* 1. Unfair Advantage Score */}
+          {/* 1. Belief Score */}
           <div
             className="mt-12"
             style={{
@@ -758,18 +758,18 @@ export function JourneySummaryScreen({ audience }: { audience: Audience }) {
   )
 }
 
-// ---------- Unfair Advantage Score card ----------
+// ---------- Belief Score card ----------
 
 function ClarityScorePending() {
   return (
     <section
-      aria-label="Unfair Advantage Score — scoring"
+      aria-label="Belief Score — scoring"
       className="s-card-static overflow-hidden"
     >
       <div className="flex items-center gap-3 px-6 py-9 sm:px-8">
         <Loader2 className="h-3.5 w-3.5 animate-spin text-ink" strokeWidth={1.6} />
         <span className="eyebrow text-foreground/70">
-          Scoring your Unfair Advantage Score…
+          Scoring your Belief Score…
         </span>
       </div>
     </section>
@@ -795,7 +795,7 @@ function ClarityScoreCard({
 
   return (
     <section
-      aria-label="Unfair Advantage Score"
+      aria-label="Belief Score"
       className="overflow-hidden rounded-md border border-border bg-card"
     >
       <div className="border-b border-border px-6 pb-5 pt-6 sm:px-8">
@@ -805,7 +805,7 @@ function ClarityScoreCard({
               className="h-1.5 w-1.5 rounded-full"
               style={{ background: bandColor }}
             />
-            Unfair Advantage Score
+            Belief Score
           </p>
           {nsState && nsState !== "UNKNOWN" ? (
             <span

@@ -64,7 +64,7 @@ export function DualPathSection() {
           </h2>
           <p className="mt-5 text-lg text-muted-foreground leading-relaxed">
             Whether you’re looking to unlock your personal performance or optimize your
-            leadership team - Your Unfair Advantage Score identifies the root cause at any
+            leadership team - Your Belief Score identifies the root cause at any
             level.
           </p>
         </div>

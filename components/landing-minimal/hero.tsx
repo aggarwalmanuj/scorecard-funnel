@@ -19,7 +19,7 @@ export function MinimalHero() {
           <div className="lg:col-span-7">
             <p className="eyebrow mb-6 text-foreground/70 sm:mb-8">
               <span className="pulse-dot mr-2.5" aria-hidden />
-              <LetterReveal text="I · Your Unfair Advantage Score" />
+              <LetterReveal text="I · Your Belief Score" />
             </p>
 
             {/* Massive serif headline - clamps tight on small phones so a
@@ -28,10 +28,10 @@ export function MinimalHero() {
             <h1 className="wrap-break-word font-serif text-[2.15rem] leading-[1.06] text-ink sm:text-6xl sm:leading-[1.02] lg:text-7xl xl:text-[5.6rem]">
               <WordReveal
                 segments={[
-                  { kind: "text", text: "There's an AI" },
-                  { kind: "italic", text: "poverty line." },
+                  { kind: "text", text: "Something underneath is" },
+                  { kind: "italic", text: "running the show." },
                   { kind: "br" },
-                  { kind: "text", text: "Find out which side you're on." },
+                  { kind: "text", text: "Find out what it is." },
                 ]}
               />
             </h1>
@@ -42,9 +42,9 @@ export function MinimalHero() {
               className="mt-7 max-w-xl space-y-4 text-[15.5px] leading-[1.7] text-foreground/90 sm:mt-10 sm:space-y-5 sm:text-[1.05rem] sm:leading-[1.75]"
             >
               <p>
-                A 10-minute reading that surfaces precisely where you stand in
-                the AI era &mdash; and the architectural decisions that separate
-                the people getting wealthier from the ones getting hollowed.
+                A 10-minute reading that surfaces the hidden belief quietly
+                shaping your decisions, your relationships, and your results
+                &mdash; and gives it back to you in plain words.
               </p>
             </Reveal>
 

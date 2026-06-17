@@ -8,7 +8,7 @@ import { ArrowRight, Gauge, Volume2, FileText, FileBarChart2, Check } from "luci
 const items = [
   {
     icon: Gauge,
-    title: "Your Unfair Advantage Score",
+    title: "Your Belief Score",
     description:
       "A precise score across all 7 dimensions - showing exactly where your hidden pattern lives.",
   },

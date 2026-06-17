@@ -99,7 +99,7 @@ export function Header() {
               <Link href="/" className="flex items-center" onClick={() => setMobileOpen(false)}>
                 <Image
                   src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Colored%20%28Transparent%29-i3BIGX38o1jOu8WEN9AsCy09XzplWy.png"
-                  alt="Your Unfair Advantage"
+                  alt="Your Belief Score"
                   width={130}
                   height={32}
                   className="dark:hidden"
@@ -108,7 +108,7 @@ export function Header() {
                 />
                 <Image
                   src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/White%20%28Transparent%29-ch7lxVfW4eNHZNaDbk70Bpfil2XuOt.png"
-                  alt="Your Unfair Advantage"
+                  alt="Your Belief Score"
                   width={130}
                   height={32}
                   className="hidden dark:block"

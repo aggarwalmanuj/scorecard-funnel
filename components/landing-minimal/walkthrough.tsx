@@ -76,7 +76,7 @@ const steps: ReadonlyArray<Step> = [
     w: 1792,
     h: 815,
     alt: "The results screen — a Clarity Readiness Index score with four pillars scored beneath it.",
-    what: "Your Unfair Advantage Score across four pillars — and the one constraint running underneath.",
+    what: "Your Belief Score across four pillars — and the one constraint running underneath.",
     why: "A precise, honest reading. Not a personality label. It shows you exactly where to look first.",
   },
   {

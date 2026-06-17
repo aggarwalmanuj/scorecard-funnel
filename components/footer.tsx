@@ -25,7 +25,7 @@ export function Footer() {
               <Link href="/" className="flex items-center group">
                 <Image
                   src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Colored%20%28Transparent%29-i3BIGX38o1jOu8WEN9AsCy09XzplWy.png"
-                  alt="Your Unfair Advantage"
+                  alt="Your Belief Score"
                   width={130}
                   height={32}
                   className="dark:hidden transition-transform duration-200 group-hover:scale-105"
@@ -34,7 +34,7 @@ export function Footer() {
                 />
                 <Image
                   src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/White%20%28Transparent%29-ch7lxVfW4eNHZNaDbk70Bpfil2XuOt.png"
-                  alt="Your Unfair Advantage"
+                  alt="Your Belief Score"
                   width={130}
                   height={32}
                   className="hidden dark:block transition-transform duration-200 group-hover:scale-105"
@@ -43,7 +43,7 @@ export function Footer() {
                 />
               </Link>
               <p className="mt-4 text-sm text-muted-foreground leading-relaxed font-medium">
-                Your Unfair Advantage Score. A 10-minute diagnostic across 7 dimensions -
+                Your Belief Score. A 10-minute diagnostic across 7 dimensions -
                 identifying the hidden pattern quietly limiting your performance.
               </p>
               <p className="mt-3 text-[12px] text-muted-foreground/80 font-medium">
@@ -69,7 +69,7 @@ export function Footer() {
         {/* Bottom Bar */}
         <div className="border-t-2 border-foreground/5 py-6 flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="text-sm text-muted-foreground font-medium">
-            &copy; {new Date().getFullYear()} Your Unfair Advantage. All rights reserved.
+            &copy; {new Date().getFullYear()} Your Belief Score. All rights reserved.
           </p>
           <div className="flex items-center gap-3">
             {socialLinks.map((link) => (

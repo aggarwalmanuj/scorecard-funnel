@@ -58,15 +58,16 @@ const SITE_URL = (
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: "Your Unfair Advantage Score | Find what's quietly limiting you",
-    template: "%s | Unfair Advantage Score",
+    default: "Your Belief Score | Find what's quietly limiting you",
+    template: "%s | Belief Score",
   },
   description:
     "Discover what's quietly limiting your performance. A 10-minute diagnostic across 7 dimensions, built on the AI Merge framework — peer-reviewed in the Mensa Research Journal. By Manuj Aggarwal, founder of TetraNoodle Technologies.",
-  applicationName: "Unfair Advantage Score",
+  applicationName: "Belief Score",
   generator: "Next.js",
   keywords: [
-    "Unfair Advantage Score",
+    "Belief Score",
+    "Belief Scorecard",
     "AI Merge",
     "Honest Decision Challenge",
     "Manuj Aggarwal",
@@ -116,8 +117,8 @@ export const metadata: Metadata = {
   },
   openGraph: {
     type: "website",
-    siteName: "Unfair Advantage Score",
-    title: "Your Unfair Advantage Score",
+    siteName: "Belief Score",
+    title: "Your Belief Score",
     description:
       "Find the hidden pattern quietly limiting your performance — across 7 dimensions of life and work. Built on the AI Merge framework.",
     url: SITE_URL,
@@ -129,13 +130,13 @@ export const metadata: Metadata = {
         url: "/newui/favicon.png",
         width: 1200,
         height: 630,
-        alt: "Unfair Advantage Score — built on the AI Merge framework",
+        alt: "Belief Score — built on the AI Merge framework",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Your Unfair Advantage Score",
+    title: "Your Belief Score",
     description:
       "A 10-minute diagnostic that names the specific pattern quietly limiting you. Built on AI Merge — peer-reviewed in the Mensa Research Journal.",
     images: ["/newui/favicon.png"],

@@ -12,7 +12,7 @@ const faqs = [
   {
     question: "Is this a personality test?",
     answer:
-      "No. This is not an assessment that gives you a label or a type. Your Unfair Advantage Score is a precise read across 7 dimensions of life and work - it identifies the specific hidden pattern limiting your results. No types, no archetypes. Just clarity.",
+      "No. This is not an assessment that gives you a label or a type. Your Belief Score is a precise read across 7 dimensions of life and work - it identifies the specific hidden pattern limiting your results. No types, no archetypes. Just clarity.",
   },
   {
     question: "What’s the difference between the Individual and Team paths?",
@@ -22,7 +22,7 @@ const faqs = [
   {
     question: "I’ve tried coaching, retreats, and assessments. How is this different?",
     answer:
-      "Most approaches deliver information or general insight. Your Unfair Advantage Score names the specific pattern running against you - so precisely that you recognize it the moment it surfaces. Built on the AI Merge framework, peer-reviewed in the Mensa Research Journal.",
+      "Most approaches deliver information or general insight. Your Belief Score names the specific pattern running against you - so precisely that you recognize it the moment it surfaces. Built on the AI Merge framework, peer-reviewed in the Mensa Research Journal.",
   },
   {
     question: "Will I be sold something at the end?",
