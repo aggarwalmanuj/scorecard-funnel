@@ -171,7 +171,7 @@ export function JourneySummaryScreen({ audience }: { audience: Audience }) {
 
   // HTML5 audio playback via the shared Safari-safe hook. Previous Web
   // Audio API impl broke on Safari macOS because `ctx.resume()` was
-  // awaited after `fetchAudioBytes()` — by then the user-activation flag
+  // awaited after `fetchAudioBytes()` - by then the user-activation flag
   // had been dropped and Safari refused to start the context, leaving
   // the Listen button permanently stuck on "Preparing audio…".
   const fetchSummaryBytes = useCallback(async (): Promise<ArrayBuffer | null> => {
@@ -210,7 +210,7 @@ export function JourneySummaryScreen({ audience }: { audience: Audience }) {
 
     if (!buffer) {
       // Buffer hasn't arrived yet. Kick off a fetch and trigger the
-      // download once it lands — but do NOT block this user gesture
+      // download once it lands - but do NOT block this user gesture
       // with an await, since Safari needs the `a.click()` to dispatch
       // from inside the same task. Best UX: surface a brief loading
       // state and let the hook's preload finish, then re-prompt.
@@ -226,7 +226,7 @@ export function JourneySummaryScreen({ audience }: { audience: Audience }) {
       return
     }
 
-    // Synchronous path — runs entirely inside the click gesture so
+    // Synchronous path - runs entirely inside the click gesture so
     // Safari permits the download dispatch.
     downloadArrayBufferAsFile({
       buffer,
@@ -242,7 +242,7 @@ export function JourneySummaryScreen({ audience }: { audience: Audience }) {
   const [visibleChars, setVisibleChars] = useState(0)
   const fullTextRef = useRef("")
   const charTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
-  // Sticky skip flag — once set (by double-click), every subsequent stream
+  // Sticky skip flag - once set (by double-click), every subsequent stream
   // chunk renders instantly instead of restarting the typewriter.
   const skippedRef = useRef(false)
 
@@ -358,7 +358,7 @@ export function JourneySummaryScreen({ audience }: { audience: Audience }) {
   // clicks that brought them here count as user activation for the
   // page). Safari ignores autoplay attempts on audio elements without
   // muted=true, so the call resolves with NotAllowedError and the
-  // hook surfaces no error — the Listen button stays visible as a
+  // hook surfaces no error - the Listen button stays visible as a
   // manual fallback. The point of this effect is to *opportunistically*
   // start playback, never to gate UI on its success.
   useEffect(() => {
@@ -501,7 +501,7 @@ export function JourneySummaryScreen({ audience }: { audience: Audience }) {
         scrollbarColor: "color-mix(in srgb, var(--signal) 40%, transparent) transparent",
       }}
     >
-      {/* Atmospheric layers — palette-driven */}
+      {/* Atmospheric layers - palette-driven */}
       <div className="pointer-events-none fixed inset-0 overflow-hidden" aria-hidden>
         <div
           className="absolute -top-16 left-1/4 h-72 w-72 rounded-full opacity-[0.18] blur-3xl animate-glow-pulse"
@@ -517,7 +517,7 @@ export function JourneySummaryScreen({ audience }: { audience: Audience }) {
         />
       </div>
 
-      {/* Top accent line — palette signal */}
+      {/* Top accent line - palette signal */}
       <div
         className="sticky top-0 z-20 h-px w-full"
         style={{
@@ -585,7 +585,7 @@ export function JourneySummaryScreen({ audience }: { audience: Audience }) {
                 nsState={nsState}
                 unlocked={unlocked}
                 onUnlock={() => {
-                  // Navigate without flipping local `unlocked` state — flipping
+                  // Navigate without flipping local `unlocked` state - flipping
                   // it triggers a re-render that paints the un-blurred content
                   // for a frame before the navigation completes, exposing the
                   // paid subscores to free users.
@@ -763,7 +763,7 @@ export function JourneySummaryScreen({ audience }: { audience: Audience }) {
 function ClarityScorePending() {
   return (
     <section
-      aria-label="Belief Score — scoring"
+      aria-label="Belief Score - scoring"
       className="s-card-static overflow-hidden"
     >
       <div className="flex items-center gap-3 px-6 py-9 sm:px-8">

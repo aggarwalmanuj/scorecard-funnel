@@ -54,7 +54,7 @@ export function ReservationForm({
         Take the assessment and receive your Belief Score, a
         personalized audio summary, and key insights{" "}
         <span style={{ color: "var(--ink)" }}>
-          — all free, no credit card required.
+          - all free, no credit card required.
         </span>{" "}
         A detailed diagnostic report is available to unlock after your
         assessment.

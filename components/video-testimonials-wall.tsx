@@ -294,7 +294,7 @@ function VideoModal({
   // browser still blocks unmuted autoplay, we fall back to a MUTED autoplay
   // (always permitted) and surface a one-tap control to restore sound. This
   // guarantees the clip always starts playing instead of sitting frozen on
-  // the poster — the "videos don't run" symptom. Re-runs when `mounted` flips
+  // the poster - the "videos don't run" symptom. Re-runs when `mounted` flips
   // (the <video> only exists after mount) and on every prev/next src change.
   useEffect(() => {
     const video = videoRef.current
@@ -436,7 +436,7 @@ function VideoModal({
           ) : (
             <>
               {/* The spinner clears on the EARLIEST signal that playback can
-                  begin — loadeddata (first frame) usually beats canplay, and
+                  begin - loadeddata (first frame) usually beats canplay, and
                   onPlaying covers the muted-fallback path; onWaiting re-shows
                   it honestly if the stream stalls mid-buffer. */}
               {/* eslint-disable-next-line jsx-a11y/media-has-caption */}

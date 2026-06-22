@@ -86,7 +86,7 @@ function PromptHelp({
       <p className="text-foreground/75">
         Each box below is one half of the AI instruction. The{" "}
         <strong className="text-foreground">System prompt</strong> is the AI&apos;s
-        rulebook — its role, the rules it follows, and the exact format it must
+        rulebook - its role, the rules it follows, and the exact format it must
         return. The <strong className="text-foreground">User prompt</strong> is the
         message we fill in with this person&apos;s answers; the{" "}
         <code className="px-1 py-0.5 rounded bg-card border border-border font-mono text-xs">{"{{tags}}"}</code>{" "}
@@ -189,7 +189,7 @@ function ResponseOutputs({
 
       {!hasAny && (
         <p className="text-muted-foreground italic text-sm">
-          No outputs captured yet — the tester hasn&apos;t reached the summary
+          No outputs captured yet - the tester hasn&apos;t reached the summary
           stage, or this submission predates output capture.
         </p>
       )}
@@ -434,7 +434,7 @@ function AnalyticsPanel() {
         </div>
         <p className="mt-1 text-[14px] leading-[1.65] text-foreground/70">
           Stage-by-stage conversion across all testers. Granular per-page paths
-          live in PostHog — use the session link on each response (User
+          live in PostHog - use the session link on each response (User
           responses tab).
         </p>
       </div>
@@ -745,7 +745,7 @@ export default function AdminPage() {
     question1_text?: string; question2_text?: string; question3_text?: string; question4_text?: string; question5_text?: string
     beat1_feedback: string; beat2_feedback: string; beat3_feedback: string; beat4_feedback: string; beat5_feedback: string
     beat1_output: string; beat2_output: string; beat3_output: string; beat4_output: string; beat5_output: string
-    // Final outputs persisted at generation time (optional — older docs lack them).
+    // Final outputs persisted at generation time (optional - older docs lack them).
     score_json?: string; report_json?: string; summary_text?: string; summary_audio_url?: string
     // Tech-analytics telemetry + purchase (/techadmin only).
     ph_session_id?: string; ph_distinct_id?: string
@@ -986,7 +986,7 @@ export default function AdminPage() {
     async (pw: string): Promise<boolean> => {
       try {
         // On /techadmin require the tech password (scope=tech); on /admin the
-        // standard one. This is what keeps the two consoles' logins distinct —
+        // standard one. This is what keeps the two consoles' logins distinct -
         // the regular admin password can't unlock /techadmin.
         const scope = isTech ? "tech" : "admin"
         const res = await fetch(`/api/admin/auth-check?scope=${scope}`, {
@@ -1241,7 +1241,7 @@ export default function AdminPage() {
       version: 3,
       audience,
       systemPrompt: current.systemPrompt,
-      // Every editable prompt — keep this list in sync with AudienceData and
+      // Every editable prompt - keep this list in sync with AudienceData and
       // handleSave so a config backup captures the full editor state. Older
       // (v2) exports omitted the score/summary/user prompts; import below
       // tolerates their absence.
@@ -1793,7 +1793,7 @@ export default function AdminPage() {
                       <strong className="text-foreground">{audience}</strong>{" "}
                       <strong className="text-foreground">0–100 Belief Score</strong>{" "}
                       and its four sub-scores (Direction, Identity, Decision,
-                      Energy). It produces <em>numbers</em>, not writing — the
+                      Energy). It produces <em>numbers</em>, not writing - the
                       written report lives on the{" "}
                       <strong className="text-foreground">“PDF report”</strong> tab.
                     </>
@@ -1806,7 +1806,7 @@ export default function AdminPage() {
                   <div className="p-6">
                     <div className="flex justify-between items-center mb-2 gap-2 flex-wrap">
                       <label className="eyebrow text-foreground/65">
-                        Score — System prompt ({audience})
+                        Score - System prompt ({audience})
                       </label>
                       <div className="flex items-center gap-3">
                         <span className="text-xs text-muted-foreground">
@@ -1838,7 +1838,7 @@ export default function AdminPage() {
                   <div className="p-6">
                     <div className="flex justify-between items-center mb-2 gap-2 flex-wrap">
                       <label className="eyebrow text-foreground/65">
-                        Score — User prompt ({audience})
+                        Score - User prompt ({audience})
                       </label>
                       <div className="flex items-center gap-3">
                         <span className="text-xs text-muted-foreground">
@@ -1890,7 +1890,7 @@ export default function AdminPage() {
                       This writes the multi-page{" "}
                       <strong className="text-foreground">{audience}</strong>{" "}
                       <strong className="text-foreground">PDF report</strong>{" "}
-                      the buyer downloads — the headline, the four pillars, the
+                      the buyer downloads - the headline, the four pillars, the
                       themes, the beat reflections, and the action steps. The{" "}
                       <em>number</em> on the cover comes from the{" "}
                       <strong className="text-foreground">“Score (0–100)”</strong> tab.
@@ -1916,7 +1916,7 @@ export default function AdminPage() {
                   <div className="p-6">
                     <div className="flex justify-between items-center mb-2 gap-2 flex-wrap">
                       <label className="eyebrow text-foreground/65">
-                        PDF report — System prompt ({audience})
+                        PDF report - System prompt ({audience})
                       </label>
                       <div className="flex items-center gap-3">
                         <span className="text-xs text-muted-foreground">
@@ -1948,7 +1948,7 @@ export default function AdminPage() {
                   <div className="p-6">
                     <div className="flex justify-between items-center mb-2 gap-2 flex-wrap">
                       <label className="eyebrow text-foreground/65">
-                        PDF report — User prompt ({audience})
+                        PDF report - User prompt ({audience})
                       </label>
                       <div className="flex items-center gap-3">
                         <span className="text-xs text-muted-foreground">
@@ -1999,12 +1999,12 @@ export default function AdminPage() {
                     <>
                       This writes the{" "}
                       <strong className="text-foreground">{audience}</strong>{" "}
-                      <strong className="text-foreground">closing summary</strong> —
+                      <strong className="text-foreground">closing summary</strong> -
                       the warm 200–280 word message (and the audio version) that
                       plays at the end of the journey.
                     </>
                   }
-                  where="The summary/results page — both the on-screen text and the “Listen” audio."
+                  where="The summary/results page - both the on-screen text and the “Listen” audio."
                   placeholders={[
                     "{{NAME}}",
                     "{{BEAT1}}",
@@ -2019,7 +2019,7 @@ export default function AdminPage() {
                   <div className="p-6">
                     <div className="flex justify-between items-center mb-2 gap-2 flex-wrap">
                       <label className="eyebrow text-foreground/65">
-                        Closing summary — System prompt ({audience})
+                        Closing summary - System prompt ({audience})
                       </label>
                       <div className="flex items-center gap-3">
                         <span className="text-xs text-muted-foreground">
@@ -2051,7 +2051,7 @@ export default function AdminPage() {
                   <div className="p-6">
                     <div className="flex justify-between items-center mb-2 gap-2 flex-wrap">
                       <label className="eyebrow text-foreground/65">
-                        Closing summary — User prompt ({audience})
+                        Closing summary - User prompt ({audience})
                       </label>
                       <div className="flex items-center gap-3">
                         <span className="text-xs text-muted-foreground">
@@ -2407,7 +2407,7 @@ export default function AdminPage() {
         )}
       </main>
 
-      {/* Report preview modal — renders a persisted report_json via the shared
+      {/* Report preview modal - renders a persisted report_json via the shared
           ReportView and exports the same client-generated PDF the user got. */}
       {reportModal && (
         <div
@@ -2424,7 +2424,7 @@ export default function AdminPage() {
               onClick={(e) => e.stopPropagation()}
             >
               <span className="truncate text-sm font-bold text-foreground">
-                Report · {reportModal.name || "—"} (#{reportModal.id})
+                Report · {reportModal.name || "-"} (#{reportModal.id})
               </span>
               <div className="flex shrink-0 items-center gap-2">
                 <Button

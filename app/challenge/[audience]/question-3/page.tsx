@@ -22,7 +22,7 @@ export default function Question3Page({ params }: { params: Promise<{ audience: 
       placeholder={prompt?.placeholder ?? ""}
       quoteZone={prompt?.quoteZone ?? ""}
       backgroundImage="/images/q3-nature.jpg"
-      imageAlt="A weathered branch curling through still air — question 3 of the AIMerge clarity diagnostic surfaces the noise pulling at a leader's attention."
+      imageAlt="A weathered branch curling through still air - question 3 of the AIMerge clarity diagnostic surfaces the noise pulling at a leader's attention."
       nextRoute={`/challenge/${audience}/question-4`}
       prevRoute={`/challenge/${audience}/question-2`}
       isMissing={isMissing}

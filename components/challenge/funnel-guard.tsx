@@ -15,7 +15,7 @@ import { isFunnelEnforced, resolveFunnelRedirect } from "@/lib/funnel-guard"
  *   hydrate from localStorage, then checks the current path against the
  *   user's state. A missing prerequisite triggers `router.replace()` to
  *   the earliest unsatisfied step. Children are not rendered while the
- *   check is in flight or a redirect is pending — this is what prevents
+ *   check is in flight or a redirect is pending - this is what prevents
  *   the flash of restricted content on direct URL access.
  *
  * The guard runs on every pathname change so that client-side soft
@@ -34,7 +34,7 @@ export function FunnelGuard({
   const { state, isHydrated } = useChallenge()
   const [cleared, setCleared] = useState(!enforced)
   // Suppress repeated router.replace calls for the same target while a
-  // navigation is in flight — without this React's strict-mode double-
+  // navigation is in flight - without this React's strict-mode double-
   // invoke and the post-replace re-render would queue duplicate pushes.
   const pendingRedirectRef = useRef<string | null>(null)
 

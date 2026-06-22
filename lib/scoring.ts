@@ -110,7 +110,7 @@ function computeDirectionClarity(q: Responses): number {
     all,
     /\bi want\b|\bi'd love\b|\bi wish\b|\bi'm ready\b|what matters to me|what i care about|what i value/gi
   )
-  // Obligation language (negative — "should/need to")
+  // Obligation language (negative - "should/need to")
   const obligation = countMatches(
     all,
     /\bi should\b|\bi need to\b|\bi have to\b|\bi must\b|\bi'm supposed to\b|expected of me|supposed to be/gi
@@ -120,7 +120,7 @@ function computeDirectionClarity(q: Responses): number {
     all,
     /\bi don'?t know\b|\bi'?m not sure\b|\bnot clear\b|\bunclear\b|\bcan'?t tell\b|\bno idea\b/gi
   )
-  // Circling — Q1 and Q2 restating the same point
+  // Circling - Q1 and Q2 restating the same point
   const q1q2Sim = jaccardSimilarity(q1, q2)
   // Q5 operational specificity
   const q5Operational =
@@ -161,7 +161,7 @@ function computeIdentityAlignment(q: Responses): number {
     /\bafraid\b|\bscared\b|\bhonestly\b|\btruth is\b|\bashamed\b|\bconfused\b|\bembarrassed\b|\btired of\b|\bi don'?t want to\b/i.test(
       q2
     )
-  // Self-reference density in Q2 — a moderate "I" count signals ownership;
+  // Self-reference density in Q2 - a moderate "I" count signals ownership;
   // zero (detached) or extreme (rumination) both reduce the signal.
   const iCount = countMatches(q2, /\bi\b/gi)
   const q2Len = q2.length
@@ -204,7 +204,7 @@ function computeDecisionReadiness(q: Responses): number {
     q2,
     /\bi don'?t know\b|\bnot sure\b|\bmaybe\b|\bmight\b|\bkind of\b|\bsort of\b/gi
   )
-  // Looping — Q1 core restated in Q2 (negative)
+  // Looping - Q1 core restated in Q2 (negative)
   const looping = jaccardSimilarity(q1, q2)
 
   let score = 48
@@ -265,7 +265,7 @@ function bandFor(overall: number): {
       band: "high",
       bandLabel: "High clarity readiness",
       bandMessage:
-        "Direction and alignment are there — one specific move unlocks significant movement.",
+        "Direction and alignment are there - one specific move unlocks significant movement.",
     }
   if (overall >= 55)
     return {
@@ -279,14 +279,14 @@ function bandFor(overall: number): {
       band: "moderate",
       bandLabel: "Moderate readiness",
       bandMessage:
-        "The weight is real, the direction is forming — this is the most common place to be.",
+        "The weight is real, the direction is forming - this is the most common place to be.",
     }
   if (overall >= 25)
     return {
       band: "significant-gaps",
       bandLabel: "Significant gaps",
       bandMessage:
-        "Multiple questions are unresolved — clarity work is the highest leverage next step.",
+        "Multiple questions are unresolved - clarity work is the highest leverage next step.",
     }
   return {
     band: "deep-stuck",
@@ -298,12 +298,12 @@ function bandFor(overall: number): {
 
 function comparisonLabelFor(overall: number): string {
   if (overall >= 70)
-    return "High clarity readiness — the question is extremely close to being named precisely enough to act on."
+    return "High clarity readiness - the question is extremely close to being named precisely enough to act on."
   if (overall < 25)
     return "Significant gaps across multiple dimensions. This is the right moment to look closely."
   const delta = overall - BENCHMARK_MEAN
   if (delta > 10)
-    return "Above average clarity readiness — one specific move unlocks significant movement."
+    return "Above average clarity readiness - one specific move unlocks significant movement."
   if (Math.abs(delta) <= 10)
     return "You are near the average for leaders carrying this kind of situation."
   return "You are below average for leaders in your peer group. This is where the most leverage lives."
@@ -316,10 +316,10 @@ function comparisonLabelFor(overall: number): string {
  * the UI consumes. Supports two known shapes (more can be added as admins
  * configure new prompts):
  *
- *   A. Legacy rubric  — { subscores: {dc, ia, dr, ea}, reasons?, nsState? }
- *   B. Simple eval    — { score: 1-10 (or 0-100), confidence?, top3issues?, summary? }
+ *   A. Legacy rubric  - { subscores: {dc, ia, dr, ea}, reasons?, nsState? }
+ *   B. Simple eval    - { score: 1-10 (or 0-100), confidence?, top3issues?, summary? }
  *
- * Returns null only when no usable signal can be extracted — in that case
+ * Returns null only when no usable signal can be extracted - in that case
  * callers should fall back to the heuristic `scoreClarity`. When the LLM
  * returns a single overall score (shape B), it fans out to all four
  * subscores. This is intentional: we don't have per-pillar resolution from
@@ -362,7 +362,7 @@ export function normalizeLlmScoreOutput(raw: unknown): {
     }
   }
 
-  // Shape B: simple eval — a single overall score (1-10 or 0-100).
+  // Shape B: simple eval - a single overall score (1-10 or 0-100).
   let overall: number | null = null
   const candidates = [o.score, o.overall, o.rating, o.value]
   for (const c of candidates) {
@@ -421,7 +421,7 @@ export function normalizeLlmScoreOutput(raw: unknown): {
 /**
  * Given subscores produced by the LLM scorer (or any external source),
  * wrap them into the same ClarityScore shape the UI expects. Does NOT
- * apply the thin-response guardrail — the LLM has already accounted for
+ * apply the thin-response guardrail - the LLM has already accounted for
  * answer thinness via the rubric.
  */
 export function buildClarityScoreFromSubscores(subs: Subscores): ClarityScore {

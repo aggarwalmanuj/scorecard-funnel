@@ -23,7 +23,7 @@ interface BeatRevealScreenProps {
   /**
    * Descriptive alt text for the hero image. Pass a sentence that names
    * what the image actually shows plus the diagnostic concept it carries
-   * (mirror, direction, noise, pattern, clarity) — search engines and LLMs
+   * (mirror, direction, noise, pattern, clarity) - search engines and LLMs
    * use this to understand the page topic.
    */
   imageAlt?: string
@@ -185,7 +185,7 @@ export function BeatRevealScreen({
 
   // Opportunistic autoplay once the typewriter finishes and the audio
   // element is primed. Chrome typically allows it after page interaction;
-  // Safari rejects with NotAllowedError, which the hook handles silently —
+  // Safari rejects with NotAllowedError, which the hook handles silently -
   // the Listen button remains visible as a manual fallback. Fires at most
   // once per beat (hasAutoplayedRef resets when beatContent changes).
   useEffect(() => {
@@ -197,7 +197,7 @@ export function BeatRevealScreen({
     audio.toggle()
   }, [isComplete, isAudioBufferReady, isAudioPlaying, audio])
 
-  // `async` is required — the body below awaits the save before
+  // `async` is required - the body below awaits the save before
   // navigating so feedback rows don't get dropped on slow connections.
   const submitFeedback = async (option: string, reason?: string) => {
     setFeedback(option)
@@ -323,7 +323,7 @@ export function BeatRevealScreen({
               <div className="img-hover-zoom relative aspect-video w-full overflow-hidden rounded-md">
                 <Image
                   src={backgroundImage}
-                  alt={imageAlt ?? `AIMerge clarity diagnostic — reflection ${beatNumber} of 5`}
+                  alt={imageAlt ?? `AIMerge clarity diagnostic - reflection ${beatNumber} of 5`}
                   fill
                   className="animate-ken-burns object-cover"
                   priority

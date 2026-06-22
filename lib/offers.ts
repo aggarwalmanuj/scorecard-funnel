@@ -1,5 +1,5 @@
 /**
- * The two "go deeper" offers shown to a Diagnostic ($47) buyer — at the end
+ * The two "go deeper" offers shown to a Diagnostic ($47) buyer - at the end
  * of their downloadable report and (later) anywhere else we want a single
  * source of truth for upsell copy + booking links.
  *
@@ -36,11 +36,11 @@ export const UPSELL_OFFERS: UpsellOffer[] = [
     id: "transformation",
     price: 997,
     label: "Deep Transformation",
-    tagline: "The shift that stays — because you hear it every morning.",
+    tagline: "The shift that stays - because you hear it every morning.",
     bullets: [
       "Everything in the Session package",
       "Extended 90-minute deep session",
-      "Two personalized narratives — past-pattern release & future self",
+      "Two personalized narratives - past-pattern release & future self",
       "30-day audio protocol in your own voice, for daily listening",
       "Two follow-up check-ins over 60 days",
     ],

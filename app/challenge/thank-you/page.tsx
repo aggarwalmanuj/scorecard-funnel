@@ -13,7 +13,7 @@ import {
 import { FB_PIXEL_ID, trackWhenReady } from "@/lib/fbpixel"
 import { persistPurchase, persistTelemetry } from "@/lib/persist-outputs"
 
-// Thank-you page — confirms successful transactions from both
+// Thank-you page - confirms successful transactions from both
 // Stripe ($47 Diagnostic) and Calendly ($497 Session / $997
 // Transformation). The view adapts to the source via the URL:
 //
@@ -36,7 +36,7 @@ interface TierCopy {
   reportTitleItalic: string
   reportCta: string
   reportNote: string
-  /** Optional low-key footer pointer — diagnostic tier only. */
+  /** Optional low-key footer pointer - diagnostic tier only. */
   footerLine?: string
 }
 
@@ -48,14 +48,14 @@ const TIER_COPY: Record<SuccessTier, TierCopy> = {
     headLead: "Your reading is",
     headEmphasis: "composed.",
     body: [
-      "What you felt but couldn't name is now on the page — the specific pattern running quietly underneath your effort, read across all seven dimensions.",
+      "What you felt but couldn't name is now on the page - the specific pattern running quietly underneath your effort, read across all seven dimensions.",
       "Take your time with it. The reading does not need to be repeated to be remembered.",
     ],
     reportTitle: "Download your report",
     reportTitleItalic: "your full reading.",
     reportCta: "Download your report",
     reportNote:
-      "A copy is also on its way to your inbox. If it hasn't arrived in a few minutes, check your spam folder — then add us to your contacts so the next one lands.",
+      "A copy is also on its way to your inbox. If it hasn't arrived in a few minutes, check your spam folder - then add us to your contacts so the next one lands.",
     footerLine:
       "When you're ready to go deeper, there's a conversation available. No hurry.",
   },
@@ -64,33 +64,33 @@ const TIER_COPY: Record<SuccessTier, TierCopy> = {
     headLead: "Thank you.",
     headEmphasis: "Your seat is held.",
     body: [
-      "This is where the reading stops being a page and becomes a conversation — your pattern named, met, and worked through with Manuj directly.",
-      "First, your report. Download it below and read it before we meet — it's what your session is built around. Bring it with you; it's the starting point for the in-depth discussion.",
+      "This is where the reading stops being a page and becomes a conversation - your pattern named, met, and worked through with Manuj directly.",
+      "First, your report. Download it below and read it before we meet - it's what your session is built around. Bring it with you; it's the starting point for the in-depth discussion.",
     ],
-    reportTitle: "Your report —",
+    reportTitle: "Your report -",
     reportTitleItalic: "what your session is built around.",
     reportCta: "Download your report",
     reportNote:
-      "Your session details and a copy of the report are on their way to your inbox. If anything needs to change, the reschedule link is in that email — and check your spam folder if it hasn't arrived in a few minutes.",
+      "Your session details and a copy of the report are on their way to your inbox. If anything needs to change, the reschedule link is in that email - and check your spam folder if it hasn't arrived in a few minutes.",
   },
   transformation: {
     eyebrow: "Payment received · This time is yours",
     headLead: "Thank you.",
     headEmphasis: "This time is yours.",
     body: [
-      "What you've reserved is undivided attention — the reading taken all the way down, to the pattern beneath the pattern, and the first concrete move out of it.",
-      "Start with your report. Download it below and sit with it before we meet; it's the map we'll work from together. Bring it to the session — there's nothing else to prepare.",
+      "What you've reserved is undivided attention - the reading taken all the way down, to the pattern beneath the pattern, and the first concrete move out of it.",
+      "Start with your report. Download it below and sit with it before we meet; it's the map we'll work from together. Bring it to the session - there's nothing else to prepare.",
     ],
-    reportTitle: "Your report —",
+    reportTitle: "Your report -",
     reportTitleItalic: "the map we'll work from.",
     reportCta: "Download your report",
     reportNote:
-      "Your session details and a copy of the report are on their way to your inbox. If the timing needs to shift, the reschedule link is in that email — and check your spam folder if it hasn't arrived shortly.",
+      "Your session details and a copy of the report are on their way to your inbox. If the timing needs to shift, the reschedule link is in that email - and check your spam folder if it hasn't arrived shortly.",
   },
 }
 
 // Facebook "Purchase" value per tier (USD). Firing this on the thank-you page
-// is what lets the ad algorithm learn which clicks convert — see the spec.
+// is what lets the ad algorithm learn which clicks convert - see the spec.
 const TIER_VALUE: Record<SuccessTier, number> = {
   diagnostic: 47,
   session: 497,
@@ -123,7 +123,7 @@ export default function ThankYouPage() {
 
   // Direct-access guard: this is a post-transaction confirmation page. When
   // funnel enforcement is on, a visit without a payment/booking signal is
-  // someone typing the URL — send them home. (The paid report itself is
+  // someone typing the URL - send them home. (The paid report itself is
   // separately protected by server-side verification, so this is just order
   // hygiene, not the security boundary.)
   useEffect(() => {
@@ -143,7 +143,7 @@ export default function ThankYouPage() {
   // Record the purchase + refresh PostHog telemetry for /techadmin analytics.
   // Reached only post-transaction; uses the buyer's serial number from context
   // (same browser as the funnel). The Stripe webhook also records purchases
-  // authoritatively — both writes are idempotent.
+  // authoritatively - both writes are idempotent.
   const recordedRef = useRef(false)
   useEffect(() => {
     if (recordedRef.current) return
@@ -162,7 +162,7 @@ export default function ThankYouPage() {
     persistTelemetry(identity)
   }, [state.serialNumber, state.email, state.firstName])
 
-  // Fire the Facebook "Purchase" pixel once, with the tier's value — this is
+  // Fire the Facebook "Purchase" pixel once, with the tier's value - this is
   // what lets the ad algorithm learn which clicks convert (per the spec).
   // This page is reached only via a post-payment redirect (?paid=1 from
   // Stripe / ?booked=1 from Calendly); we require one of those flags so a
@@ -186,7 +186,7 @@ export default function ThankYouPage() {
     // uuid (which Calendly also appends to this redirect as `invitee_uuid`).
     // Passing the same id on the browser pixel lets Meta collapse the two into
     // one Purchase. Falls back to the tier when no id is present (e.g. a
-    // Calendly plan that strips the param) — still fires, just not deduped.
+    // Calendly plan that strips the param) - still fires, just not deduped.
     const eventId =
       sid ?? params.get("invitee_uuid") ?? `unfair-advantage-${resolved}`
     const dedupKey = `fb-purchase:${eventId}`
@@ -196,7 +196,7 @@ export default function ThankYouPage() {
         return
       }
     } catch {
-      /* sessionStorage blocked — fall through and fire once per mount */
+      /* sessionStorage blocked - fall through and fire once per mount */
     }
     purchaseFiredRef.current = true
     trackWhenReady(
@@ -229,7 +229,7 @@ export default function ThankYouPage() {
     const text = state.summaryText?.trim()
     if (!text) {
       setAudioError(
-        "Your audio summary isn't ready yet — refresh in a moment and try again.",
+        "Your audio summary isn't ready yet - refresh in a moment and try again.",
       )
       return
     }
@@ -304,7 +304,7 @@ export default function ThankYouPage() {
               eyebrow="Your report · PDF"
               title={copy.reportTitle}
               titleItalic={copy.reportTitleItalic}
-              description="Your full PDF reading — your scores, the specific pattern named in plain language, three immediate behavioral shifts, and a 90-day benchmark to measure progress."
+              description="Your full PDF reading - your scores, the specific pattern named in plain language, three immediate behavioral shifts, and a 90-day benchmark to measure progress."
               actionHref={`/challenge/report?autosave=1&tier=${tier}${
                 sessionId ? `&session_id=${encodeURIComponent(sessionId)}` : ""
               }`}
@@ -315,7 +315,7 @@ export default function ThankYouPage() {
             <DownloadCard
               preview={<AudioPreview />}
               eyebrow="Audio summary · MP3"
-              title="Your reading, in voice —"
+              title="Your reading, in voice -"
               titleItalic="for listening, not reading."
               description="The personalized audio summary generated from your responses. Use it on walks, in transit, or anywhere the written page doesn't reach."
               actionLabel={
@@ -349,7 +349,7 @@ export default function ThankYouPage() {
             Yours to keep · download any time
           </p>
 
-          {/* The single, low-key "go deeper" pointer allowed on the $47 page —
+          {/* The single, low-key "go deeper" pointer allowed on the $47 page -
               no upsell cards, per the spec. */}
           {copy.footerLine && (
             <p
@@ -512,7 +512,7 @@ function DownloadCard({
 }
 
 // ──────────────────────────────────────────────────────────────
-// File previews — bespoke per-format visuals that read as
+// File previews - bespoke per-format visuals that read as
 // "this is the artifact you bought" before the user even hits
 // download. Decorative, palette-driven, marked aria-hidden.
 
@@ -523,7 +523,7 @@ function PdfPreview() {
       aria-hidden
       style={{ width: 84, height: 108 }}
     >
-      {/* Stacked-page effect — two paper shadows sit behind the
+      {/* Stacked-page effect - two paper shadows sit behind the
           front sheet so the preview reads as a multi-page PDF
           rather than a single card. */}
       <div
@@ -543,7 +543,7 @@ function PdfPreview() {
         }}
       />
 
-      {/* Front sheet — content mock so the viewer reads
+      {/* Front sheet - content mock so the viewer reads
           "diagnostic report" without literally rendering one. */}
       <div
         className="absolute inset-0 overflow-hidden rounded-sm"
@@ -565,7 +565,7 @@ function PdfPreview() {
             opacity="0.9"
           />
 
-          {/* Score panel — the most recognizable element of the
+          {/* Score panel - the most recognizable element of the
               real report, miniaturized so it reads at a glance. */}
           <rect
             x="9"
@@ -628,7 +628,7 @@ function PdfPreview() {
             fill="color-mix(in srgb, var(--foreground) 20%, transparent)"
           />
 
-          {/* Pillar bars — four mini progress rows that gesture
+          {/* Pillar bars - four mini progress rows that gesture
               at the seven-pillar score breakdown in the real PDF. */}
           {[
             { y: 70, w: 48 },
@@ -658,7 +658,7 @@ function PdfPreview() {
         </svg>
       </div>
 
-      {/* Format badge — overlaps the front sheet's bottom-right */}
+      {/* Format badge - overlaps the front sheet's bottom-right */}
       <span
         className="absolute -bottom-1.5 -right-1.5 inline-flex h-5 items-center rounded-full px-2 text-[8.5px] font-semibold tracking-[0.18em]"
         style={{
@@ -675,7 +675,7 @@ function PdfPreview() {
 }
 
 function AudioPreview() {
-  // Pre-baked waveform heights — symmetric-ish but irregular so
+  // Pre-baked waveform heights - symmetric-ish but irregular so
   // it doesn't read as a chart pattern. The center bars are
   // tallest, suggesting the loudest point of the audio.
   const bars = [
@@ -708,7 +708,7 @@ function AudioPreview() {
         }}
       />
 
-      {/* Concentric "needle-drop" ring — small play-disc cue */}
+      {/* Concentric "needle-drop" ring - small play-disc cue */}
       <div
         className="absolute"
         style={{
@@ -736,7 +736,7 @@ function AudioPreview() {
         />
       </div>
 
-      {/* Waveform — vertical bars, signal-tinted, center bars
+      {/* Waveform - vertical bars, signal-tinted, center bars
           slightly more opaque to mimic a "playhead". */}
       <div
         className="absolute inset-x-0 flex items-center justify-center gap-[2px] px-2.5"
@@ -777,7 +777,7 @@ function AudioPreview() {
 }
 
 // ──────────────────────────────────────────────────────────────
-// Success mark — Apple-style draw-in. Circle traces, then the
+// Success mark - Apple-style draw-in. Circle traces, then the
 // check traces inside it, then an outer ring begins a slow
 // ambient pulse. All animations defined in globals.css so they
 // honor prefers-reduced-motion centrally.

@@ -7,14 +7,14 @@ import { ArrowRight, Pause, Play } from "lucide-react"
 import { MagneticButton, Reveal } from "./motion"
 
 /**
- * Walkthrough — the conversion-critical "see the whole reading before you
+ * Walkthrough - the conversion-critical "see the whole reading before you
  * begin" catalogue. Ad visitors were bouncing because the ask had no
  * visible shape: they couldn't tell what they'd do or what they'd get.
  * This previews the entire funnel with the real product screenshots so the
  * commitment feels known, not uncertain.
  *
  * Motion intent: a story-style auto-advance (Instagram-segments) carries
- * passive visitors through all five steps without a click — the single
+ * passive visitors through all five steps without a click - the single
  * most important thing is that they *see* the arc. It is fully pausable
  * (WCAG 2.2.2), pauses on hover/focus so it never fights the reader, and
  * defaults to paused under prefers-reduced-motion. The image crossfade and
@@ -42,9 +42,9 @@ const steps: ReadonlyArray<Step> = [
     img: "/take/audience.png",
     w: 1880,
     h: 892,
-    alt: "The opening screen — your name, your email, and whether the reading is for you or your team.",
+    alt: "The opening screen - your name, your email, and whether the reading is for you or your team.",
     what: "Your name, your email, and whether the reading is for you or for your team.",
-    why: "The diagnostic calibrates to your level — and your results are sent to you, yours to keep.",
+    why: "The diagnostic calibrates to your level - and your results are sent to you, yours to keep.",
   },
   {
     n: "02",
@@ -53,7 +53,7 @@ const steps: ReadonlyArray<Step> = [
     img: "/take/question.png",
     w: 1888,
     h: 906,
-    alt: "A question screen — a single open question with the option to speak your answer aloud or type it.",
+    alt: "A question screen - a single open question with the option to speak your answer aloud or type it.",
     what: "Five open questions across seven dimensions. Speak each answer aloud, or type it.",
     why: "There's nothing to study and no right answer. You're simply describing what's true right now.",
   },
@@ -64,9 +64,9 @@ const steps: ReadonlyArray<Step> = [
     img: "/take/beat.png",
     w: 1879,
     h: 891,
-    alt: "A reflection screen — the reading mirrors what you've just said back to you in composed language.",
+    alt: "A reflection screen - the reading mirrors what you've just said back to you in composed language.",
     what: "Between questions, the reading mirrors what you've said back in short, composed reflections.",
-    why: "This is the moment most people feel seen — language for what they already knew but couldn't name.",
+    why: "This is the moment most people feel seen - language for what they already knew but couldn't name.",
   },
   {
     n: "04",
@@ -75,8 +75,8 @@ const steps: ReadonlyArray<Step> = [
     img: "/take/reportsummary.png",
     w: 1792,
     h: 815,
-    alt: "The results screen — a Clarity Readiness Index score with four pillars scored beneath it.",
-    what: "Your Belief Score across four pillars — and the one constraint running underneath.",
+    alt: "The results screen - a Clarity Readiness Index score with four pillars scored beneath it.",
+    what: "Your Belief Score across four pillars - and the one constraint running underneath.",
     why: "A precise, honest reading. Not a personality label. It shows you exactly where to look first.",
   },
   {
@@ -86,7 +86,7 @@ const steps: ReadonlyArray<Step> = [
     img: "/take/reportpdf.png",
     w: 988,
     h: 769,
-    alt: "The full diagnostic report — an expanded, personalised breakdown across every dimension.",
+    alt: "The full diagnostic report - an expanded, personalised breakdown across every dimension.",
     what: "A full diagnostic report and a personal audio composition, built around your exact answers.",
     why: "The complete picture: what the pattern means, what's in the way, and what shifts when it lifts.",
   },
@@ -183,7 +183,7 @@ export function WalkthroughSection() {
               Ten minutes. Five questions. One honest reading.
             </p>
             <p className="mt-3 text-[15px] leading-[1.75] text-foreground/70">
-              Here is every step, start to finish — so you know exactly what
+              Here is every step, start to finish - so you know exactly what
               you&apos;re walking into, and what you&apos;ll walk away with.
             </p>
           </div>
@@ -202,7 +202,7 @@ export function WalkthroughSection() {
             onFocusCapture={() => setInteracting(true)}
             onBlurCapture={() => setInteracting(false)}
           >
-          {/* Stage — browser-framed screenshot with story segments. */}
+          {/* Stage - browser-framed screenshot with story segments. */}
           <div className="lg:col-span-7">
             <div className="wt-frame relative overflow-hidden rounded-xl bg-card ring-1 ring-border">
               {/* Chrome bar */}
@@ -249,7 +249,7 @@ export function WalkthroughSection() {
                 </div>
               </div>
 
-              {/* Image — single tabpanel, all slides stacked + crossfaded. */}
+              {/* Image - single tabpanel, all slides stacked + crossfaded. */}
               <div
                 id="wt-panel"
                 role="tabpanel"
@@ -311,7 +311,7 @@ export function WalkthroughSection() {
             </div>
           </div>
 
-          {/* Step list — vertical tablist; the active step expands to reveal
+          {/* Step list - vertical tablist; the active step expands to reveal
               the "why". */}
           <div className="lg:col-span-5">
             <div
@@ -358,7 +358,7 @@ export function WalkthroughSection() {
                             {s.meta}
                           </span>
                         </span>
-                        {/* Expanding detail — grid-rows trick animates height
+                        {/* Expanding detail - grid-rows trick animates height
                             without measuring; only opacity/transform paint. */}
                         <span
                           className={`grid transition-all duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${

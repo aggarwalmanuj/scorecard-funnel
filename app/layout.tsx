@@ -16,14 +16,14 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 })
 
-// Inter — clean modern sans for body copy on the minimal landing.
+// Inter - clean modern sans for body copy on the minimal landing.
 const inter = Inter({
   subsets: ["latin"],
   display: "swap",
   variable: "--font-inter",
 })
 
-// Fraunces — variable serif for editorial display + italic emphasis.
+// Fraunces - variable serif for editorial display + italic emphasis.
 // Loaded with optical sizing for tighter headlines.
 const fraunces = Fraunces({
   subsets: ["latin"],
@@ -40,7 +40,7 @@ const FB_PIXEL_ID =
 
 // Google Analytics 4 measurement ID. Env-overridable for non-prod
 // properties; defaults to the production tag. Format-validated (G-XXXX…)
-// for the same template-injection reason as the FB pixel above — the value
+// for the same template-injection reason as the FB pixel above - the value
 // is interpolated into an inline <script>.
 const RAW_GA_ID =
   process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID ?? "G-J4575YSZQH"
@@ -50,7 +50,7 @@ const GA_MEASUREMENT_ID = /^G-[A-Z0-9]{4,15}$/i.test(RAW_GA_ID)
 
 // Canonical site origin. Set NEXT_PUBLIC_SITE_URL in production env so absolute
 // URLs in metadata, OG tags, and JSON-LD all resolve correctly. The fallback is
-// a placeholder — replace before shipping if the env var isn't wired up.
+// a placeholder - replace before shipping if the env var isn't wired up.
 const SITE_URL = (
   process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.example.com"
 ).replace(/\/$/, "")
@@ -62,7 +62,7 @@ export const metadata: Metadata = {
     template: "%s | Belief Score",
   },
   description:
-    "Discover what's quietly limiting your performance. A 10-minute diagnostic across 7 dimensions, built on the AI Merge framework — peer-reviewed in the Mensa Research Journal. By Manuj Aggarwal, founder of TetraNoodle Technologies.",
+    "Discover what's quietly limiting your performance. A 10-minute diagnostic across 7 dimensions, built on the AI Merge framework - peer-reviewed in the Mensa Research Journal. By Manuj Aggarwal, founder of TetraNoodle Technologies.",
   applicationName: "Belief Score",
   generator: "Next.js",
   keywords: [
@@ -110,7 +110,7 @@ export const metadata: Metadata = {
   },
   icons: {
     // White-on-transparent favicon. Browsers render it on their own toolbar
-    // background, which is universally light or dark — the white mark stays
+    // background, which is universally light or dark - the white mark stays
     // legible on either, so no separate dark/light variant is shipped.
     icon: "/newui/favicon.png",
     apple: "/newui/favicon.png",
@@ -120,7 +120,7 @@ export const metadata: Metadata = {
     siteName: "Belief Score",
     title: "Your Belief Score",
     description:
-      "Find the hidden pattern quietly limiting your performance — across 7 dimensions of life and work. Built on the AI Merge framework.",
+      "Find the hidden pattern quietly limiting your performance - across 7 dimensions of life and work. Built on the AI Merge framework.",
     url: SITE_URL,
     locale: "en_US",
     images: [
@@ -130,7 +130,7 @@ export const metadata: Metadata = {
         url: "/newui/favicon.png",
         width: 1200,
         height: 630,
-        alt: "Belief Score — built on the AI Merge framework",
+        alt: "Belief Score - built on the AI Merge framework",
       },
     ],
   },
@@ -138,7 +138,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Your Belief Score",
     description:
-      "A 10-minute diagnostic that names the specific pattern quietly limiting you. Built on AI Merge — peer-reviewed in the Mensa Research Journal.",
+      "A 10-minute diagnostic that names the specific pattern quietly limiting you. Built on AI Merge - peer-reviewed in the Mensa Research Journal.",
     images: ["/newui/favicon.png"],
     creator: "@manujaggarwal",
   },
@@ -161,7 +161,7 @@ const personSchema = {
   jobTitle: "Founder & Fractional CTO",
   worksFor: { "@id": `${SITE_URL}/#tetranoodle` },
   description:
-    "Founder of TetraNoodle Technologies. Creator of the AI Merge framework — a human–AI decision system peer-reviewed in the Mensa Research Journal and protected by four patents.",
+    "Founder of TetraNoodle Technologies. Creator of the AI Merge framework - a human–AI decision system peer-reviewed in the Mensa Research Journal and protected by four patents.",
   image: `${SITE_URL}/manuj/1762108515290.jpg`,
   url: SITE_URL,
   knowsAbout: [
@@ -194,7 +194,7 @@ const professionalServiceSchema = {
   url: SITE_URL,
   image: `${SITE_URL}/newui/favicon.png`,
   description:
-    "AI strategy and Fractional CTO services for founders and operators. Powered by AI Merge — a peer-reviewed human–AI decision system.",
+    "AI strategy and Fractional CTO services for founders and operators. Powered by AI Merge - a peer-reviewed human–AI decision system.",
   areaServed: ["United States", "Canada", "Worldwide"],
   serviceType: [
     "Fractional CTO",

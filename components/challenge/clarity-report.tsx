@@ -170,7 +170,7 @@ export function reportFileSlug(name: string): string {
 
 /**
  * Self-contained, prop-driven render of a report from an already-resolved
- * `/api/challenge/report` payload — no context, no fetching. Used by the admin
+ * `/api/challenge/report` payload - no context, no fetching. Used by the admin
  * panel to render a persisted report and (via `downloadReportPdf`) export the
  * same PDF the user got.
  */
@@ -184,7 +184,7 @@ export function ReportView({
   data: ApiResponse
   name: string
   dateISO?: string
-  /** Include the "Go deeper" offers page (default true — admin previews the
+  /** Include the "Go deeper" offers page (default true - admin previews the
    *  full Diagnostic-buyer report). */
   showOffers?: boolean
   audience?: string
@@ -627,7 +627,7 @@ function ReportPages({
           <div className="eyebrow">Go deeper</div>
           <h1 className="title small">Two ways to move what you just saw</h1>
           <p className="lede" style={{ marginBottom: 18 }}>
-            Your report names the pattern. These take it further — from seeing
+            Your report names the pattern. These take it further - from seeing
             it, to moving it, to making the shift part of how you operate.
           </p>
 

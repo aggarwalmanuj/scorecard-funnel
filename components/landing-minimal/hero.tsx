@@ -44,7 +44,7 @@ export function MinimalHero() {
               <p>
                 A 10-minute reading that surfaces the hidden belief quietly
                 shaping your decisions, your relationships, and your results
-                &mdash; and gives it back to you in plain words.
+                - and gives it back to you in plain words.
               </p>
             </Reveal>
 
@@ -56,7 +56,7 @@ export function MinimalHero() {
               <ReservationForm
                 eyebrow="Begin your free reading"
                 title="Five quiet questions. One personal preview."
-                ctaLabel="Get Your Score — Free"
+                ctaLabel="Get Your Score - Free"
               />
             </Reveal>
 

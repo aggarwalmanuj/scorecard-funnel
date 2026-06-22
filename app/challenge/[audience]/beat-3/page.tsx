@@ -17,7 +17,7 @@ export default function Beat3Page({ params }: { params: Promise<{ audience: Audi
       dynamicLabel={beat?.label ?? ""}
       feedbackQuestion={beat?.feedbackQuestion ?? ""}
       backgroundImage="/images/beat-3-noise.jpg"
-      imageAlt="Quiet water disturbed by ripples — reflection 3 of the AIMerge clarity diagnostic names the structural noise pulling at a leader's attention."
+      imageAlt="Quiet water disturbed by ripples - reflection 3 of the AIMerge clarity diagnostic names the structural noise pulling at a leader's attention."
       nextRoute={`/challenge/${audience}/beat-4`}
       prevRoute={`/challenge/${audience}/beat-2`}
     />

@@ -25,7 +25,7 @@ const processingSteps = [
 const BEAT_READY_MIN_CHARS = 40
 // Auto-navigate fallback if the pipeline hasn't completed by here.
 // 75s gives slow networks room to finish without abandoning the user
-// (testers reported sitting for ~2 min with no feedback — that wait now
+// (testers reported sitting for ~2 min with no feedback - that wait now
 // has explicit progressive messaging plus a "Continue anyway" button).
 const HARD_TIMEOUT_MS = 75_000
 // Show "this is taking a moment" after the checklist animation completes
@@ -169,7 +169,7 @@ export function ProcessingScreen({ audience }: { audience: Audience }) {
   const [audioReady, setAudioReady] = useState(false)
   // Tracks whether ALL beat-output writes to Cosmos have finished
   // (success or final failure). Gates navigation to beat-1 so the user
-  // can't reach the reveal screens — and the admin Responses tab — before
+  // can't reach the reveal screens - and the admin Responses tab - before
   // their beat_output rows have been persisted. Without this gate, fast
   // streamers can navigate while the saves are still in flight, which
   // testers reported as missing beat_output cells in the database.
@@ -375,7 +375,7 @@ export function ProcessingScreen({ audience }: { audience: Audience }) {
       // Wait for all beat-output writes to settle (success OR final
       // failure after retries) before allowing navigation. Promise.race
       // against a hard cap so the user is never stranded if Cosmos is
-      // completely unreachable — the writes will still continue under
+      // completely unreachable - the writes will still continue under
       // keepalive after navigation, and the in-page retries will have
       // exhausted by then.
       const SAVE_HARD_WAIT_MS = 12_000
@@ -609,7 +609,7 @@ export function ProcessingScreen({ audience }: { audience: Audience }) {
 
       </div>
 
-      {/* Slow-network banner — fixed at the viewport bottom so it's always
+      {/* Slow-network banner - fixed at the viewport bottom so it's always
           visible regardless of how tall the centered checklist column has
           grown. Testers reported the previous inline placement was below
           the fold on standard laptop screens. */}
@@ -623,8 +623,8 @@ export function ProcessingScreen({ audience }: { audience: Audience }) {
             <p className="flex items-center gap-2 text-center text-[12px] uppercase tracking-[0.2em] text-foreground/70 sm:text-left">
               <span className="pulse-dot" aria-hidden />
               {showEscapeHatch
-                ? "Still working — taking longer than usual."
-                : "Still working — your network is taking a moment."}
+                ? "Still working - taking longer than usual."
+                : "Still working - your network is taking a moment."}
             </p>
             {showEscapeHatch && (
               <button

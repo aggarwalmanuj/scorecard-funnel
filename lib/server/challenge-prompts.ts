@@ -3,7 +3,7 @@
  * Placeholders: {{NAME}}, {{Q1}}–{{Q5}}, {{GATE2}}, {{GATE4}}
  *
  * All keys are now audience-scoped: `<base>_<audience>` where audience is
- * "individual" or "team". The team variant has NO fallback — when admins
+ * "individual" or "team". The team variant has NO fallback - when admins
  * haven't seeded team copy, callers receive a "not configured" error and
  * must surface a clear empty state to the user.
  */
@@ -64,7 +64,7 @@ async function getPrompt(base: string, audience: Audience): Promise<string> {
     throw new Error(
       `Prompt "${key}" not found in database. ${
         audience === "team"
-          ? "Team content has not been configured yet — upload team prompts via the admin page."
+          ? "Team content has not been configured yet - upload team prompts via the admin page."
           : "Save prompts from the admin page first."
       }`
     )
@@ -115,7 +115,7 @@ export async function buildUserPromptForBeat(
 /**
  * Read the admin-configured detailed-scorecard (Clarity Readiness Report)
  * narrative prompt. Falls back to the supplied default when admins haven't
- * seeded a value — keeps the report endpoint working out of the box.
+ * seeded a value - keeps the report endpoint working out of the box.
  */
 export async function getReportSystemPrompt(
   audience: Audience,
@@ -129,7 +129,7 @@ export async function getReportSystemPrompt(
 
 /**
  * Read the admin-configured score system prompt. Falls back to the supplied
- * default when admins haven't seeded a value — keeps the score endpoint
+ * default when admins haven't seeded a value - keeps the score endpoint
  * working out of the box.
  */
 export async function getScoreSystemPrompt(
@@ -144,7 +144,7 @@ export async function getScoreSystemPrompt(
 
 /**
  * Read the admin-configured closing-summary system prompt. Falls back to the
- * supplied default when admins haven't seeded a value — keeps the summary
+ * supplied default when admins haven't seeded a value - keeps the summary
  * endpoint working out of the box.
  */
 export async function getSummarySystemPrompt(
@@ -160,7 +160,7 @@ export async function getSummarySystemPrompt(
 /**
  * Generic per-audience prompt-template reader for the score / report /
  * summary user-prompt templates. Falls back to the supplied default when no
- * Cosmos value has been saved. Returns the raw template — callers apply
+ * Cosmos value has been saved. Returns the raw template - callers apply
  * placeholder substitution.
  */
 async function getRawTemplate(

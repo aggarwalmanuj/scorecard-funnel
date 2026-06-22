@@ -17,7 +17,7 @@ export default function Beat4Page({ params }: { params: Promise<{ audience: Audi
       dynamicLabel={beat?.label ?? ""}
       feedbackQuestion={beat?.feedbackQuestion ?? ""}
       backgroundImage="/images/beat-4-pattern.jpg"
-      imageAlt="A pattern of light tracing through stone — reflection 4 of the AIMerge clarity diagnostic recalls the conditions under which a leader's most capable self showed up."
+      imageAlt="A pattern of light tracing through stone - reflection 4 of the AIMerge clarity diagnostic recalls the conditions under which a leader's most capable self showed up."
       nextRoute={`/challenge/${audience}/beat-5`}
       prevRoute={`/challenge/${audience}/beat-3`}
     />

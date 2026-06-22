@@ -54,7 +54,7 @@ function isValidEmail(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email.trim())
 }
 
-/** "a", "a and b", "a, b and c" — for the gentle requirements hint. */
+/** "a", "a and b", "a, b and c" - for the gentle requirements hint. */
 function joinWithAnd(parts: string[]): string {
   if (parts.length <= 1) return parts[0] ?? ""
   return `${parts.slice(0, -1).join(", ")} and ${parts[parts.length - 1]}`
@@ -68,7 +68,7 @@ export default function AudienceSelectionPage() {
   const [firstNameValue, setFirstNameValue] = useState("")
   const [emailValue, setEmailValue] = useState("")
   const [selected, setSelected] = useState<Audience | null>(null)
-  // Per-field "has the user interacted with this yet" — so validation hints
+  // Per-field "has the user interacted with this yet" - so validation hints
   // only appear after a field is touched (or on a submit attempt), never as
   // accusatory red text on a pristine form.
   const [touched, setTouched] = useState({ firstName: false, email: false })
@@ -103,14 +103,14 @@ export default function AudienceSelectionPage() {
   const trimmedEmail = emailValue.trim()
   const emailValid = isValidEmail(trimmedEmail)
 
-  // Inline, per-field messages — only after the field is touched.
+  // Inline, per-field messages - only after the field is touched.
   const nameMessage = touched.firstName && !trimmedName ? "Please enter your first name." : ""
   const emailMessage = !touched.email
     ? ""
     : !trimmedEmail
       ? "Please enter your email."
       : !emailValid
-        ? "That doesn't look like a valid email — try the format name@email.com."
+        ? "That doesn't look like a valid email - try the format name@email.com."
         : ""
 
   const formInvalid = !trimmedName || !emailValid || !selected
@@ -129,7 +129,7 @@ export default function AudienceSelectionPage() {
       // happened, instead of a dead grey button.
       setTouched({ firstName: true, email: true })
       // The user may have scrolled down to the path cards, far from the
-      // inputs — so just revealing an off-screen inline error isn't enough.
+      // inputs - so just revealing an off-screen inline error isn't enough.
       // Bring the first unmet requirement into view and focus it.
       if (typeof document !== "undefined") {
         const targetId = !trimmedName
@@ -218,7 +218,7 @@ export default function AudienceSelectionPage() {
               </span>
               {/* data-ph-unmask: reveal ONLY this field in PostHog session
                   replays so we can identify which tester a recording belongs
-                  to. Email + all other inputs stay masked — see the
+                  to. Email + all other inputs stay masked - see the
                   maskInputFn in instrumentation-client.ts. */}
               <Input
                 id="firstName"
@@ -349,7 +349,7 @@ export default function AudienceSelectionPage() {
             </div>
           </div>
 
-          {/* Gentle, neutral hint that explains the disabled button — updates
+          {/* Gentle, neutral hint that explains the disabled button - updates
               live as each requirement is met, so "why is the button grey?" is
               never a mystery. Per-field red messages handle format errors. */}
           {formInvalid && (

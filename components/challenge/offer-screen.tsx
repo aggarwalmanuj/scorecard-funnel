@@ -17,7 +17,7 @@ import { track } from "@/lib/fbpixel"
 
 type Tier = "diagnostic" | "session" | "transformation"
 
-// Facebook value per tier (USD) — used for the InitiateCheckout pixel event
+// Facebook value per tier (USD) - used for the InitiateCheckout pixel event
 // fired at the payment/booking handoff. Mirrors TIER_VALUE on the thank-you
 // page (which fires the matching Purchase event).
 const TIER_VALUE: Record<Tier, number> = {
@@ -52,8 +52,8 @@ const TIERS: TierConfig[] = [
       "90-day benchmark score to measure progress",
     ],
     valueStatement:
-      "Most people spend thousands on coaching that never identifies the root. This does — in a report you can read in 20 minutes.",
-    cta: "Get My Report — $47",
+      "Most people spend thousands on coaching that never identifies the root. This does - in a report you can read in 20 minutes.",
+    cta: "Get My Report - $47",
   },
   {
     id: "session",
@@ -65,37 +65,37 @@ const TIERS: TierConfig[] = [
       "Everything in the Diagnostic Report",
       "60-minute session with an AI Merge trained expert",
       "Live exploration of your specific pattern",
-      "A personalized narrative generated from your session — delivered within 48 hours",
+      "A personalized narrative generated from your session - delivered within 48 hours",
       "30-day follow-up check-in",
     ],
     valueStatement:
       "One session finds and moves the specific thing. Most people spend $500/month on support for years without this precision. This is the better investment.",
-    cta: "Book My Session — $497",
+    cta: "Book My Session - $497",
     featured: true,
   },
   {
     id: "transformation",
     price: 997,
     label: "Deep Transformation",
-    headline: "The shift that stays —",
+    headline: "The shift that stays -",
     headlineItalic: "because you hear it every morning.",
     included: [
       "Everything in the Session package",
       "Extended 90-minute deep session",
-      "Two personalized narratives — past pattern release and future self",
+      "Two personalized narratives - past pattern release and future self",
       "30-day audio protocol: your stories in your own voice, for daily listening",
       "Two follow-up check-ins over 60 days",
       "Priority booking for future sessions",
     ],
     valueStatement:
-      "Most interventions produce insight that fades within weeks. The 30-day audio protocol installs the shift permanently — because your own voice, in your own words, is the most powerful delivery mechanism for lasting change.",
-    cta: "Start My Transformation — $997",
+      "Most interventions produce insight that fades within weeks. The 30-day audio protocol installs the shift permanently - because your own voice, in your own words, is the most powerful delivery mechanism for lasting change.",
+    cta: "Start My Transformation - $997",
   },
 ]
 
 type ModalKind = "none" | "upsell-1" | "upsell-2" | "contact"
 
-// Integration targets. Diagnostic goes through Stripe — the
+// Integration targets. Diagnostic goes through Stripe - the
 // price/product are resolved server-side from env at /api/stripe/checkout.
 // Session/Transformation are paid + scheduled inside Calendly's hosted
 // flow; Calendly URLs are read from NEXT_PUBLIC_* env vars so the
@@ -127,7 +127,7 @@ export function OfferScreen({ audience }: { audience: Audience }) {
 
   // The upsells are shown at most once per visit per the doc spec
   // ("Show ONCE … never show again"). Tracked in component state so
-  // refreshes reset — that matches the intent: a single nudge per
+  // refreshes reset - that matches the intent: a single nudge per
   // purchase decision moment, not a hard never-again block.
   const [shownUpsell1, setShownUpsell1] = useState(false)
   const [shownUpsell2, setShownUpsell2] = useState(false)
@@ -195,7 +195,7 @@ export function OfferScreen({ audience }: { audience: Audience }) {
     }
   }
 
-  // $47 path — collect contact details (the Stripe price for $47
+  // $47 path - collect contact details (the Stripe price for $47
   // doesn't capture name on its own), then hand off to Stripe.
   const proceedToStripe = (tier: Tier) => {
     const email = state.email?.trim() ?? ""
@@ -211,13 +211,13 @@ export function OfferScreen({ audience }: { audience: Audience }) {
     void startCheckout(email, firstName, tier)
   }
 
-  // $497 / $997 path — Calendly hosts the booking + payment for
+  // $497 / $997 path - Calendly hosts the booking + payment for
   // these tiers. We hand off directly to the PM-supplied tier URL
   // (no API round-trip needed). On successful booking, Calendly
   // redirects back to /challenge/thank-you?booked=1&tier=... so
   // the user lands on a coherent confirmation screen with their
   // diagnostic-report download. On cancel/close the user stays on
-  // Calendly's domain — they can navigate back themselves via the
+  // Calendly's domain - they can navigate back themselves via the
   // browser back button, which lands them back on this offer page.
   const openCalendly = (tier: Tier) => {
     const config = TIER_INTEGRATION[tier]
@@ -248,9 +248,9 @@ export function OfferScreen({ audience }: { audience: Audience }) {
       if (state.firstName) url.searchParams.set("name", state.firstName)
       if (state.email) url.searchParams.set("email", state.email)
 
-      // Post-booking redirect — Calendly honors this on Standard
+      // Post-booking redirect - Calendly honors this on Standard
       // plans and above. On plans that ignore it, the user lands
-      // on Calendly's own confirmation page (still fine — they
+      // on Calendly's own confirmation page (still fine - they
       // got the calendar invite by email).
       if (typeof window !== "undefined") {
         const redirect = new URL("/challenge/thank-you", window.location.origin)
@@ -328,7 +328,7 @@ export function OfferScreen({ audience }: { audience: Audience }) {
         </div>
       </header>
 
-      {/* Compact decision header — leads with the title and subhead so
+      {/* Compact decision header - leads with the title and subhead so
           the pricing grid is in the first viewport on most screens.
           Previously this section started with an editorial figure +
           bridge copy, but that pushed pricing below the fold and felt
@@ -364,7 +364,7 @@ export function OfferScreen({ audience }: { audience: Audience }) {
         </div>
       </section>
 
-      {/* The Offer — three tiers in a single decision moment.
+      {/* The Offer - three tiers in a single decision moment.
           Lifted card surface keeps continuity with the rest of the
           funnel; signal hairline accents draw the eye in. */}
       <section
@@ -407,7 +407,7 @@ export function OfferScreen({ audience }: { audience: Audience }) {
         </div>
       </section>
 
-      {/* Voices wall — keeps social proof between offer and exit */}
+      {/* Voices wall - keeps social proof between offer and exit */}
       <section
         aria-labelledby="offer-voices-heading"
         className="border-t border-border py-16 sm:py-20"
@@ -446,7 +446,7 @@ export function OfferScreen({ audience }: { audience: Audience }) {
           <div className="mb-7 max-w-xl space-y-5 text-[16px] leading-[1.8] text-foreground/85">
             <p>What surfaced is not going anywhere.</p>
             <p className="text-foreground/75">
-              The pattern you saw is now visible — and that visibility alone
+              The pattern you saw is now visible - and that visibility alone
               changes how you move.
             </p>
             <p className="text-foreground/75">
@@ -473,7 +473,7 @@ export function OfferScreen({ audience }: { audience: Audience }) {
         </div>
       </footer>
 
-      {/* Upsell screens — shown ONCE per tier per session, between
+      {/* Upsell screens - shown ONCE per tier per session, between
           tier selection and the payment handoff. Decline routes to
           the originally-selected tier's checkout. */}
       {modal === "upsell-1" && (
@@ -483,7 +483,7 @@ export function OfferScreen({ audience }: { audience: Audience }) {
           titleItalic="want to discuss what it reveals."
           body={[
             "Most people who unlock the report find they want to discuss what it reveals with an expert.",
-            "For $450 more, you get a full 60-minute session plus a personalized narrative generated from it — delivered within 48 hours.",
+            "For $450 more, you get a full 60-minute session plus a personalized narrative generated from it - delivered within 48 hours.",
             "That's $497 total instead of $47.",
           ]}
           acceptLabel="Yes, upgrade to $497"
@@ -500,7 +500,7 @@ export function OfferScreen({ audience }: { audience: Audience }) {
           titleItalic="The audio protocol makes sure it stays moved."
           body={[
             "The session will move something. The 30-day audio protocol makes sure it stays moved.",
-            "Add the Deep Transformation package for $500 more — including a 90-minute session, two personalized narratives, and 30 days of daily audio in your own voice.",
+            "Add the Deep Transformation package for $500 more - including a 90-minute session, two personalized narratives, and 30 days of daily audio in your own voice.",
             "That's $997 total.",
           ]}
           acceptLabel="Yes, upgrade to $997"

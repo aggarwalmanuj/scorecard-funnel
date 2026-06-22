@@ -70,9 +70,9 @@ export function ReportPaywall() {
 
           <div className="mb-10 max-w-xl space-y-5 text-[16px] leading-[1.8] text-foreground/85">
             <p>
-              The four-page PDF — your scores across all seven pillars, the
+              The four-page PDF - your scores across all seven pillars, the
               specific pattern identified in plain language, three immediate
-              behavioral shifts, and a 90-day benchmark score — is included with
+              behavioral shifts, and a 90-day benchmark score - is included with
               any tier starting at $47.
             </p>
             <p className="text-foreground/75">

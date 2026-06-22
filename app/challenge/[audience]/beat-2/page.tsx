@@ -17,7 +17,7 @@ export default function Beat2Page({ params }: { params: Promise<{ audience: Audi
       dynamicLabel={beat?.label ?? ""}
       feedbackQuestion={beat?.feedbackQuestion ?? ""}
       backgroundImage="/images/beat-2-direction.jpg"
-      imageAlt="An open horizon stretching forward — reflection 2 of the AIMerge clarity diagnostic surfaces the direction your subconscious has already chosen."
+      imageAlt="An open horizon stretching forward - reflection 2 of the AIMerge clarity diagnostic surfaces the direction your subconscious has already chosen."
       nextRoute={`/challenge/${audience}/beat-3`}
       prevRoute={`/challenge/${audience}/beat-1`}
     />

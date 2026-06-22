@@ -17,7 +17,7 @@ type Audience = "individual" | "team"
 //   1. Repeat hook calls inside one page render share a single fetch
 //      (e.g. useQuestionPrompt and useBeatPrompt firing simultaneously).
 //   2. Admin edits propagate to user pages within ~30 seconds without
-//      a hard reload — the cache expires and the next render re-fetches.
+//      a hard reload - the cache expires and the next render re-fetches.
 //   3. Returning to the tab after backgrounding it always re-fetches,
 //      catching the "admin updated content while user was away" case.
 //
@@ -41,7 +41,7 @@ function clearCache() {
   for (const key of Object.keys(cache) as Audience[]) delete cache[key]
 }
 
-// Drop the cache when the tab regains focus — covers the case where an
+// Drop the cache when the tab regains focus - covers the case where an
 // admin saved while the user was away. Registered exactly once per page
 // load so we don't accumulate listeners as components mount/unmount.
 if (typeof document !== "undefined") {

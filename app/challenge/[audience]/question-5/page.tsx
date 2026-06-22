@@ -22,7 +22,7 @@ export default function Question5Page({ params }: { params: Promise<{ audience: 
       placeholder={prompt?.placeholder ?? ""}
       quoteZone={prompt?.quoteZone ?? ""}
       backgroundImage="/images/q5-morning.jpg"
-      imageAlt="An early morning room with light easing across the floor — question 5 of the AIMerge clarity diagnostic asks a leader to describe the morning the noise is gone."
+      imageAlt="An early morning room with light easing across the floor - question 5 of the AIMerge clarity diagnostic asks a leader to describe the morning the noise is gone."
       nextRoute={`/challenge/${audience}/processing`}
       prevRoute={`/challenge/${audience}/question-4`}
       isMissing={isMissing}

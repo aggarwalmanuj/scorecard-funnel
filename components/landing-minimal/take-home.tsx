@@ -7,7 +7,7 @@ const items: ReadonlyArray<{
   number: string
   title: string
   body: string
-  /** Paid add-on (unlocks after the assessment) — flagged with an asterisk. */
+  /** Paid add-on (unlocks after the assessment) - flagged with an asterisk. */
   paid?: boolean
 }> = [
   {
@@ -160,7 +160,7 @@ export function TakeHomeSection() {
                       {it.paid && (
                         <sup
                           className="ml-0.5 align-super font-sans text-[0.5em] font-semibold not-italic text-foreground/55"
-                          title="Paid — unlocks after your assessment"
+                          title="Paid - unlocks after your assessment"
                           aria-label="paid add-on"
                         >
                           *
