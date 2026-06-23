@@ -88,7 +88,7 @@ export async function POST(request: Request) {
         Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json",
         "HTTP-Referer": referer,
-        "X-Title": "Honest Decision Challenge - Journey Summary",
+        "X-Title": "Belief Score - Journey Summary",
       },
       body: JSON.stringify({
         model,

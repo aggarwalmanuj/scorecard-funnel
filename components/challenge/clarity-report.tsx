@@ -412,7 +412,7 @@ export function ClarityReport() {
           <AlertCircle size={28} />
           <p className="status-title">Nothing to report on yet.</p>
           <p className="status-sub">
-            Complete the Honest Decision Challenge first - your report is built
+            Complete the Belief Score assessment first - your report is built
             from your answers.
           </p>
           <Link href="/" className="status-link">

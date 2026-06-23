@@ -23,7 +23,7 @@ Length: 200-280 words. Economy is everything.`
  *   {{NAME}} - first name (or "you")
  *   {{BEAT1}}-{{BEAT5}} - the AI-generated beats (or "(not available)")
  */
-export const DEFAULT_SUMMARY_USER_PROMPT = `{{NAME}} just completed the Honest Decision Challenge. Here is what surfaced across their five beats of reflection:
+export const DEFAULT_SUMMARY_USER_PROMPT = `{{NAME}} just completed the Belief Score assessment. Here is what surfaced across their five beats of reflection:
 
 Beat 1 - The Pattern:
 {{BEAT1}}

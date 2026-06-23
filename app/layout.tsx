@@ -69,7 +69,7 @@ export const metadata: Metadata = {
     "Belief Score",
     "Belief Scorecard",
     "AI Merge",
-    "Honest Decision Challenge",
+    "Belief Score assessment",
     "Manuj Aggarwal",
     "TetraNoodle Technologies",
     "Fractional CTO",
