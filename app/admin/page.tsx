@@ -35,6 +35,7 @@ import {
   FileText,
   Volume2,
   Loader2,
+  MessageCircle,
 } from "lucide-react"
 import {
   ReportView,
@@ -777,6 +778,7 @@ export default function AdminPage() {
     id: string
     firstName: string
     email: string
+    phone?: string
     audience?: Audience | ""
     createdAt: string
     question1: string; question2: string; question3: string; question4: string; question5: string
@@ -981,6 +983,7 @@ export default function AdminPage() {
       id: r.id,
       firstName: r.firstName,
       email: r.email,
+      phone: r.phone ?? "",
       audience: r.audience ?? "",
       createdAt: r.createdAt,
       question1: r.question1, question1_text: r.question1_text ?? "",
@@ -2333,6 +2336,37 @@ export default function AdminPage() {
 
                             {open && (
                               <div className="border-t border-border/60 p-5 space-y-4 animate-in fade-in slide-in-from-top-1 duration-200">
+                                <p className="eyebrow text-foreground/65 pb-1.5 border-b border-border">
+                                  Contact
+                                </p>
+                                <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-sm">
+                                  {r.email ? (
+                                    <a
+                                      href={`mailto:${r.email}`}
+                                      className="text-ink hover:underline break-all"
+                                    >
+                                      {r.email}
+                                    </a>
+                                  ) : (
+                                    <span className="text-muted-foreground italic text-xs">No email</span>
+                                  )}
+                                  {r.phone ? (
+                                    <a
+                                      href={`https://wa.me/${r.phone.replace(/\D/g, "")}`}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="inline-flex items-center gap-1.5 rounded-full bg-green-500/10 px-3 py-1 text-[13px] font-medium text-green-700 ring-1 ring-green-500/20 transition-colors hover:bg-green-500/15"
+                                      title="Open WhatsApp chat"
+                                    >
+                                      <MessageCircle className="h-3.5 w-3.5" />
+                                      {r.phone}
+                                    </a>
+                                  ) : (
+                                    <span className="text-muted-foreground italic text-xs">No phone</span>
+                                  )}
+                                </div>
+
+                                <Separator />
                                 <p className="eyebrow text-foreground/65 pb-1.5 border-b border-border">
                                   Answers
                                 </p>

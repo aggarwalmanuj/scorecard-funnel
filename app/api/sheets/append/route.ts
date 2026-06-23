@@ -13,6 +13,11 @@ const bodySchema = z.object({
     (v) => (v == null ? "" : String(v).trim().slice(0, 320)),
     z.string().max(320).email("Invalid email format")
   ),
+  // Optional WhatsApp/phone (signup action) for sales follow-up.
+  phone: z.preprocess(
+    (v) => (v == null ? undefined : String(v).trim().slice(0, 40)),
+    z.string().max(40).optional()
+  ),
   audience: z.enum(["individual", "team"]).optional(),
   serialNumber: z.number().int().positive().optional(),
   questionNumber: z.number().int().min(1).max(5).optional(),
@@ -83,12 +88,12 @@ export async function POST(request: Request) {
     )
   }
 
-  const { action, firstName, email, audience, serialNumber, questionNumber, answer, questionText, beatNumber, feedback, output, scoreJson, reportJson, summaryText, phSessionId, phDistinctId, paidTier, paidAmount, attribution } = parsed.data
+  const { action, firstName, email, phone, audience, serialNumber, questionNumber, answer, questionText, beatNumber, feedback, output, scoreJson, reportJson, summaryText, phSessionId, phDistinctId, paidTier, paidAmount, attribution } = parsed.data
 
   try {
     if (action === "signup") {
       // Always appends a new row, even for repeat emails. Returns the new S.No.
-      const sno = await appendSignupRow(firstName, email, audience ?? "", attribution)
+      const sno = await appendSignupRow(firstName, email, audience ?? "", attribution, phone)
       return NextResponse.json({ ok: true, serialNumber: sno })
     } else if (action === "answer" && questionNumber && answer !== undefined) {
       if (!serialNumber) {

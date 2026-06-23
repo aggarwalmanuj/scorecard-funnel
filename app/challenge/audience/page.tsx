@@ -54,6 +54,16 @@ function isValidEmail(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email.trim())
 }
 
+// Phone is OPTIONAL, but if provided it must be plausibly dial-able so the
+// sales team's WhatsApp outreach has a usable number. Loose international
+// check: 7-15 digits (E.164 range), allowing +, spaces, dashes, parens.
+function isValidPhone(phone: string): boolean {
+  const trimmed = phone.trim()
+  if (!/^\+?[0-9\s\-().]+$/.test(trimmed)) return false
+  const digits = trimmed.replace(/\D/g, "")
+  return digits.length >= 7 && digits.length <= 15
+}
+
 /** "a", "a and b", "a, b and c" - for the gentle requirements hint. */
 function joinWithAnd(parts: string[]): string {
   if (parts.length <= 1) return parts[0] ?? ""
@@ -67,11 +77,16 @@ export default function AudienceSelectionPage() {
 
   const [firstNameValue, setFirstNameValue] = useState("")
   const [emailValue, setEmailValue] = useState("")
+  const [phoneValue, setPhoneValue] = useState("")
   const [selected, setSelected] = useState<Audience | null>(null)
   // Per-field "has the user interacted with this yet" - so validation hints
   // only appear after a field is touched (or on a submit attempt), never as
   // accusatory red text on a pristine form.
-  const [touched, setTouched] = useState({ firstName: false, email: false })
+  const [touched, setTouched] = useState({
+    firstName: false,
+    email: false,
+    phone: false,
+  })
   const [isNavigating, setIsNavigating] = useState(false)
   const [isVisible, setIsVisible] = useState(false)
 
@@ -101,7 +116,10 @@ export default function AudienceSelectionPage() {
 
   const trimmedName = firstNameValue.trim()
   const trimmedEmail = emailValue.trim()
+  const trimmedPhone = phoneValue.trim()
   const emailValid = isValidEmail(trimmedEmail)
+  // Optional: empty is fine; a non-empty value must look dial-able.
+  const phoneValid = trimmedPhone === "" || isValidPhone(trimmedPhone)
 
   // Inline, per-field messages - only after the field is touched.
   const nameMessage = touched.firstName && !trimmedName ? "Please enter your first name." : ""
@@ -112,8 +130,12 @@ export default function AudienceSelectionPage() {
       : !emailValid
         ? "That doesn't look like a valid email - try the format name@email.com."
         : ""
+  const phoneMessage =
+    touched.phone && trimmedPhone !== "" && !isValidPhone(trimmedPhone)
+      ? "Add your number with country code, e.g. +1 555 123 4567."
+      : ""
 
-  const formInvalid = !trimmedName || !emailValid || !selected
+  const formInvalid = !trimmedName || !emailValid || !phoneValid || !selected
 
   // What's still missing, for the gentle hint beside the disabled button so the
   // greyed state is never a mystery.
@@ -127,7 +149,7 @@ export default function AudienceSelectionPage() {
     if (formInvalid) {
       // Surface the inline hints so the user can see exactly why nothing
       // happened, instead of a dead grey button.
-      setTouched({ firstName: true, email: true })
+      setTouched({ firstName: true, email: true, phone: true })
       // The user may have scrolled down to the path cards, far from the
       // inputs - so just revealing an off-screen inline error isn't enough.
       // Bring the first unmet requirement into view and focus it.
@@ -136,9 +158,11 @@ export default function AudienceSelectionPage() {
           ? "firstName"
           : !emailValid
             ? "email"
-            : !selected
-              ? "path-cards"
-              : null
+            : !phoneValid
+              ? "phone"
+              : !selected
+                ? "path-cards"
+                : null
         const el = targetId ? document.getElementById(targetId) : null
         el?.scrollIntoView({ behavior: "smooth", block: "center" })
         if (el instanceof HTMLInputElement) el.focus({ preventScroll: true })
@@ -154,7 +178,12 @@ export default function AudienceSelectionPage() {
     setAudience(selected)
 
     // Fire-and-forget: the funnel is resilient to a missing serialNumber.
-    const sno = await submitSignup(trimmedName, trimmedEmail, selected!)
+    const sno = await submitSignup(
+      trimmedName,
+      trimmedEmail,
+      selected!,
+      trimmedPhone || undefined,
+    )
     if (sno !== null) {
       setSerialNumber(sno)
       // Tie this tester to their PostHog session for /techadmin.
@@ -273,6 +302,41 @@ export default function AudienceSelectionPage() {
                   className="mt-1.5 text-[12.5px] leading-snug text-destructive"
                 >
                   {emailMessage}
+                </p>
+              )}
+            </label>
+            <label className="block sm:col-span-2">
+              <span className="eyebrow mb-2 block text-foreground/70">
+                WhatsApp / phone{" "}
+                <span className="text-foreground/45 normal-case">(optional)</span>
+              </span>
+              <Input
+                id="phone"
+                name="phone-no-autofill"
+                placeholder="+1 555 123 4567"
+                type="tel"
+                inputMode="tel"
+                autoComplete="off"
+                data-lpignore="true"
+                data-form-type="other"
+                value={phoneValue}
+                onChange={(e) => setPhoneValue(e.target.value)}
+                onBlur={() => setTouched((t) => ({ ...t, phone: true }))}
+                aria-invalid={!!phoneMessage}
+                aria-describedby={phoneMessage ? "phone-error" : "phone-hint"}
+                className={`s-input h-12 ${phoneMessage ? "ring-1 ring-destructive/60" : ""}`}
+              />
+              {phoneMessage ? (
+                <p
+                  id="phone-error"
+                  role="alert"
+                  className="mt-1.5 text-[12.5px] leading-snug text-destructive"
+                >
+                  {phoneMessage}
+                </p>
+              ) : (
+                <p id="phone-hint" className="mt-1.5 text-[12px] leading-snug text-foreground/55">
+                  Include your country code so we can reach you on WhatsApp.
                 </p>
               )}
             </label>

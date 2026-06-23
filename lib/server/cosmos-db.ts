@@ -60,6 +60,8 @@ export type UserDocument = {
   id: string
   firstName: string
   email: string
+  /** Optional WhatsApp/phone for sales follow-up, captured at signup. */
+  phone?: string
   audience: Audience | ""
   question1: string
   question2: string
@@ -406,7 +408,8 @@ export async function appendSignupRow(
   firstName: string,
   email: string,
   audience: Audience | "" = "",
-  attribution?: Attribution
+  attribution?: Attribution,
+  phone?: string
 ): Promise<number> {
   await ensureInitialized()
   const sno = await getNextSerialNumber()
@@ -416,6 +419,7 @@ export async function appendSignupRow(
     id: String(sno),
     firstName,
     email,
+    phone: (phone ?? "").trim().slice(0, 40),
     audience,
     // First-touch acquisition attribution (utm_* / referrer / landing_page),
     // spread in only for the keys that are present.

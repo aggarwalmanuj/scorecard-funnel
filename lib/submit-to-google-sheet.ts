@@ -6,6 +6,7 @@ type SignupPayload = {
   action: "signup"
   firstName: string
   email: string
+  phone?: string
   audience?: Audience
   attribution?: ReturnType<typeof getAttribution>
 }
@@ -56,7 +57,8 @@ type SheetPayload = SignupPayload | AnswerPayload | FeedbackPayload | BeatOutput
 export async function submitSignup(
   firstName: string,
   email: string,
-  audience?: Audience
+  audience?: Audience,
+  phone?: string
 ): Promise<number | null> {
   try {
     // First-touch attribution (utm_* / referrer) captured at the landing.
@@ -69,6 +71,7 @@ export async function submitSignup(
         firstName,
         email,
         audience,
+        ...(phone ? { phone } : {}),
         ...(Object.keys(attribution).length > 0 ? { attribution } : {}),
       }),
       keepalive: true,
