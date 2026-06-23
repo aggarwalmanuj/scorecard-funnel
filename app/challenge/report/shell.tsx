@@ -28,7 +28,7 @@ type Access = "checking" | "allowed" | "denied"
  *    verify it SERVER-SIDE (/api/stripe/verify-session) - a forged `?paid=1`
  *    no longer unlocks anything, because only a genuinely paid Stripe session
  *    returns paid:true.
- *  - Calendly ($497 / $997): paid inside Calendly's hosted flow, so there's no
+ *  - Calendly ($497 / $1,997 / $4,997): paid inside Calendly's hosted flow, so there's no
  *    Stripe session to verify here. We allow these tiers through (the report
  *    is personalized to the viewer's own assessment). Tightening this to a
  *    true payment check requires a Calendly webhook that records paid status

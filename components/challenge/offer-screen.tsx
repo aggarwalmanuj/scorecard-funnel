@@ -14,16 +14,19 @@ import { ChallengeNavHome } from "@/components/challenge/challenge-nav-home"
 import { ChallengeMenuButton } from "@/components/challenge/challenge-funnel-header-actions"
 import { VideoTestimonialsWall } from "@/components/video-testimonials-wall"
 import { track } from "@/lib/fbpixel"
+import { STRIPE_PAYMENT_LINKS } from "@/lib/offers"
 
-type Tier = "diagnostic" | "session" | "transformation"
+type Tier = "diagnostic" | "session" | "transformation" | "elevated"
 
 // Facebook value per tier (USD) - used for the InitiateCheckout pixel event
 // fired at the payment/booking handoff. Mirrors TIER_VALUE on the thank-you
-// page (which fires the matching Purchase event).
+// page (which fires the matching Purchase event) and the Calendly webhook's
+// server-side value map. Keep all three in sync.
 const TIER_VALUE: Record<Tier, number> = {
   diagnostic: 47,
   session: 497,
-  transformation: 997,
+  transformation: 1997,
+  elevated: 4997,
 }
 
 interface TierConfig {
@@ -42,89 +45,91 @@ const TIERS: TierConfig[] = [
   {
     id: "diagnostic",
     price: 47,
-    label: "Diagnostic Report",
-    headline: "Find the pattern.",
-    headlineItalic: "Know the root cause.",
+    label: "Read The Pattern",
+    headline: "Read the pattern.",
+    headlineItalic: "In plain language.",
     included: [
-      "Full PDF diagnostic report across all 7 pillars",
-      "The specific pattern identified in plain language",
-      "Three immediate behavioral shifts based on your results",
-      "90-day benchmark score to measure progress",
+      "Your full personalised report, built from your exact answers",
+      "Four scored dimensions - where the friction is coming from",
+      "The specific pattern named, sometimes for the first time",
+      "Concrete next moves, specific to what you wrote",
     ],
     valueStatement:
-      "Most people spend thousands on coaching that never identifies the root. This does - in a report you can read in 20 minutes.",
-    cta: "Get My Report - $47",
+      "Not generic advice. Not a quiz result. Your exact words reflected back, with the mechanism underneath made visible - a document you return to.",
+    cta: "Get my report",
   },
   {
     id: "session",
     price: 497,
-    label: "Session + Report",
-    headline: "Find it. Move it.",
-    headlineItalic: "Walk away different.",
+    label: "Hear Your Story",
+    headline: "Hear your story.",
+    headlineItalic: "In your own voice.",
     included: [
-      "Everything in the Diagnostic Report",
-      "60-minute session with an AI Merge trained expert",
-      "Live exploration of your specific pattern",
-      "A personalized narrative generated from your session - delivered within 48 hours",
-      "30-day follow-up check-in",
+      "Everything in the report",
+      "Your first personalised narrative - your Purpose Story",
+      "Built from your exact words and your actual life",
+      "No call required - a structured submission at your own pace",
+      "Yours permanently",
     ],
     valueStatement:
-      "One session finds and moves the specific thing. Most people spend $500/month on support for years without this precision. This is the better investment.",
-    cta: "Book My Session - $497",
+      "Credited in full toward the Protocol if you go deeper within 30 days.",
+    cta: "Hear my story",
     featured: true,
   },
   {
     id: "transformation",
-    price: 997,
-    label: "Deep Transformation",
-    headline: "The shift that stays -",
-    headlineItalic: "because you hear it every morning.",
+    price: 1997,
+    label: "Believe Yourself",
+    headline: "Believe yourself.",
+    headlineItalic: "Four weeks. Four stories.",
     included: [
-      "Everything in the Session package",
-      "Extended 90-minute deep session",
-      "Two personalized narratives - past pattern release and future self",
-      "30-day audio protocol: your stories in your own voice, for daily listening",
-      "Two follow-up check-ins over 60 days",
-      "Priority booking for future sessions",
+      "Everything in the Story Session",
+      "One intake conversation with a trained practitioner",
+      "Four personalised narratives - Purpose, Past, Future, Integration",
+      "A midpoint check-in and an integration session at week four",
+      "28-day Signal Wall to make your own change visible",
+      "Money-back guarantee",
     ],
     valueStatement:
-      "Most interventions produce insight that fades within weeks. The 30-day audio protocol installs the shift permanently - because your own voice, in your own words, is the most powerful delivery mechanism for lasting change.",
-    cta: "Start My Transformation - $997",
+      "One story shows you what is running. Four walk you through what becomes possible when it stops.",
+    cta: "Begin the Protocol",
+  },
+  {
+    id: "elevated",
+    price: 4997,
+    label: "Build From That Belief",
+    headline: "Build from that belief.",
+    headlineItalic: "Eight weeks, produced.",
+    included: [
+      "Everything in the Protocol",
+      "Extended to eight weeks - deeper integration, more ground covered",
+      "Direct practitioner access between sessions",
+      "An additional deep-dive session at week six",
+      "Professionally produced audio with original music",
+      "A shareable legacy version of your story",
+    ],
+    valueStatement:
+      "Where what you saw, believed, and built becomes something that travels - a produced audio experience your family can hear.",
+    cta: "Go Elevated",
   },
 ]
 
-type ModalKind = "none" | "upsell-1" | "upsell-2" | "contact"
+type ModalKind = "none" | "upsell-1" | "upsell-2"
 
-// Integration targets. Diagnostic goes through Stripe - the
-// price/product are resolved server-side from env at /api/stripe/checkout.
-// Session/Transformation are paid + scheduled inside Calendly's hosted
-// flow; Calendly URLs are read from NEXT_PUBLIC_* env vars so the
-// booking team can rotate them without a code change.
-//
-// Required env vars:
-//   NEXT_PUBLIC_CALENDLY_SESSION_URL          ($497 tier)
-//   NEXT_PUBLIC_CALENDLY_TRANSFORMATION_URL   ($997 tier)
-const TIER_INTEGRATION = {
-  diagnostic: { type: "stripe" as const },
-  session: {
-    type: "calendly" as const,
-    url: process.env.NEXT_PUBLIC_CALENDLY_SESSION_URL ?? "",
-  },
-  transformation: {
-    type: "calendly" as const,
-    url: process.env.NEXT_PUBLIC_CALENDLY_TRANSFORMATION_URL ?? "",
-  },
-}
+// Each tier hands off to its Stripe Payment Link (single source of truth in
+// lib/offers.ts, shared with the in-report "go deeper" links). Stripe collects
+// payment + email, then redirects to our thank-you page — that redirect URL is
+// configured PER LINK in the Stripe Dashboard (Payment Link → After payment →
+// Redirect customers to your website), set to:
+//   https://<site>/challenge/thank-you?paid=1&tier=<id>
+// Stripe automatically appends &session_id=… so the thank-you page can unlock
+// the report (verified server-side via /api/stripe/verify-session).
 
 export function OfferScreen({ audience }: { audience: Audience }) {
   const { state } = useChallenge()
   const [isProcessing, setIsProcessing] = useState(false)
   const [modal, setModal] = useState<ModalKind>("none")
   const [pendingTier, setPendingTier] = useState<Tier | null>(null)
-  const [modalEmail, setModalEmail] = useState("")
-  const [modalFirstName, setModalFirstName] = useState("")
-  const [modalError, setModalError] = useState("")
-
   // The upsells are shown at most once per visit per the doc spec
   // ("Show ONCE … never show again"). Tracked in component state so
   // refreshes reset - that matches the intent: a single nudge per
@@ -132,140 +137,39 @@ export function OfferScreen({ audience }: { audience: Audience }) {
   const [shownUpsell1, setShownUpsell1] = useState(false)
   const [shownUpsell2, setShownUpsell2] = useState(false)
 
-  const isValidEmail = (e: string) =>
-    /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(e.trim())
-
-  const startCheckout = async (
-    email: string,
-    firstName: string,
-    tier: Tier,
-  ) => {
-    setIsProcessing(true)
-    try {
-      const res = await fetch("/api/stripe/checkout", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email,
-          firstName: firstName || undefined,
-          audience,
-          tier,
-          // Lets the Stripe webhook record the purchase against this row.
-          serialNumber: state.serialNumber ?? undefined,
-        }),
-      })
-      const data = (await res.json()) as {
-        checkoutUrl?: string
-        error?: string
-      }
-      if (!res.ok || !data.checkoutUrl) {
-        console.error("[stripe/checkout] failed", data)
-        setModalError(
-          data.error ?? "Could not start checkout. Please try again.",
-        )
-        setIsProcessing(false)
-        return
-      }
-      window.location.assign(data.checkoutUrl)
-    } catch (err) {
-      console.error("[stripe/checkout] network error", err)
-      setModalError("Network error. Please try again.")
-      setIsProcessing(false)
-    }
-  }
-
-  // The $47 Diagnostic Report is the only tier that goes through
-  // Stripe. The $497 / $997 tiers book directly through Calendly
-  // (Calendly's hosted booking page handles payment via its own
-  // Stripe integration), so they skip our checkout entirely.
+  // Single chokepoint just before the payment handoff (reached after any
+  // upsell decision), so InitiateCheckout fires exactly once per purchase
+  // intent regardless of which tier the user lands on. Then we navigate to the
+  // tier's Stripe Payment Link. The funnel serial rides along as
+  // client_reference_id (Stripe surfaces it on the Checkout Session so the
+  // webhook can tie the purchase back to this row), and the email is prefilled.
+  // The matching Purchase event fires server-side from the Stripe webhook and
+  // on the thank-you page (deduped via the Checkout Session id).
   const proceedToTier = (tier: Tier) => {
-    // Single chokepoint just before the payment/booking handoff (reached
-    // after any upsell decision), so InitiateCheckout fires exactly once per
-    // purchase intent regardless of which tier the user lands on. The matching
-    // Purchase event fires on the thank-you page.
     track("InitiateCheckout", {
       value: TIER_VALUE[tier],
       currency: "USD",
       content_name: `unfair-advantage-${tier}`,
     })
-    if (tier === "diagnostic") {
-      proceedToStripe(tier)
-    } else {
-      void openCalendly(tier)
-    }
-  }
-
-  // $47 path - collect contact details (the Stripe price for $47
-  // doesn't capture name on its own), then hand off to Stripe.
-  const proceedToStripe = (tier: Tier) => {
-    const email = state.email?.trim() ?? ""
-    const firstName = state.firstName?.trim() ?? ""
-    if (!isValidEmail(email) || !firstName) {
-      setPendingTier(tier)
-      setModalEmail(isValidEmail(email) ? email : "")
-      setModalFirstName(firstName)
-      setModalError("")
-      setModal("contact")
-      return
-    }
-    void startCheckout(email, firstName, tier)
-  }
-
-  // $497 / $997 path - Calendly hosts the booking + payment for
-  // these tiers. We hand off directly to the PM-supplied tier URL
-  // (no API round-trip needed). On successful booking, Calendly
-  // redirects back to /challenge/thank-you?booked=1&tier=... so
-  // the user lands on a coherent confirmation screen with their
-  // diagnostic-report download. On cancel/close the user stays on
-  // Calendly's domain - they can navigate back themselves via the
-  // browser back button, which lands them back on this offer page.
-  const openCalendly = (tier: Tier) => {
-    const config = TIER_INTEGRATION[tier]
-    if (config.type !== "calendly") return
-    if (!config.url) {
-      console.error(
-        `[calendly] missing URL for tier "${tier}". Set NEXT_PUBLIC_CALENDLY_${
-          tier === "session" ? "SESSION" : "TRANSFORMATION"
-        }_URL in your environment.`,
-      )
-      setModal("contact")
-      setModalError(
-        "Booking is temporarily unavailable. Please try again shortly or email us.",
-      )
+    const link = STRIPE_PAYMENT_LINKS[tier]
+    if (!link) {
+      console.error(`[stripe] no payment link configured for tier "${tier}"`)
       return
     }
     setPendingTier(tier)
     setIsProcessing(true)
     try {
-      const url = new URL(config.url)
-      url.searchParams.set("utm_source", "ai-merge-challenge")
-      url.searchParams.set("utm_medium", tier)
-      // Carry the serial number through Calendly's UTM passthrough so the
-      // invitee.created webhook can record the purchase against this user row
-      // (Calendly surfaces utm_content in its webhook payload's `tracking`).
+      const url = new URL(link)
+      // Reserved Stripe Payment Link query params:
+      //   client_reference_id → echoed onto the Checkout Session for the webhook
+      //   prefilled_email     → pre-fills the email field on Stripe's page
       if (state.serialNumber != null)
-        url.searchParams.set("utm_content", String(state.serialNumber))
-      if (state.firstName) url.searchParams.set("name", state.firstName)
-      if (state.email) url.searchParams.set("email", state.email)
-
-      // Post-booking redirect - Calendly honors this on Standard
-      // plans and above. On plans that ignore it, the user lands
-      // on Calendly's own confirmation page (still fine - they
-      // got the calendar invite by email).
-      if (typeof window !== "undefined") {
-        const redirect = new URL("/challenge/thank-you", window.location.origin)
-        redirect.searchParams.set("booked", "1")
-        redirect.searchParams.set("tier", tier)
-        if (audience) redirect.searchParams.set("audience", audience)
-        url.searchParams.set("redirect_url", redirect.toString())
-      }
-
+        url.searchParams.set("client_reference_id", String(state.serialNumber))
+      if (state.email) url.searchParams.set("prefilled_email", state.email)
       window.location.assign(url.toString())
     } catch (err) {
-      console.error("[calendly] failed to open", err)
+      console.error("[stripe] failed to open payment link", err)
       setIsProcessing(false)
-      setModal("contact")
-      setModalError("Could not open booking. Please try again.")
     }
   }
 
@@ -293,26 +197,6 @@ export function OfferScreen({ audience }: { audience: Audience }) {
   const declineUpsell = (originalTier: Tier) => {
     setModal("none")
     proceedToTier(originalTier)
-  }
-
-  const handleContactSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    const email = modalEmail.trim()
-    const firstName = modalFirstName.trim()
-    if (!firstName) {
-      setModalError("Please enter your first name.")
-      return
-    }
-    if (!isValidEmail(email)) {
-      setModalError("Please enter a valid email address.")
-      return
-    }
-    if (!pendingTier) {
-      setModalError("Something went wrong. Please pick an option again.")
-      return
-    }
-    setModalError("")
-    await startCheckout(email, firstName, pendingTier)
   }
 
   return (
@@ -359,7 +243,7 @@ export function OfferScreen({ audience }: { audience: Audience }) {
           </h1>
 
           <p className="max-w-xl text-[15px] leading-[1.75] text-foreground/75 sm:text-[16px]">
-            All options include your full diagnostic report.
+            Each step includes everything before it. Go as deep as you choose.
           </p>
         </div>
       </section>
@@ -388,7 +272,7 @@ export function OfferScreen({ audience }: { audience: Audience }) {
         />
 
         <div className="mx-auto max-w-6xl">
-          <div className="grid grid-cols-1 gap-6 md:gap-7 lg:grid-cols-3 lg:items-stretch">
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:gap-7 xl:grid-cols-4 xl:items-stretch">
             {TIERS.map((tier, idx) => (
               <TierCard
                 key={tier.id}
@@ -479,14 +363,14 @@ export function OfferScreen({ audience }: { audience: Audience }) {
       {modal === "upsell-1" && (
         <UpsellModal
           eyebrow="One more thing before you checkout"
-          title="Most people who unlock the report"
-          titleItalic="want to discuss what it reveals."
+          title="Most people who read the pattern"
+          titleItalic="want to hear it in their own voice."
           body={[
-            "Most people who unlock the report find they want to discuss what it reveals with an expert.",
-            "For $450 more, you get a full 60-minute session plus a personalized narrative generated from it - delivered within 48 hours.",
-            "That's $497 total instead of $47.",
+            "Most people who unlock the report want their story told back to them - in their own words.",
+            "For $450 more, you get your first personalised narrative, your Purpose Story - built from your actual life and yours permanently.",
+            "That's $497 total instead of $47 - credited in full toward the Protocol if you go deeper within 30 days.",
           ]}
-          acceptLabel="Yes, upgrade to $497"
+          acceptLabel="Yes, hear my Story - $497"
           declineLabel="No thanks, just the report"
           onAccept={() => acceptUpsell("session")}
           onDecline={() => declineUpsell("diagnostic")}
@@ -495,33 +379,18 @@ export function OfferScreen({ audience }: { audience: Audience }) {
 
       {modal === "upsell-2" && (
         <UpsellModal
-          eyebrow="Make the shift permanent"
-          title="The session will move something."
-          titleItalic="The audio protocol makes sure it stays moved."
+          eyebrow="Go from one story to four"
+          title="One story shows you what is running."
+          titleItalic="Four walk you through what changes."
           body={[
-            "The session will move something. The 30-day audio protocol makes sure it stays moved.",
-            "Add the Deep Transformation package for $500 more - including a 90-minute session, two personalized narratives, and 30 days of daily audio in your own voice.",
-            "That's $997 total.",
+            "Your Purpose Story shows you what is running underneath. The full Protocol walks you through what becomes possible when it stops.",
+            "Add the four-week Protocol for $1,500 more - four narratives, a practitioner intake, midpoint and integration sessions, and the 28-day Signal Wall.",
+            "That's $1,997 total. Your $497 is credited in full.",
           ]}
-          acceptLabel="Yes, upgrade to $997"
-          declineLabel="No thanks, keep my $497 session"
+          acceptLabel="Yes, upgrade to $1,997"
+          declineLabel="No thanks, keep my Story"
           onAccept={() => acceptUpsell("transformation")}
           onDecline={() => declineUpsell("session")}
-        />
-      )}
-
-      {modal === "contact" && (
-        <ContactModal
-          firstName={modalFirstName}
-          email={modalEmail}
-          error={modalError}
-          isProcessing={isProcessing}
-          onFirstNameChange={setModalFirstName}
-          onEmailChange={setModalEmail}
-          onClose={() => {
-            if (!isProcessing) setModal("none")
-          }}
-          onSubmit={handleContactSubmit}
         />
       )}
     </div>
@@ -604,7 +473,7 @@ function TierCard({
           className="font-serif tabular-nums leading-none text-ink"
           style={{ fontSize: "clamp(36px, 5vw, 48px)" }}
         >
-          ${tier.price}
+          ${tier.price.toLocaleString("en-US")}
         </span>
         <span className="font-serif-italic text-[13px] text-foreground/65">
           one-time
@@ -656,7 +525,7 @@ function TierCard({
         type="button"
         onClick={onSelect}
         disabled={isProcessing}
-        className="s-btn group/btn mt-auto h-12 w-full justify-center text-[12px]"
+        className="s-btn group/btn mt-auto h-12 w-full justify-center whitespace-nowrap text-[12px]"
         style={{
           background: featured ? "var(--signal)" : "var(--ink)",
           color: "var(--background)",
@@ -798,176 +667,3 @@ function UpsellModal({
     </div>
   )
 }
-
-// ──────────────────────────────────────────────────────────────
-// Contact details modal (email + first name before Stripe)
-
-function ContactModal({
-  firstName,
-  email,
-  error,
-  isProcessing,
-  onFirstNameChange,
-  onEmailChange,
-  onClose,
-  onSubmit,
-}: {
-  firstName: string
-  email: string
-  error: string
-  isProcessing: boolean
-  onFirstNameChange: (v: string) => void
-  onEmailChange: (v: string) => void
-  onClose: () => void
-  onSubmit: (e: React.FormEvent) => void
-}) {
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto overscroll-contain px-5 py-8 sm:px-8 animate-fade-in-up"
-      style={{
-        background: "color-mix(in srgb, var(--ink) 70%, transparent)",
-        backdropFilter: "blur(6px)",
-        WebkitBackdropFilter: "blur(6px)",
-      }}
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="checkout-modal-title"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose()
-      }}
-    >
-      <form
-        onSubmit={onSubmit}
-        className="relative w-full max-w-md rounded-md p-7 shadow-2xl"
-        style={{
-          background: "var(--card)",
-          border: "1px solid color-mix(in srgb, var(--ink) 22%, transparent)",
-          color: "var(--foreground)",
-        }}
-      >
-        <span
-          className="absolute inset-x-0 top-0 h-px"
-          style={{
-            background:
-              "linear-gradient(90deg, transparent, var(--signal), transparent)",
-          }}
-          aria-hidden
-        />
-        <p className="eyebrow mb-4 inline-flex items-center gap-3 text-foreground/75">
-          <span
-            className="h-1.5 w-1.5 rounded-full"
-            style={{ background: "var(--signal)" }}
-            aria-hidden
-          />
-          Continue to checkout
-        </p>
-        <h3
-          id="checkout-modal-title"
-          className="mb-2 font-serif text-[22px] leading-snug text-ink sm:text-[24px]"
-        >
-          A couple of details
-          <span className="block font-serif-italic text-foreground">
-            before payment.
-          </span>
-        </h3>
-        <p className="mb-6 text-[14px] leading-[1.7] text-foreground/75">
-          We&apos;ll send your receipt and details here.
-        </p>
-
-        <label className="mb-4 block">
-          <span className="mb-2 block text-[11px] uppercase tracking-[0.22em] text-foreground/70">
-            First name
-          </span>
-          <input
-            type="text"
-            value={firstName}
-            onChange={(e) => onFirstNameChange(e.target.value)}
-            autoFocus
-            required
-            disabled={isProcessing}
-            className="w-full rounded-md bg-transparent px-4 py-3 font-serif text-[15px] text-ink outline-none transition-colors focus:border-[color:var(--signal)]"
-            style={{
-              border:
-                "1px solid color-mix(in srgb, var(--ink) 22%, transparent)",
-            }}
-          />
-        </label>
-
-        <label className="mb-2 block">
-          <span className="mb-2 block text-[11px] uppercase tracking-[0.22em] text-foreground/70">
-            Email
-          </span>
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => onEmailChange(e.target.value)}
-            required
-            disabled={isProcessing}
-            className="w-full rounded-md bg-transparent px-4 py-3 font-serif text-[15px] text-ink outline-none transition-colors focus:border-[color:var(--signal)]"
-            style={{
-              border:
-                "1px solid color-mix(in srgb, var(--ink) 22%, transparent)",
-            }}
-          />
-        </label>
-
-        {error && (
-          <p
-            className="mt-4 rounded-md px-3 py-2 text-[13px] leading-snug"
-            style={{
-              background:
-                "color-mix(in srgb, var(--signal) 8%, transparent)",
-              border:
-                "1px solid color-mix(in srgb, var(--signal) 30%, transparent)",
-              color: "var(--ink)",
-            }}
-            role="alert"
-          >
-            {error}
-          </p>
-        )}
-
-        <div className="mt-7 flex items-center gap-3">
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={isProcessing}
-            className="text-[11px] uppercase tracking-[0.22em] text-foreground/65 transition-colors hover:text-ink disabled:opacity-50"
-          >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            disabled={isProcessing}
-            className="s-btn group ml-auto h-12 px-6 text-[12px]"
-            style={{
-              background: "var(--signal)",
-              color: "var(--background)",
-              border:
-                "1px solid color-mix(in srgb, var(--signal) 60%, transparent)",
-              boxShadow: "0 14px 40px -16px rgba(var(--glow), 0.55)",
-            }}
-          >
-            {isProcessing ? (
-              <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border border-current border-t-transparent" />
-            ) : (
-              <>
-                Continue
-                <ArrowRight
-                  className="h-3.5 w-3.5 transition-transform duration-500 group-hover:translate-x-1"
-                  strokeWidth={1.6}
-                />
-              </>
-            )}
-          </button>
-        </div>
-
-        <p className="mt-5 flex items-center justify-center gap-2 text-[11px] uppercase tracking-[0.22em] text-foreground/55">
-          <Shield className="h-3 w-3" strokeWidth={1.5} />
-          Secure checkout · One-time payment
-        </p>
-      </form>
-    </div>
-  )
-}
-

@@ -179,7 +179,6 @@ export function ReportView({
   name,
   dateISO,
   showOffers = true,
-  audience,
 }: {
   data: ApiResponse
   name: string
@@ -187,7 +186,6 @@ export function ReportView({
   /** Include the "Go deeper" offers page (default true - admin previews the
    *  full Diagnostic-buyer report). */
   showOffers?: boolean
-  audience?: string
 }) {
   const today = dateISO ? new Date(dateISO) : new Date()
   const rid = useMemo(() => reportId(name || "report"), [name])
@@ -203,7 +201,6 @@ export function ReportView({
         nsState={data.nsState}
         report={data.report}
         showOffers={showOffers}
-        audience={audience}
       />
     </div>
   )
@@ -432,7 +429,8 @@ export function ClarityReport() {
           nsState={data.nsState}
           report={data.report}
           showOffers={showOffers}
-          audience={state.audience ?? undefined}
+          serialNumber={state.serialNumber}
+          email={state.email ?? undefined}
         />
       )}
     </div>
@@ -450,7 +448,8 @@ function ReportPages({
   nsState,
   report,
   showOffers = false,
-  audience,
+  serialNumber,
+  email,
 }: {
   name: string
   today: Date
@@ -461,7 +460,10 @@ function ReportPages({
   report: ReportData
   /** Append the "Go deeper" upsell page (for Diagnostic-only buyers). */
   showOffers?: boolean
-  audience?: string
+  /** Funnel serial + email, threaded onto the in-report checkout links so a
+   *  purchase from the PDF still ties back to the user's row. */
+  serialNumber?: number | null
+  email?: string
 }) {
   const subBy = useMemo(() => {
     const map = new Map<Pillar["key"], number>()
@@ -633,7 +635,7 @@ function ReportPages({
 
           <div style={{ display: "grid", gap: 16 }}>
             {UPSELL_OFFERS.map((offer) => {
-              const url = offerBookingUrl(offer.id, audience)
+              const url = offerBookingUrl(offer.id, { serialNumber, email })
               return (
                 <a
                   key={offer.id}
@@ -675,7 +677,7 @@ function ReportPages({
                         color: "var(--brand-dark)",
                       }}
                     >
-                      ${offer.price}
+                      ${offer.price.toLocaleString("en-US")}
                     </span>
                   </div>
                   <p

@@ -46,7 +46,7 @@ export function ReportPaywall() {
             <figcaption className="mt-3 flex items-center gap-3">
               <span className="h-px w-8 bg-foreground/40" aria-hidden />
               <span className="eyebrow text-foreground/65">
-                Diagnostic report · Locked
+                Your full report · Locked
               </span>
             </figcaption>
           </figure>
@@ -62,18 +62,17 @@ export function ReportPaywall() {
 
           <h1 className="mb-7 font-serif text-[1.85rem] leading-[1.12] text-ink sm:text-[2rem] sm:leading-[1.1] md:text-[2.5rem]">
             {state.firstName ? `${state.firstName}, your` : "Your"} full report is
-            part of
             <span className="block font-serif-italic text-foreground">
-              the diagnostic package.
+              one step away.
             </span>
           </h1>
 
           <div className="mb-10 max-w-xl space-y-5 text-[16px] leading-[1.8] text-foreground/85">
             <p>
-              The four-page PDF - your scores across all seven pillars, the
-              specific pattern identified in plain language, three immediate
-              behavioral shifts, and a 90-day benchmark score - is included with
-              any tier starting at $47.
+              Your full personalised report - your scored dimensions, the
+              specific pattern named in plain language, and concrete next moves
+              built from your exact answers - unlocks with Read The Pattern, at
+              $47.
             </p>
             <p className="text-foreground/75">
               Choose your option to unlock the full reading.
@@ -100,7 +99,7 @@ export function ReportPaywall() {
 
           <p className="mt-5 flex items-center gap-2 text-[11px] uppercase tracking-[0.22em] text-foreground/55">
             <Shield className="h-3 w-3" strokeWidth={1.5} />
-            Three tiers · From $47 · One-time payment
+            Four steps · From $47 · One-time payment
           </p>
 
           <div className="mt-12 border-t border-border pt-8">

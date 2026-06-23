@@ -8,16 +8,33 @@ import { redactError } from "@/lib/security"
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
 
-// The funnel sells the $47 Diagnostic Report as a one-time
-// payment (mode: "payment") via app/api/stripe/checkout. The
-// $497 / $997 tiers are paid + booked inside Calendly's hosted
-// flow, which talks to its own Stripe account — those never
-// hit this webhook. So the events we care about here are:
+// All four tiers ($47 / $497 / $1,997 / $4,997) are sold through Stripe
+// Payment Links (hosted buy.stripe.com pages), so every successful purchase
+// fires checkout.session.completed here. The offer page passes the funnel
+// serial as the session's client_reference_id; the tier is read from the
+// link's metadata if set, otherwise derived from the amount. Events handled:
 //
 //   checkout.session.completed       → success path
 //   checkout.session.expired         → user abandoned (info only)
 //   payment_intent.payment_failed    → card declined or 3DS failed
 //   charge.refunded                  → refunded after the fact
+
+// Maps the paid amount (in cents) back to a tier id when a Payment Link has no
+// tier metadata. Mirrors the prices on the offer screen; keep in sync.
+function tierFromAmount(amountTotal: number | null): string {
+  switch (amountTotal) {
+    case 4700:
+      return "diagnostic"
+    case 49700:
+      return "session"
+    case 199700:
+      return "transformation"
+    case 499700:
+      return "elevated"
+    default:
+      return ""
+  }
+}
 
 export async function POST(req: Request) {
   const body = await req.text()
@@ -62,8 +79,14 @@ export async function POST(req: Request) {
       })
 
       const md = session.metadata ?? {}
-      const sno = Number.parseInt(md.serialNumber ?? "", 10)
-      const tier = md.tier ?? ""
+      // Payment Links surface the funnel serial via client_reference_id (set on
+      // the offer page) rather than session metadata; fall back across both.
+      // Tier comes from the link's metadata when configured, else the amount.
+      const sno = Number.parseInt(
+        session.client_reference_id ?? md.serialNumber ?? "",
+        10,
+      )
+      const tier = md.tier || tierFromAmount(session.amount_total)
       const paid = session.payment_status === "paid"
       const email =
         session.customer_details?.email ?? session.customer_email ?? ""

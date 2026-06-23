@@ -14,17 +14,18 @@ import { FB_PIXEL_ID, trackWhenReady } from "@/lib/fbpixel"
 import { persistPurchase, persistTelemetry } from "@/lib/persist-outputs"
 
 // Thank-you page - confirms successful transactions from both
-// Stripe ($47 Diagnostic) and Calendly ($497 Session / $997
-// Transformation). The view adapts to the source via the URL:
+// Stripe ($47 report) and the deeper tiers booked via Calendly.
+// The view adapts to the source via the URL:
 //
-//   ?paid=1                  → Stripe success ($47)
-//   ?booked=1&tier=session   → Calendly success ($497)
-//   ?booked=1&tier=transformation → Calendly success ($997)
+//   ?paid=1                        → Stripe success ($47 Read The Pattern)
+//   ?booked=1&tier=session         → $497 Hear Your Story
+//   ?booked=1&tier=transformation  → $1,997 Believe Yourself (Protocol)
+//   ?booked=1&tier=elevated        → $4,997 Build From That Belief
 //
-// All three include the diagnostic report + audio summary, so
-// the downloads section is shared across all tiers.
+// Every tier includes the report + audio summary, so the
+// downloads section is shared across all tiers.
 
-type SuccessTier = "diagnostic" | "session" | "transformation"
+type SuccessTier = "diagnostic" | "session" | "transformation" | "elevated"
 
 interface TierCopy {
   eyebrow: string
@@ -60,32 +61,46 @@ const TIER_COPY: Record<SuccessTier, TierCopy> = {
       "When you're ready to go deeper, there's a conversation available. No hurry.",
   },
   session: {
-    eyebrow: "Payment received · Your session is reserved",
+    eyebrow: "Payment received · Your Story is on the way",
     headLead: "Thank you.",
-    headEmphasis: "Your seat is held.",
+    headEmphasis: "Your Story is being written.",
     body: [
-      "This is where the reading stops being a page and becomes a conversation - your pattern named, met, and worked through with Manuj directly.",
-      "First, your report. Download it below and read it before we meet - it's what your session is built around. Bring it with you; it's the starting point for the in-depth discussion.",
+      "This is where the reading stops being a page and becomes a narrative - your Purpose Story, built from your actual life and returned to you in your own words.",
+      "First, your report. Download it below - the steps to submit the details for your Story are on their way to your inbox, and your report is the ground it's built on.",
     ],
     reportTitle: "Your report -",
-    reportTitleItalic: "what your session is built around.",
+    reportTitleItalic: "the ground your Story is built on.",
     reportCta: "Download your report",
     reportNote:
-      "Your session details and a copy of the report are on their way to your inbox. If anything needs to change, the reschedule link is in that email - and check your spam folder if it hasn't arrived in a few minutes.",
+      "Your Story submission steps and a copy of the report are on their way to your inbox. If they haven't arrived in a few minutes, check your spam folder - then add us to your contacts so the next one lands.",
   },
   transformation: {
-    eyebrow: "Payment received · This time is yours",
+    eyebrow: "Payment received · Your Protocol is reserved",
     headLead: "Thank you.",
-    headEmphasis: "This time is yours.",
+    headEmphasis: "The four weeks are yours.",
     body: [
-      "What you've reserved is undivided attention - the reading taken all the way down, to the pattern beneath the pattern, and the first concrete move out of it.",
-      "Start with your report. Download it below and sit with it before we meet; it's the map we'll work from together. Bring it to the session - there's nothing else to prepare.",
+      "What you've reserved is the full arc - four personalised narratives, an intake with a trained practitioner, and the 28-day Signal Wall that makes your own change visible.",
+      "Start with your report. Download it below and sit with it before your intake; it's the map the Protocol works from.",
     ],
     reportTitle: "Your report -",
-    reportTitleItalic: "the map we'll work from.",
+    reportTitleItalic: "the map your Protocol works from.",
     reportCta: "Download your report",
     reportNote:
-      "Your session details and a copy of the report are on their way to your inbox. If the timing needs to shift, the reschedule link is in that email - and check your spam folder if it hasn't arrived shortly.",
+      "Your intake details and a copy of the report are on their way to your inbox. If anything needs to change, the reschedule link is in that email - and check your spam folder if it hasn't arrived shortly.",
+  },
+  elevated: {
+    eyebrow: "Payment received · Your Elevated experience is reserved",
+    headLead: "Thank you.",
+    headEmphasis: "This is the full container.",
+    body: [
+      "Eight weeks, produced - your narratives layered with original music, direct access to your practitioner throughout, and a shareable version your family can hear.",
+      "Start with your report. Download it below and sit with it before your intake; it's where the whole arc begins.",
+    ],
+    reportTitle: "Your report -",
+    reportTitleItalic: "where the whole arc begins.",
+    reportCta: "Download your report",
+    reportNote:
+      "Your intake details and a copy of the report are on their way to your inbox. If the timing needs to shift, the reschedule link is in that email - and check your spam folder if it hasn't arrived shortly.",
   },
 }
 
@@ -94,14 +109,15 @@ const TIER_COPY: Record<SuccessTier, TierCopy> = {
 const TIER_VALUE: Record<SuccessTier, number> = {
   diagnostic: 47,
   session: 497,
-  transformation: 997,
+  transformation: 1997,
+  elevated: 4997,
 }
 
 function resolveTier(): SuccessTier {
   if (typeof window === "undefined") return "diagnostic"
   const params = new URLSearchParams(window.location.search)
   const t = params.get("tier")
-  if (t === "session" || t === "transformation") return t
+  if (t === "session" || t === "transformation" || t === "elevated") return t
   return "diagnostic"
 }
 

@@ -16,7 +16,7 @@ import { redactError } from "@/lib/security"
  * the session as paid. Invalid / unknown ids resolve to paid:false (never an
  * error the client could treat as a pass).
  *
- * Note: the $497 / $997 tiers are paid inside Calendly's hosted flow and have
+ * Note: the $497 / $1,997 / $4,997 tiers are paid inside Calendly's hosted flow and have
  * no Stripe session here — those are handled separately on the report page.
  */
 

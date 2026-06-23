@@ -7,8 +7,9 @@ import { redactError } from "@/lib/security"
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
 
-// The $497 Session and $997 Transformation tiers are booked + paid inside
-// Calendly's hosted flow. Calendly POSTs an `invitee.created` event here when a
+// The deeper tiers ($497 Hear Your Story, $1,997 Believe Yourself, $4,997
+// Build From That Belief) are booked + paid inside Calendly's hosted flow,
+// when their per-tier URL is configured. Calendly POSTs an `invitee.created` event here when a
 // booking completes; we use it to:
 //   1. fire a server-side Meta Purchase (backstop for the browser pixel, which
 //      only fires if Calendly redirects the user back to /challenge/thank-you), and
@@ -17,7 +18,7 @@ export const dynamic = "force-dynamic"
 // Attribution is carried through Calendly's UTM passthrough, which it surfaces
 // in the webhook payload's `tracking` object (see openCalendly in
 // components/challenge/offer-screen.tsx):
-//   tracking.utm_medium  → tier ("session" | "transformation")
+//   tracking.utm_medium  → tier ("session" | "transformation" | "elevated")
 //   tracking.utm_content → serialNumber (links the booking to the funnel row)
 //
 // Required env:
@@ -27,7 +28,8 @@ export const dynamic = "force-dynamic"
 
 const TIER_VALUE: Record<string, number> = {
   session: 497,
-  transformation: 997,
+  transformation: 1997,
+  elevated: 4997,
 }
 
 /**

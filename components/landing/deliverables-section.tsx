@@ -25,9 +25,9 @@ const items = [
   },
   {
     icon: FileBarChart2,
-    title: "Full Diagnostic PDF Report",
+    title: "Full Personalised Report",
     description:
-      "Your complete personalized report with specific insights and recommended next steps.",
+      "Your complete report, built from your exact answers - the pattern named in plain language, with concrete next moves specific to you.",
   },
 ]
 

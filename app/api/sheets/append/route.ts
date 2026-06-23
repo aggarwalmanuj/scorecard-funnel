@@ -35,7 +35,9 @@ const bodySchema = z.object({
   // Tech-analytics telemetry + purchase recording.
   phSessionId: z.string().max(200).optional(),
   phDistinctId: z.string().max(200).optional(),
-  paidTier: z.enum(["diagnostic", "session", "transformation"]).optional(),
+  paidTier: z
+    .enum(["diagnostic", "session", "transformation", "elevated"])
+    .optional(),
   paidAmount: z.string().max(20).optional(),
   // First-touch acquisition attribution (signup action only). Capped so a
   // signup can't bloat the document; server re-trims via sanitizeAttribution.
@@ -46,6 +48,14 @@ const bodySchema = z.object({
       utm_campaign: z.string().max(500).optional(),
       utm_term: z.string().max(500).optional(),
       utm_content: z.string().max(500).optional(),
+      // Ad-platform click IDs (which platform drove the click).
+      fbclid: z.string().max(500).optional(),
+      gclid: z.string().max(500).optional(),
+      ttclid: z.string().max(500).optional(),
+      msclkid: z.string().max(500).optional(),
+      // Cross-reference back to the originating landing page.
+      ref: z.string().max(500).optional(),
+      lp: z.string().max(500).optional(),
       referrer: z.string().max(500).optional(),
       landing_page: z.string().max(500).optional(),
     })

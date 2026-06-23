@@ -563,6 +563,12 @@ function ResponseSourceDetails({
     utm_campaign?: string
     utm_term?: string
     utm_content?: string
+    fbclid?: string
+    gclid?: string
+    ttclid?: string
+    msclkid?: string
+    ref?: string
+    lp?: string
     referrer?: string
     landing_page?: string
   }
@@ -573,10 +579,23 @@ function ResponseSourceDetails({
     { label: "Campaign", value: r.utm_campaign },
     { label: "Term", value: r.utm_term },
     { label: "Content", value: r.utm_content },
+    { label: "Funnel", value: r.lp },
   ].filter((row) => cellFilled(row.value))
 
+  // Ad-platform click IDs — presence identifies the platform that drove the click.
+  const clickIds: Array<{ label: string; value?: string }> = [
+    { label: "Meta", value: r.fbclid },
+    { label: "Google", value: r.gclid },
+    { label: "TikTok", value: r.ttclid },
+    { label: "Microsoft", value: r.msclkid },
+  ].filter((c) => cellFilled(c.value))
+
   const hasAttribution =
-    utmRows.length > 0 || cellFilled(r.referrer) || cellFilled(r.landing_page)
+    utmRows.length > 0 ||
+    clickIds.length > 0 ||
+    cellFilled(r.ref) ||
+    cellFilled(r.referrer) ||
+    cellFilled(r.landing_page)
 
   return (
     <>
@@ -604,6 +623,25 @@ function ResponseSourceDetails({
                   </Badge>
                 ))}
               </div>
+            )}
+            {clickIds.length > 0 && (
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-foreground/50 text-xs">Platform click:</span>
+                {clickIds.map((c) => (
+                  <Badge
+                    key={c.label}
+                    variant="outline"
+                    className="rounded-full border-ink/20 font-normal text-foreground/85"
+                  >
+                    {c.label}
+                  </Badge>
+                ))}
+              </div>
+            )}
+            {cellFilled(r.ref) && (
+              <p className="break-all text-xs text-foreground/75">
+                <span className="text-foreground/50">Lead ref:</span> {r.ref}
+              </p>
             )}
             {cellFilled(r.referrer) && (
               <p className="break-all text-xs text-foreground/75">
@@ -753,6 +791,8 @@ export default function AdminPage() {
     // First-touch acquisition attribution (shown on both /admin and /techadmin).
     utm_source?: string; utm_medium?: string; utm_campaign?: string
     utm_term?: string; utm_content?: string
+    fbclid?: string; gclid?: string; ttclid?: string; msclkid?: string
+    ref?: string; lp?: string
     referrer?: string; landing_page?: string
   }
   const [responses, setResponses] = useState<UserResponse[]>([])
@@ -957,7 +997,10 @@ export default function AdminPage() {
       // First-touch acquisition attribution.
       utm_source: r.utm_source ?? "", utm_medium: r.utm_medium ?? "",
       utm_campaign: r.utm_campaign ?? "", utm_term: r.utm_term ?? "",
-      utm_content: r.utm_content ?? "", referrer: r.referrer ?? "",
+      utm_content: r.utm_content ?? "",
+      fbclid: r.fbclid ?? "", gclid: r.gclid ?? "", ttclid: r.ttclid ?? "",
+      msclkid: r.msclkid ?? "", ref: r.ref ?? "", lp: r.lp ?? "",
+      referrer: r.referrer ?? "",
       landing_page: r.landing_page ?? "",
     }))
     const blob = new Blob([JSON.stringify(clean, null, 2)], { type: "application/json" })

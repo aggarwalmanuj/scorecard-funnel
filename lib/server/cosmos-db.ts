@@ -109,6 +109,14 @@ export type UserDocument = {
   utm_campaign?: string
   utm_term?: string
   utm_content?: string
+  // Ad-platform click IDs + cross-reference to the originating landing page
+  // (ref = that page's lead/record id; lp = which landing page forwarded them).
+  fbclid?: string
+  gclid?: string
+  ttclid?: string
+  msclkid?: string
+  ref?: string
+  lp?: string
   referrer?: string
   landing_page?: string
   // Purchase record. Written by the Stripe webhook (authoritative) and/or the
@@ -126,6 +134,12 @@ export type Attribution = {
   utm_campaign?: string
   utm_term?: string
   utm_content?: string
+  fbclid?: string
+  gclid?: string
+  ttclid?: string
+  msclkid?: string
+  ref?: string
+  lp?: string
   referrer?: string
   landing_page?: string
 }
@@ -142,6 +156,12 @@ function sanitizeAttribution(attribution?: Attribution): Record<string, string> 
     "utm_campaign",
     "utm_term",
     "utm_content",
+    "fbclid",
+    "gclid",
+    "ttclid",
+    "msclkid",
+    "ref",
+    "lp",
     "referrer",
     "landing_page",
   ]

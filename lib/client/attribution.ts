@@ -1,12 +1,21 @@
 /**
  * First-touch acquisition attribution.
  *
- * UTM params and the referrer arrive on the *landing* URL (usually `/`), but
- * signup happens later on /challenge/audience — by then the query string is
- * gone. So we capture once, as early as possible at app boot (see
+ * UTM params, ad-platform click IDs, and a cross-reference back to the
+ * originating landing page arrive on the *landing* URL (usually `/` or
+ * `/challenge/audience`), but signup happens later — by then the query string
+ * is gone. So we capture once, as early as possible at app boot (see
  * instrumentation-client.ts), and stash it in localStorage. submitSignup reads
  * it back and persists it onto the user document, where both /admin and
  * /techadmin surface it on each response.
+ *
+ * Cross-funnel flow: external landing pages (run behind ads) store their own
+ * utm/click-id/lead-id, then forward the user here with those values appended
+ * to the redirect URL, e.g.
+ *   https://aimerge.live/challenge/audience?utm_source=meta&utm_campaign=adhd-q3
+ *     &fbclid=…&ref=<landing-db-lead-id>&lp=adhd
+ * We capture them so a score on this site can be tied back to the exact lead
+ * row (ref) and the platform that drove it (utm_source / click IDs).
  *
  * "First touch": we only write if nothing meaningful is stored yet, so the very
  * first campaign/referrer that brought the user in wins — a later same-browser
@@ -15,6 +24,7 @@
 
 const STORAGE_KEY = "ufa_attribution"
 
+// Standard UTM tags.
 const UTM_KEYS = [
   "utm_source",
   "utm_medium",
@@ -23,12 +33,21 @@ const UTM_KEYS = [
   "utm_content",
 ] as const
 
-export type Attribution = {
-  utm_source?: string
-  utm_medium?: string
-  utm_campaign?: string
-  utm_term?: string
-  utm_content?: string
+// Ad-platform click identifiers — pinpoint the platform and enable
+// conversion matching (Meta fbclid, Google gclid, TikTok ttclid, Microsoft).
+const CLICK_KEYS = ["fbclid", "gclid", "ttclid", "msclkid"] as const
+
+// Cross-reference back to the originating landing page:
+//   ref → the landing page's own lead/record id (lets you JOIN a score on this
+//         site to the exact row already stored in the landing page's DB)
+//   lp  → which landing page / funnel forwarded the user (e.g. "adhd")
+const REF_KEYS = ["ref", "lp"] as const
+
+const CAPTURE_KEYS = [...UTM_KEYS, ...CLICK_KEYS, ...REF_KEYS] as const
+
+export type Attribution = Partial<
+  Record<(typeof CAPTURE_KEYS)[number], string>
+> & {
   referrer?: string
   landing_page?: string
 }
@@ -37,14 +56,7 @@ const MAX_LEN = 500
 const clamp = (v: string) => v.slice(0, MAX_LEN)
 
 function hasMeaningfulSignal(a: Attribution): boolean {
-  return Boolean(
-    a.utm_source ||
-      a.utm_medium ||
-      a.utm_campaign ||
-      a.utm_term ||
-      a.utm_content ||
-      a.referrer,
-  )
+  return Boolean(CAPTURE_KEYS.some((k) => a[k]) || a.referrer)
 }
 
 /**
@@ -60,12 +72,14 @@ export function captureAttribution(): void {
 
     const params = new URLSearchParams(window.location.search)
     const captured: Attribution = {}
-    for (const key of UTM_KEYS) {
+    for (const key of CAPTURE_KEYS) {
       const value = params.get(key)
       if (value) captured[key] = clamp(value)
     }
     // Only record an external referrer — same-origin navigations aren't
-    // acquisition sources and would just be noise.
+    // acquisition sources and would just be noise. Note: landing pages that
+    // set rel="noreferrer" / a strict Referrer-Policy won't send this, which is
+    // exactly why we also rely on explicit utm/ref/lp params above.
     const ref = document.referrer
     if (ref) {
       try {

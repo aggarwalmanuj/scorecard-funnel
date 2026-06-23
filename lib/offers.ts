@@ -1,7 +1,9 @@
 /**
- * The two "go deeper" offers shown to a Diagnostic ($47) buyer - at the end
- * of their downloadable report and (later) anywhere else we want a single
- * source of truth for upsell copy + booking links.
+ * The two "go deeper" offers shown to a Read The Pattern ($47) buyer - at the
+ * end of their downloadable report and (later) anywhere else we want a single
+ * source of truth for upsell copy + booking links. The full ladder (incl. the
+ * $4,997 Elevated tier) lives on the offer screen; the report surfaces the two
+ * primary next steps.
  *
  * Booking URLs come from the same NEXT_PUBLIC_CALENDLY_* env vars the offer
  * screen uses, so the booking team can rotate them without a code change.
@@ -23,43 +25,65 @@ export const UPSELL_OFFERS: UpsellOffer[] = [
   {
     id: "session",
     price: 497,
-    label: "Session + Report",
-    tagline: "Find it. Move it. Walk away different.",
+    label: "Hear Your Story",
+    tagline: "Your first narrative - in your own voice.",
     bullets: [
-      "60-minute session with an AI Merge trained expert",
-      "Live exploration of your specific pattern",
-      "A personalized narrative, delivered within 48 hours",
-      "30-day follow-up check-in",
+      "Your first personalised narrative - your Purpose Story",
+      "Built from your exact words and your actual life",
+      "No call required - a structured submission at your own pace",
+      "Yours permanently, credited toward the Protocol within 30 days",
     ],
   },
   {
     id: "transformation",
-    price: 997,
-    label: "Deep Transformation",
-    tagline: "The shift that stays - because you hear it every morning.",
+    price: 1997,
+    label: "Believe Yourself",
+    tagline: "Four weeks. Four stories. The shift that stays.",
     bullets: [
-      "Everything in the Session package",
-      "Extended 90-minute deep session",
-      "Two personalized narratives - past-pattern release & future self",
-      "30-day audio protocol in your own voice, for daily listening",
-      "Two follow-up check-ins over 60 days",
+      "Everything in the Story Session",
+      "One intake conversation with a trained practitioner",
+      "Four personalised narratives - Purpose, Past, Future, Integration",
+      "Midpoint check-in, integration session, and the 28-day Signal Wall",
+      "Money-back guarantee",
     ],
   },
 ]
 
-const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL ?? "").replace(/\/$/, "")
+/** All four tiers. The offer screen and the in-report "go deeper" links both
+ *  resolve to these Stripe Payment Links — single source of truth so they never
+ *  drift apart. Hard-coded defaults work out of the box; override via env. */
+export type Tier = "diagnostic" | "session" | "transformation" | "elevated"
 
-/** Resolve the booking URL for an upsell tier. Prefers the Calendly env URL;
- *  falls back to the absolute on-site offer page for the given audience. */
+export const STRIPE_PAYMENT_LINKS: Record<Tier, string> = {
+  diagnostic:
+    process.env.NEXT_PUBLIC_STRIPE_LINK_DIAGNOSTIC ??
+    "https://buy.stripe.com/fZu4gz1mOd1K73O0ho2wU0m",
+  session:
+    process.env.NEXT_PUBLIC_STRIPE_LINK_SESSION ??
+    "https://buy.stripe.com/7sYbJ1fdE0eYbk4e8e2wU0n",
+  transformation:
+    process.env.NEXT_PUBLIC_STRIPE_LINK_TRANSFORMATION ??
+    "https://buy.stripe.com/8x2bJ1e9A3rabk45BI2wU0o",
+  elevated:
+    process.env.NEXT_PUBLIC_STRIPE_LINK_ELEVATED ??
+    "https://buy.stripe.com/bJefZh8PgbXG0Fqd4a2wU0p",
+}
+
+/** Resolve the checkout URL for an upsell tier — the tier's Stripe Payment
+ *  Link, with the funnel serial (client_reference_id) and email prefilled when
+ *  available so the purchase still ties back to the user's row. */
 export function offerBookingUrl(
   id: UpsellOfferId,
-  audience?: string
+  opts?: { serialNumber?: number | null; email?: string }
 ): string {
-  const env =
-    id === "session"
-      ? process.env.NEXT_PUBLIC_CALENDLY_SESSION_URL
-      : process.env.NEXT_PUBLIC_CALENDLY_TRANSFORMATION_URL
-  if (env && env.trim()) return env.trim()
-  const aud = audience === "team" ? "team" : "individual"
-  return `${SITE_URL}/challenge/${aud}/offer`
+  const base = STRIPE_PAYMENT_LINKS[id]
+  try {
+    const url = new URL(base)
+    if (opts?.serialNumber != null)
+      url.searchParams.set("client_reference_id", String(opts.serialNumber))
+    if (opts?.email) url.searchParams.set("prefilled_email", opts.email)
+    return url.toString()
+  } catch {
+    return base
+  }
 }
