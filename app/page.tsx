@@ -25,8 +25,8 @@ export default function Home() {
       <MinimalHeader />
       <main>
         <MinimalHero />
-        <WalkthroughSection />
         <CredentialsSection />
+        <WalkthroughSection />
         <TakeHomeSection />
         <VoicesSection />
         <SanctuarySection />

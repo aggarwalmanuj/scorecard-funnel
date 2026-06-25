@@ -166,7 +166,7 @@ export function WalkthroughSection() {
         <Reveal as="div" className="grid items-end gap-8 lg:grid-cols-12 lg:gap-16">
           <div className="lg:col-span-7">
             <p className="eyebrow mb-6 text-foreground/70">
-              II · The walkthrough
+              III · The walkthrough
             </p>
             <h2
               id="walkthrough-heading"

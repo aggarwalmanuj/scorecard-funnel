@@ -25,6 +25,7 @@ import {
   persistSummaryText,
   persistSummaryAudio,
 } from "@/lib/persist-outputs"
+import { track } from "@/lib/fbpixel"
 
 type ScoreSource = "llm" | "fallback" | "pending"
 type ScoreReasons = Partial<Record<keyof Subscores, string>>
@@ -168,6 +169,27 @@ export function JourneySummaryScreen({ audience }: { audience: Audience }) {
   const [isVisible, setIsVisible] = useState(false)
   const [ctaVisible, setCtaVisible] = useState(false)
   const [unlocked, setUnlocked] = useState(false)
+
+  // Meta standard "CompleteRegistration" — the visitor finished the free
+  // five-question assessment and reached their Belief Score. A strong
+  // mid-funnel signal between Lead (signup) and InitiateCheckout/Purchase.
+  // Once per browser session, keyed by serial so a refresh doesn't recount.
+  const completeRegFiredRef = useRef(false)
+  useEffect(() => {
+    if (completeRegFiredRef.current || !isHydrated) return
+    completeRegFiredRef.current = true
+    try {
+      const key = `fb-completereg:${state.serialNumber ?? "anon"}`
+      if (sessionStorage.getItem(key)) return
+      track("CompleteRegistration", {
+        content_name: "belief-score-assessment",
+        status: true,
+      })
+      sessionStorage.setItem(key, "1")
+    } catch {
+      track("CompleteRegistration", { content_name: "belief-score-assessment" })
+    }
+  }, [isHydrated, state.serialNumber])
 
   // HTML5 audio playback via the shared Safari-safe hook. Previous Web
   // Audio API impl broke on Safari macOS because `ctx.resume()` was

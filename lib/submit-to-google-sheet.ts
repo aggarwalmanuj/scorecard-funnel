@@ -7,6 +7,8 @@ type SignupPayload = {
   firstName: string
   email: string
   phone?: string
+  /** Shared id so the server Lead CAPI event dedups against the browser pixel. */
+  leadEventId?: string
   audience?: Audience
   attribution?: ReturnType<typeof getAttribution>
 }
@@ -58,7 +60,8 @@ export async function submitSignup(
   firstName: string,
   email: string,
   audience?: Audience,
-  phone?: string
+  phone?: string,
+  leadEventId?: string
 ): Promise<number | null> {
   try {
     // First-touch attribution (utm_* / referrer) captured at the landing.
@@ -72,6 +75,7 @@ export async function submitSignup(
         email,
         audience,
         ...(phone ? { phone } : {}),
+        ...(leadEventId ? { leadEventId } : {}),
         ...(Object.keys(attribution).length > 0 ? { attribution } : {}),
       }),
       keepalive: true,

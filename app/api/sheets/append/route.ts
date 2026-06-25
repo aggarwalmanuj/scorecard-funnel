@@ -2,6 +2,14 @@ import { NextResponse } from "next/server"
 import { z } from "zod"
 import { isCosmosConfigured, appendSignupRow, updateQuestionCell, updateFeedbackCell, updateBeatOutputCell, updateUserOutputs, updateUserTelemetry, recordPurchase } from "@/lib/server/cosmos-db"
 import { redactError } from "@/lib/security"
+import { sendLeadEvent } from "@/lib/server/meta-capi"
+
+/** Read a single cookie value out of the raw Cookie header. */
+function readCookie(header: string | null, name: string): string | undefined {
+  if (!header) return undefined
+  const m = header.match(new RegExp(`(?:^|;\\s*)${name}=([^;]+)`))
+  return m ? decodeURIComponent(m[1]) : undefined
+}
 
 const bodySchema = z.object({
   action: z.enum(["signup", "answer", "feedback", "beat_output", "score", "report", "summary", "telemetry", "purchase"]),
@@ -18,6 +26,9 @@ const bodySchema = z.object({
     (v) => (v == null ? undefined : String(v).trim().slice(0, 40)),
     z.string().max(40).optional()
   ),
+  // Client-minted id (signup action) so the server Lead CAPI event dedups
+  // against the browser Lead pixel that carries the same id.
+  leadEventId: z.string().max(100).optional(),
   audience: z.enum(["individual", "team"]).optional(),
   serialNumber: z.number().int().positive().optional(),
   questionNumber: z.number().int().min(1).max(5).optional(),
@@ -88,12 +99,38 @@ export async function POST(request: Request) {
     )
   }
 
-  const { action, firstName, email, phone, audience, serialNumber, questionNumber, answer, questionText, beatNumber, feedback, output, scoreJson, reportJson, summaryText, phSessionId, phDistinctId, paidTier, paidAmount, attribution } = parsed.data
+  const { action, firstName, email, phone, leadEventId, audience, serialNumber, questionNumber, answer, questionText, beatNumber, feedback, output, scoreJson, reportJson, summaryText, phSessionId, phDistinctId, paidTier, paidAmount, attribution } = parsed.data
 
   try {
     if (action === "signup") {
       // Always appends a new row, even for repeat emails. Returns the new S.No.
       const sno = await appendSignupRow(firstName, email, audience ?? "", attribution, phone)
+
+      // Server-side Lead (Conversions API backstop for the browser pixel). This
+      // signup request is same-origin, so we can read the visitor's _fbp/_fbc
+      // cookies + IP/UA for high-quality advanced matching, and hash their
+      // email/phone server-side. Deduped against the browser Lead via the
+      // shared client-minted event id. No-op when CAPI isn't configured.
+      if (leadEventId) {
+        const cookie = request.headers.get("cookie")
+        await sendLeadEvent({
+          eventId: leadEventId,
+          contentName: "belief-score-signup",
+          eventSourceUrl: request.headers.get("referer"),
+          user: {
+            email,
+            phone,
+            firstName,
+            fbp: readCookie(cookie, "_fbp"),
+            fbc: readCookie(cookie, "_fbc"),
+            clientIp:
+              request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+              request.headers.get("x-real-ip"),
+            userAgent: request.headers.get("user-agent"),
+          },
+        })
+      }
+
       return NextResponse.json({ ok: true, serialNumber: sno })
     } else if (action === "answer" && questionNumber && answer !== undefined) {
       if (!serialNumber) {

@@ -99,6 +99,9 @@ export async function POST(req: Request) {
         await sendPurchaseEvent({
           eventId: session.id,
           email,
+          // Stripe collects the phone on the Payment Link page when enabled;
+          // hashed server-side for advanced matching.
+          phone: session.customer_details?.phone ?? undefined,
           value: session.amount_total / 100,
           contentName: tier ? `unfair-advantage-${tier}` : undefined,
         })

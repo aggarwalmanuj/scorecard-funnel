@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input"
 import { useChallenge, type Audience } from "@/context/challenge-context"
 import { submitSignup } from "@/lib/submit-to-google-sheet"
 import { persistTelemetry } from "@/lib/persist-outputs"
+import { trackWhenReady } from "@/lib/fbpixel"
 import { ChallengeMenuButton } from "@/components/challenge/challenge-funnel-header-actions"
 import { ChallengeNavHome } from "@/components/challenge/challenge-nav-home"
 import { PrivacyNotice } from "@/components/privacy-notice"
@@ -177,12 +178,30 @@ export default function AudienceSelectionPage() {
     setEmail(trimmedEmail)
     setAudience(selected)
 
+    // Meta standard "Lead" — the core signup conversion and the primary event
+    // lead-gen campaigns optimize toward. A shared event id lets the server-side
+    // Lead (Conversions API, fired from the signup route) dedup against this
+    // browser pixel — so the event counts once but survives ad-blockers.
+    const leadEventId =
+      typeof crypto !== "undefined" && "randomUUID" in crypto
+        ? crypto.randomUUID()
+        : `lead-${Date.now()}-${Math.random().toString(36).slice(2)}`
+    trackWhenReady(
+      "Lead",
+      {
+        content_name: "belief-score-signup",
+        content_category: selected ?? undefined,
+      },
+      leadEventId,
+    )
+
     // Fire-and-forget: the funnel is resilient to a missing serialNumber.
     const sno = await submitSignup(
       trimmedName,
       trimmedEmail,
       selected!,
       trimmedPhone || undefined,
+      leadEventId,
     )
     if (sno !== null) {
       setSerialNumber(sno)
