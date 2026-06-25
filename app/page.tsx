@@ -3,6 +3,10 @@ import { MinimalHero } from "@/components/landing-minimal/hero"
 import { WalkthroughSection } from "@/components/landing-minimal/walkthrough"
 import { SanctuarySection } from "@/components/landing-minimal/sanctuary"
 import { DimensionsSection } from "@/components/landing-minimal/dimensions"
+import { EssenceSection } from "@/components/landing-minimal/essence"
+import { LevelsSection } from "@/components/landing-minimal/levels"
+import { FitSection } from "@/components/landing-minimal/fit"
+import { TeamsSection } from "@/components/landing-minimal/teams"
 import { TakeHomeSection } from "@/components/landing-minimal/take-home"
 import { VoicesSection } from "@/components/landing-minimal/voices"
 import { CredentialsSection } from "@/components/landing-minimal/credentials"
@@ -26,11 +30,15 @@ export default function Home() {
       <main>
         <MinimalHero />
         <WalkthroughSection />
+        <EssenceSection />
         <CredentialsSection />
         <TakeHomeSection />
         <VoicesSection />
         <SanctuarySection />
         <DimensionsSection />
+        <LevelsSection />
+        <FitSection />
+        <TeamsSection />
         <NotesSection />
         <ClosingSection />
       </main>
