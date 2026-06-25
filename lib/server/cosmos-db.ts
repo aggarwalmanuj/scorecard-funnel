@@ -401,8 +401,35 @@ async function getNextSerialNumber(): Promise<number> {
 }
 
 /**
- * Signup: ALWAYS creates a new document, even for repeat emails.
- * Returns the newly assigned S.No (stored as `id`).
+ * Most recent INCOMPLETE row (no Q5 answer) for this email, matched
+ * case-insensitively. Used to reuse an abandoned signup instead of duplicating
+ * it. Cross-partition (email is the partition key, but users type it with
+ * varying case), which is fine at this volume.
+ */
+async function findReusableSignup(email: string): Promise<UserDocument | null> {
+  const normalized = email.trim().toLowerCase()
+  if (!normalized) return null
+  const container = usersContainer()
+  const { resources } = await container.items
+    .query({
+      query:
+        'SELECT * FROM c WHERE LOWER(c.email) = @email AND (NOT IS_DEFINED(c.question5) OR c.question5 = "") ORDER BY c.createdAt DESC',
+      parameters: [{ name: "@email", value: normalized }],
+    })
+    .fetchAll()
+  return (resources[0] as UserDocument) ?? null
+}
+
+/**
+ * Signup. Reuses an existing INCOMPLETE row for the same email when one exists,
+ * otherwise creates a new document. Returns the row's S.No (stored as `id`).
+ *
+ * Why reuse: every signup used to create a brand-new row, so a visitor who
+ * abandoned before answering — or who re-submitted the form on a later visit /
+ * via the back button — left an empty "Incomplete" row behind for each attempt
+ * (the classic "one user, two rows, one always incomplete" duplicate). A row
+ * that already has answers (Complete) is never reused, so a genuine retake
+ * still gets its own fresh row.
  */
 export async function appendSignupRow(
   firstName: string,
@@ -412,8 +439,37 @@ export async function appendSignupRow(
   phone?: string
 ): Promise<number> {
   await ensureInitialized()
-  const sno = await getNextSerialNumber()
   const container = usersContainer()
+
+  const reusable = await findReusableSignup(email)
+  if (reusable) {
+    try {
+      // Latest name/audience/phone win; first-touch attribution is preserved —
+      // we only fill attribution keys the original row was missing.
+      const ops: { op: "set"; path: string; value: string }[] = [
+        { op: "set", path: "/firstName", value: firstName },
+        { op: "set", path: "/audience", value: audience },
+      ]
+      if (phone) {
+        ops.push({ op: "set", path: "/phone", value: phone.trim().slice(0, 40) })
+      }
+      for (const [k, v] of Object.entries(sanitizeAttribution(attribution))) {
+        if (!reusable[k as keyof UserDocument]) {
+          ops.push({ op: "set", path: `/${k}`, value: v })
+        }
+      }
+      await container.item(reusable.id, reusable.email).patch(ops)
+      return Number(reusable.id)
+    } catch (e) {
+      console.error(
+        "[cosmos-db] appendSignupRow: reuse patch failed, creating fresh row",
+        (e as Error)?.message?.slice(0, 120),
+      )
+      // fall through to create a new row
+    }
+  }
+
+  const sno = await getNextSerialNumber()
 
   await container.items.create({
     id: String(sno),
