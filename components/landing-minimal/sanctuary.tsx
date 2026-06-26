@@ -98,7 +98,7 @@ export function SanctuarySection() {
             <div className="pt-4">
               <MagneticButton>
                 <Link href="/challenge/audience" className="s-btn group">
-                  Begin the reading
+                  Get your free score
                   <ArrowRight
                     className="h-3.5 w-3.5 transition-transform duration-500 group-hover:translate-x-1"
                     strokeWidth={1.6}

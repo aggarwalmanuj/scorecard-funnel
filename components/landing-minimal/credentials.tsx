@@ -8,14 +8,12 @@ const logos = [
   { src: "/logos/ibm.png", alt: "IBM" },
   { src: "/logos/tmobile.png", alt: "T-Mobile" },
   { src: "/logos/pearson.png", alt: "Pearson" },
-  { src: "/logos/un.png", alt: "United Nations" },
 ] as const
 
 const credentials = [
   { label: "Patents", value: "Four in human-AI decision systems" },
-  { label: "Keynote", value: "United Nations" },
+  { label: "Speaker", value: "Global keynote speaker" },
   { label: "Published", value: "Mensa Research Journal" },
-  { label: "Documented", value: "$500M+ business impact" },
 ] as const
 
 export function CredentialsSection() {
@@ -40,7 +38,7 @@ export function CredentialsSection() {
                 `object-left` + gap-x-8 combo flagged by QA as "check
                 spacing". Heights nudged up so smaller marks (Pearson, UN)
                 don't disappear next to the wider ones. */}
-            <ul className="grid grid-cols-2 items-center justify-items-center gap-x-10 gap-y-10 sm:grid-cols-5 sm:gap-x-12 lg:gap-x-14">
+            <ul className="grid grid-cols-2 items-center justify-items-center gap-x-10 gap-y-10 sm:grid-cols-4 sm:gap-x-12 lg:gap-x-14">
               {logos.map((logo, i) => (
                 <Reveal
                   as="li"

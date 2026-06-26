@@ -2,7 +2,6 @@ import { MinimalHeader } from "@/components/landing-minimal/header"
 import { MinimalHero } from "@/components/landing-minimal/hero"
 import { WalkthroughSection } from "@/components/landing-minimal/walkthrough"
 import { SanctuarySection } from "@/components/landing-minimal/sanctuary"
-import { DimensionsSection } from "@/components/landing-minimal/dimensions"
 import { EssenceSection } from "@/components/landing-minimal/essence"
 import { LevelsSection } from "@/components/landing-minimal/levels"
 import { FitSection } from "@/components/landing-minimal/fit"
@@ -13,6 +12,7 @@ import { CredentialsSection } from "@/components/landing-minimal/credentials"
 import { NotesSection } from "@/components/landing-minimal/notes"
 import { ClosingSection } from "@/components/landing-minimal/closing"
 import { MinimalFooter } from "@/components/landing-minimal/footer"
+import { ExitIntent } from "@/components/exit-intent"
 
 /**
  * Landing page is locked to the Marine palette to match the rest of the
@@ -26,6 +26,7 @@ export default function Home() {
       data-palette="marine"
       className="min-h-screen bg-background text-foreground font-sans"
     >
+      <ExitIntent />
       <MinimalHeader />
       <main>
         <MinimalHero />
@@ -35,7 +36,6 @@ export default function Home() {
         <TakeHomeSection />
         <VoicesSection />
         <SanctuarySection />
-        <DimensionsSection />
         <LevelsSection />
         <FitSection />
         <TeamsSection />

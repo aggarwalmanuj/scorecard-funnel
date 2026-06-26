@@ -70,8 +70,8 @@ export function ChallengeNavHome({
               Are you sure?
             </AlertDialogTitle>
             <AlertDialogDescription className="text-[15px] leading-[1.75] text-foreground/80">
-              Your progress won&apos;t be saved. You&apos;ll need to begin the reading
-              from the start.
+              Your progress won&apos;t be saved. You&apos;ll need to start over
+              from the beginning.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

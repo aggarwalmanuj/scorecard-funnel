@@ -100,7 +100,7 @@ export function MinimalHeader() {
               href="/challenge/audience"
               className="s-btn hidden text-[0.7rem] lg:inline-flex"
             >
-              Begin the reading
+              Get your free score
             </Link>
 
             {/* Hamburger - animated to morph into an X when opened. The
@@ -193,7 +193,7 @@ export function MinimalHeader() {
                 onClick={() => setMobileOpen(false)}
                 className="s-btn w-full justify-center"
               >
-                Begin the reading
+                Get your free score
               </Link>
               <p className="mt-4 text-center text-[10px] uppercase tracking-[0.22em] text-foreground/55">
                 Ten minutes · No commitment

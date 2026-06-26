@@ -17,7 +17,7 @@ export function TeamsSection() {
         <Reveal as="div" className="grid items-end gap-10 lg:grid-cols-12 lg:gap-16">
           <div className="lg:col-span-7">
             <p className="eyebrow mb-6 text-foreground/70">
-              XI · Teams &amp; organisations
+              X · Teams &amp; organisations
             </p>
             <h2 className="font-serif text-[1.95rem] leading-[1.08] text-ink sm:text-5xl sm:leading-[1.05] lg:text-6xl">
               Same mechanism.
@@ -58,7 +58,7 @@ export function TeamsSection() {
                 href="/challenge/audience"
                 className="s-btn group w-full justify-center sm:w-auto"
               >
-                Begin the reading
+                Get your free score
                 <ArrowRight
                   className="h-3.5 w-3.5 transition-transform duration-500 group-hover:translate-x-1"
                   strokeWidth={1.6}

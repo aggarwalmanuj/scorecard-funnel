@@ -28,10 +28,9 @@ export function MinimalHero() {
             <h1 className="wrap-break-word font-serif text-[2.15rem] leading-[1.06] text-ink sm:text-6xl sm:leading-[1.02] lg:text-7xl xl:text-[5.6rem]">
               <WordReveal
                 segments={[
-                  { kind: "text", text: "Something underneath is" },
-                  { kind: "italic", text: "running the show." },
+                  { kind: "text", text: "You already know" },
                   { kind: "br" },
-                  { kind: "text", text: "Find out what it is." },
+                  { kind: "italic", text: "there is more in you." },
                 ]}
               />
             </h1>
@@ -42,9 +41,9 @@ export function MinimalHero() {
               className="mt-7 max-w-xl space-y-4 text-[15.5px] leading-[1.7] text-foreground/90 sm:mt-10 sm:space-y-5 sm:text-[1.05rem] sm:leading-[1.75]"
             >
               <p>
-                A 10-minute reading that surfaces the hidden belief quietly
-                shaping your decisions, your relationships, and your results
-                - and gives it back to you in plain words.
+                Something underneath is still running the show. The answer has
+                been in your own voice all along - you just haven&apos;t heard it
+                clearly yet.
               </p>
             </Reveal>
 
@@ -83,8 +82,8 @@ export function MinimalHero() {
                 <ParallaxImage amount={28}>
                   <div className="img-hover-zoom relative overflow-hidden rounded-sm">
                     <Image
-                      src="/images/hero-leader.jpg"
-                      alt="A wide horizon at first light - the quiet a reading is meant to compose"
+                      src="/images/hero-portrait.jpg"
+                      alt="A composed professional in a quiet, reflective moment - the stillness a reading is meant to compose"
                       width={1500}
                       height={2000}
                       sizes="(max-width: 1024px) 100vw, 42vw"

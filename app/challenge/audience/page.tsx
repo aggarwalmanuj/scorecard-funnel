@@ -12,6 +12,8 @@ import { trackWhenReady } from "@/lib/fbpixel"
 import { ChallengeMenuButton } from "@/components/challenge/challenge-funnel-header-actions"
 import { ChallengeNavHome } from "@/components/challenge/challenge-nav-home"
 import { PrivacyNotice } from "@/components/privacy-notice"
+import { PhoneField } from "@/components/phone-field"
+import { dialFor } from "@/lib/country-codes"
 
 const cards: Array<{
   id: Audience
@@ -78,7 +80,10 @@ export default function AudienceSelectionPage() {
 
   const [firstNameValue, setFirstNameValue] = useState("")
   const [emailValue, setEmailValue] = useState("")
-  const [phoneValue, setPhoneValue] = useState("")
+  // Phone is split (country + local number) and lifted here so the values
+  // survive the step-1/step-2 toggle remounting the field. Combined below.
+  const [phoneCode, setPhoneCode] = useState("US")
+  const [phoneNum, setPhoneNum] = useState("")
   const [selected, setSelected] = useState<Audience | null>(null)
   // Per-field "has the user interacted with this yet" - so validation hints
   // only appear after a field is touched (or on a submit attempt), never as
@@ -90,6 +95,8 @@ export default function AudienceSelectionPage() {
   })
   const [isNavigating, setIsNavigating] = useState(false)
   const [isVisible, setIsVisible] = useState(false)
+  // Two-step layout: 1 = contact (name/email/phone), 2 = path (individual/team).
+  const [step, setStep] = useState<1 | 2>(1)
 
   useEffect(() => {
     setIsVisible(true)
@@ -117,7 +124,10 @@ export default function AudienceSelectionPage() {
 
   const trimmedName = firstNameValue.trim()
   const trimmedEmail = emailValue.trim()
-  const trimmedPhone = phoneValue.trim()
+  // Combined international number, e.g. "+1 5551234567" (empty when no number).
+  const trimmedPhone = phoneNum.trim()
+    ? `${dialFor(phoneCode)} ${phoneNum.trim()}`
+    : ""
   const emailValid = isValidEmail(trimmedEmail)
   // Optional: empty is fine; a non-empty value must look dial-able.
   const phoneValid = trimmedPhone === "" || isValidPhone(trimmedPhone)
@@ -144,6 +154,13 @@ export default function AudienceSelectionPage() {
   if (!trimmedName) missing.push("your first name")
   if (!emailValid) missing.push("a valid email")
   if (!selected) missing.push("a path below")
+
+  // Step 1 gates on contact details only (phone is optional, so it blocks only
+  // when present-but-invalid). Step 2 gates on a selected path.
+  const step1Invalid = !trimmedName || !emailValid || !phoneValid
+  const step1Missing: string[] = []
+  if (!trimmedName) step1Missing.push("your first name")
+  if (!emailValid) step1Missing.push("a valid email")
 
   const handleContinue = async () => {
     if (isNavigating) return
@@ -212,6 +229,26 @@ export default function AudienceSelectionPage() {
     router.push(`/challenge/${selected}/question-1`)
   }
 
+  // Step 1 → Step 2. Validates contact details; reveals hints + focuses the
+  // first offender if incomplete (mirrors handleContinue's behaviour).
+  const handleNext = () => {
+    if (step1Invalid) {
+      setTouched((t) => ({ ...t, firstName: true, email: true, phone: true }))
+      if (typeof document !== "undefined") {
+        const targetId = !trimmedName
+          ? "firstName"
+          : !emailValid
+            ? "email"
+            : "phone"
+        const el = document.getElementById(targetId)
+        el?.scrollIntoView({ behavior: "smooth", block: "center" })
+        if (el instanceof HTMLInputElement) el.focus({ preventScroll: true })
+      }
+      return
+    }
+    setStep(2)
+  }
+
   return (
     <div className="flex min-h-screen flex-col">
       {/* Editorial sticky nav - hairline border, no logo (per request). */}
@@ -228,34 +265,61 @@ export default function AudienceSelectionPage() {
       <main className="flex flex-1 items-start justify-center px-5 py-16 sm:py-20">
         <div className="w-full max-w-4xl">
           <div
-            className={`mb-12 text-center ${
+            className={`mb-10 text-center ${
               isVisible ? "animate-fade-in-up" : "opacity-0"
             }`}
           >
             <p className="eyebrow mb-6 text-foreground/70">
               <span className="pulse-dot mr-3" aria-hidden />
-              I · The arrival
+              {step === 1 ? "I · Your details" : "II · Your path"}
             </p>
             <h1 className="font-serif text-[2.4rem] leading-[1.04] text-ink sm:text-[3rem] md:text-[3.5rem]">
-              Tell us who is
-              <span className="block font-serif-italic text-foreground">
-                taking the reading.
-              </span>
+              {step === 1 ? (
+                <>
+                  Tell us who is
+                  <span className="block font-serif-italic text-foreground">
+                    taking the reading.
+                  </span>
+                </>
+              ) : (
+                <>
+                  Choose the lens
+                  <span className="block font-serif-italic text-foreground">
+                    for your reading.
+                  </span>
+                </>
+              )}
             </h1>
             <p className="mx-auto mt-6 max-w-xl text-[15px] leading-[1.8] text-foreground/85 sm:text-base">
-              The diagnostic adapts to the level of the system you are trying
-              to unlock. Your score and report are sent to the email you
-              provide.
+              {step === 1
+                ? "Your score and report are sent to the email you provide. A phone number is optional - only if you'd like a personal follow-up on WhatsApp."
+                : "The diagnostic adapts to the level of the system you are trying to unlock."}
             </p>
+
+            {/* Two-step progress indicator */}
+            <div
+              className="mt-7 flex items-center justify-center gap-2"
+              aria-hidden
+            >
+              {[1, 2].map((s) => (
+                <span
+                  key={s}
+                  className={`h-1.5 rounded-full transition-all duration-500 ${
+                    step === s ? "w-8 bg-signal" : "w-4 bg-foreground/25"
+                  }`}
+                />
+              ))}
+            </div>
           </div>
 
-          {/* Form - name + email, calm two-column, editorial inputs */}
+          {/* Step 1 - contact: name + email + phone */}
+          {step === 1 && (
           <form
             onSubmit={(e) => {
               e.preventDefault()
-              void handleContinue()
+              handleNext()
             }}
-            className={`mx-auto mb-12 grid max-w-2xl grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 ${
+            className={`mx-auto mb-10 grid max-w-2xl grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 ${
               isVisible ? "animate-fade-in-up delay-100" : "opacity-0"
             }`}
             autoComplete="off"
@@ -329,21 +393,15 @@ export default function AudienceSelectionPage() {
                 WhatsApp / phone{" "}
                 <span className="text-foreground/45 normal-case">(optional)</span>
               </span>
-              <Input
+              <PhoneField
                 id="phone"
-                name="phone-no-autofill"
-                placeholder="+1 555 123 4567"
-                type="tel"
-                inputMode="tel"
-                autoComplete="off"
-                data-lpignore="true"
-                data-form-type="other"
-                value={phoneValue}
-                onChange={(e) => setPhoneValue(e.target.value)}
+                invalid={!!phoneMessage}
+                describedBy={phoneMessage ? "phone-error" : "phone-hint"}
+                code={phoneCode}
+                num={phoneNum}
+                onCodeChange={setPhoneCode}
+                onNumChange={setPhoneNum}
                 onBlur={() => setTouched((t) => ({ ...t, phone: true }))}
-                aria-invalid={!!phoneMessage}
-                aria-describedby={phoneMessage ? "phone-error" : "phone-hint"}
-                className={`s-input h-12 ${phoneMessage ? "ring-1 ring-destructive/60" : ""}`}
               />
               {phoneMessage ? (
                 <p
@@ -355,18 +413,16 @@ export default function AudienceSelectionPage() {
                 </p>
               ) : (
                 <p id="phone-hint" className="mt-1.5 text-[12px] leading-snug text-foreground/55">
-                  Include your country code so we can reach you on WhatsApp.
+                  Pick your country code; a number lets the team reach you on WhatsApp.
                 </p>
               )}
             </label>
           </form>
+          )}
 
-          {/* Pick path - eyebrow + two editorial cards */}
+          {/* Step 2 - path: two editorial cards */}
+          {step === 2 && (
           <div id="path-cards" className="mx-auto max-w-3xl scroll-mt-24">
-            <p className="eyebrow mb-5 text-center text-foreground/70">
-              II · Pick your path
-            </p>
-
             <div className="grid gap-4 sm:grid-cols-2 sm:gap-5">
               {cards.map((card, idx) => {
                 const isActive = selected === card.id
@@ -431,58 +487,93 @@ export default function AudienceSelectionPage() {
               })}
             </div>
           </div>
+          )}
 
-          {/* Gentle, neutral hint that explains the disabled button - updates
-              live as each requirement is met, so "why is the button grey?" is
-              never a mystery. Per-field red messages handle format errors. */}
-          {formInvalid && (
+          {/* Gentle, neutral hint that explains the greyed button - updates live
+              so "why is the button dim?" is never a mystery. Per-field red
+              messages handle format errors. */}
+          {step === 1 && step1Invalid && (
             <p
               aria-live="polite"
               className="mt-7 text-center text-[13px] leading-[1.7] text-foreground/55"
             >
-              To begin, add {joinWithAnd(missing)}.
+              To continue, add {joinWithAnd(step1Missing)}.
+            </p>
+          )}
+          {step === 2 && !selected && (
+            <p
+              aria-live="polite"
+              className="mt-7 text-center text-[13px] leading-[1.7] text-foreground/55"
+            >
+              Pick a path to get your score.
             </p>
           )}
 
           <div
-            className={`mt-12 flex flex-col items-center justify-between gap-5 sm:flex-row ${
+            className={`mt-10 flex flex-col items-center justify-between gap-5 sm:flex-row ${
               isVisible ? "animate-fade-in-up delay-400" : "opacity-0"
             }`}
           >
-            <Link
-              href="/"
-              className="inline-flex items-center gap-1.5 text-[12px] uppercase tracking-[0.22em] text-foreground/65 transition-colors hover:text-ink"
-            >
-              <ArrowLeft className="h-3.5 w-3.5" strokeWidth={1.5} />
-              Back to home
-            </Link>
+            {step === 1 ? (
+              <Link
+                href="/"
+                className="inline-flex items-center gap-1.5 text-[12px] uppercase tracking-[0.22em] text-foreground/65 transition-colors hover:text-ink"
+              >
+                <ArrowLeft className="h-3.5 w-3.5" strokeWidth={1.5} />
+                Back to home
+              </Link>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setStep(1)}
+                className="inline-flex items-center gap-1.5 text-[12px] uppercase tracking-[0.22em] text-foreground/65 transition-colors hover:text-ink"
+              >
+                <ArrowLeft className="h-3.5 w-3.5" strokeWidth={1.5} />
+                Back
+              </button>
+            )}
 
-            {/* Intentionally NOT disabled on an incomplete form: a dead grey
-                button gives no feedback (the reported bug). Clicking while
-                invalid reveals the per-field messages via handleContinue so
-                the user always learns what's missing. Only disabled mid-submit.
-                `aria-disabled` keeps the "not ready" signal for assistive tech. */}
-            <button
-              type="button"
-              onClick={handleContinue}
-              disabled={isNavigating}
-              aria-disabled={formInvalid || isNavigating}
-              className={`s-btn group min-w-44 justify-center ${
-                formInvalid ? "opacity-60" : ""
-              }`}
-            >
-              {isNavigating ? (
-                <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border border-current border-t-transparent" />
-              ) : (
-                <>
-                  Begin the reading
-                  <ArrowRight
-                    className="h-3.5 w-3.5 transition-transform duration-500 group-hover:translate-x-1"
-                    strokeWidth={1.6}
-                  />
-                </>
-              )}
-            </button>
+            {/* Not disabled on an incomplete form: clicking while invalid
+                reveals the per-field hints (handleNext / handleContinue) so the
+                user always learns what's missing. Only disabled mid-submit. */}
+            {step === 1 ? (
+              <button
+                type="button"
+                onClick={handleNext}
+                aria-disabled={step1Invalid}
+                className={`s-btn group min-w-44 justify-center ${
+                  step1Invalid ? "opacity-60" : ""
+                }`}
+              >
+                Next
+                <ArrowRight
+                  className="h-3.5 w-3.5 transition-transform duration-500 group-hover:translate-x-1"
+                  strokeWidth={1.6}
+                />
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={handleContinue}
+                disabled={isNavigating}
+                aria-disabled={!selected || isNavigating}
+                className={`s-btn group min-w-44 justify-center ${
+                  !selected ? "opacity-60" : ""
+                }`}
+              >
+                {isNavigating ? (
+                  <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border border-current border-t-transparent" />
+                ) : (
+                  <>
+                    Get your free score
+                    <ArrowRight
+                      className="h-3.5 w-3.5 transition-transform duration-500 group-hover:translate-x-1"
+                      strokeWidth={1.6}
+                    />
+                  </>
+                )}
+              </button>
+            )}
           </div>
 
           <PrivacyNotice className="mx-auto mt-8 max-w-2xl justify-center text-center" />

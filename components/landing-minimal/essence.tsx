@@ -27,7 +27,7 @@ export function EssenceSection() {
             <h2 className="font-serif text-[1.95rem] leading-[1.08] text-ink sm:text-5xl sm:leading-[1.05] lg:text-6xl">
               <WordReveal
                 segments={[
-                  { kind: "text", text: "Not coaching. Not therapy. Not a course." },
+                  { kind: "text", text: "Your own words." },
                   { kind: "br" },
                   { kind: "italic", text: "Your own voice." },
                 ]}
@@ -102,7 +102,7 @@ export function EssenceSection() {
             <Reveal as="div" delay={200} className="mt-12">
               <MagneticButton>
                 <Link href="/challenge/audience" className="s-btn group">
-                  Begin the reading
+                  Get your free score
                   <ArrowRight
                     className="h-3.5 w-3.5 transition-transform duration-500 group-hover:translate-x-1"
                     strokeWidth={1.6}

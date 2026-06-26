@@ -363,6 +363,18 @@ export function JourneySummaryScreen({ audience }: { audience: Audience }) {
     return () => clearTimeout(t)
   }, [isComplete, hasFailed])
 
+  // Front-load the TTS the instant the summary text is final, so the audio
+  // bytes are generating/cached before autoplay (or the user's click) needs
+  // them - this is what removes the "Preparing audio…" wait. Idempotent:
+  // preloadSummaryAudio dedupes against the audio cache, so a later play just
+  // reuses these bytes instead of starting a fresh round-trip.
+  useEffect(() => {
+    if (!isComplete) return
+    const text = summaryText.trim()
+    if (!text) return
+    void preloadSummaryAudio(text)
+  }, [isComplete, summaryText])
+
   // Warm the next route's bundle as soon as the page mounts. By the time
   // the CTA fades in and the user clicks it, Next has the RSC payload and
   // any data hooks pre-resolved - the navigation feels instant.
@@ -557,7 +569,7 @@ export function JourneySummaryScreen({ audience }: { audience: Audience }) {
           transform: isVisible ? "translateY(0)" : "translateY(24px)",
         }}
       >
-        <div className="w-full flex-1 px-5 pb-12 pt-12 sm:px-10 sm:pt-16">
+        <div className="mx-auto w-full max-w-3xl flex-1 px-5 pb-12 pt-12 sm:px-10 sm:pt-16">
           {/* Header */}
           <div
             style={{
@@ -637,11 +649,15 @@ export function JourneySummaryScreen({ audience }: { audience: Audience }) {
                 className="group relative w-full max-w-md flex items-center justify-center gap-3 px-8 py-4 sm:py-5 rounded-2xl font-black uppercase tracking-[0.14em] transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] disabled:cursor-wait disabled:opacity-90"
                 style={{
                   fontSize: "clamp(16px, 2.2vw, 20px)",
-                  background: "linear-gradient(135deg, #fde047 0%, #f59e0b 100%)",
-                  color: "#1a1306",
+                  // On-palette teal (the brand --signal accent) - vibrant and
+                  // distinct, with navy text for crisp contrast. Replaces the
+                  // off-brand amber/yellow gradient.
+                  background:
+                    "linear-gradient(135deg, var(--signal) 0%, color-mix(in srgb, var(--signal) 58%, var(--background)) 100%)",
+                  color: "var(--background)",
                   border: "1px solid rgba(255,255,255,0.35)",
                   boxShadow:
-                    "0 18px 40px rgba(245,158,11,0.4), inset 0 1px 0 rgba(255,255,255,0.45)",
+                    "0 18px 40px rgba(var(--glow), 0.42), inset 0 1px 0 rgba(255,255,255,0.4)",
                   animation:
                     !isPlaying && !isLoadingAudio
                       ? "attention-pulse 2.5s ease-out infinite"

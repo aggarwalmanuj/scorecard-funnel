@@ -17,7 +17,7 @@ export function ReservationForm({
   id,
   eyebrow = "Reserve your reading",
   title = "Five quiet questions. One personal preview.",
-  ctaLabel = "Begin the reading",
+  ctaLabel = "Get your free score",
 }: {
   id?: string
   eyebrow?: string

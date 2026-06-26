@@ -204,8 +204,16 @@ export async function fetchUsers(
 
   // Fetch pageSize + 1 to detect hasMore in a single round-trip.
   const probe = pageSize + 1
+  // IMPORTANT: order by the system `_ts` (last-write timestamp), NOT by
+  // `c.createdAt`. Cosmos silently DROPS any document missing the ORDER BY
+  // field, so `ORDER BY c.createdAt` excluded legacy rows that predate that
+  // field — capping the admin list (and making "Load More" disappear because
+  // hasMore came back false) even though more rows exist. `_ts` is defined on
+  // every document, so the full dataset paginates. The `IS_DEFINED(c.email)`
+  // filter keeps the internal serial-counter doc out of the user list.
   const querySpec = {
-    query: "SELECT * FROM c ORDER BY c.createdAt DESC OFFSET @offset LIMIT @limit",
+    query:
+      "SELECT * FROM c WHERE IS_DEFINED(c.email) ORDER BY c._ts DESC OFFSET @offset LIMIT @limit",
     parameters: [
       { name: "@offset", value: offset },
       { name: "@limit", value: probe },
@@ -259,9 +267,12 @@ export async function searchUsers(opts: {
     conditions.push("(NOT IS_DEFINED(c.question5) OR c.question5 = '')")
   }
 
-  const where = conditions.length > 0 ? ` WHERE ${conditions.join(" AND ")}` : ""
+  // Always filter to real user rows (excludes the serial-counter doc) and order
+  // by the always-defined system `_ts` rather than `c.createdAt` — see the note
+  // in fetchUsers: ordering by createdAt silently drops rows that lack it.
+  const where = ` WHERE ${["IS_DEFINED(c.email)", ...conditions].join(" AND ")}`
   const querySpec = {
-    query: `SELECT * FROM c${where} ORDER BY c.createdAt DESC`,
+    query: `SELECT * FROM c${where} ORDER BY c._ts DESC`,
     parameters: params,
   }
 

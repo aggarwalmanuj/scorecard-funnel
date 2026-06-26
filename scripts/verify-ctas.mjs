@@ -41,11 +41,11 @@ async function getHrefByText(scope, text) {
 
   // Sanctuary CTA
   const sanctuarySection = await page.$('#sanctuary');
-  report.sanctuary = sanctuarySection ? await getHrefByText(sanctuarySection, 'Begin the reading') : null;
+  report.sanctuary = sanctuarySection ? await getHrefByText(sanctuarySection, 'Get your free score') : null;
 
   // Dimensions CTA (#how-it-works)
   const dimSection = await page.$('#how-it-works');
-  report.dimensions = dimSection ? await getHrefByText(dimSection, 'Begin the reading') : null;
+  report.dimensions = dimSection ? await getHrefByText(dimSection, 'Get your free score') : null;
 
   // Closing CTA: section before footer (search broadly, find the last <section>
   // appearing before the <footer> in document order)
@@ -60,10 +60,10 @@ async function getHrefByText(scope, text) {
       if (pos & Node.DOCUMENT_POSITION_FOLLOWING) target = s;
     }
     if (!target) return null;
-    // Find a link with text "Begin the reading" within
+    // Find a link with text "Get your free score" within
     const links = Array.from(target.querySelectorAll('a[href]'));
     const begin = links.find((a) =>
-      (a.textContent || '').toLowerCase().includes('begin the reading')
+      (a.textContent || '').toLowerCase().includes('get your free score')
     );
     return begin ? begin.getAttribute('href') : (links[0] ? links[0].getAttribute('href') : null);
   });
@@ -179,7 +179,7 @@ async function getHrefByText(scope, text) {
     await mpage.waitForTimeout(700);
     // find sheet/dialog container
     const sheet = (await mpage.$('[role="dialog"]')) || (await mpage.$('[data-state="open"]')) || mpage;
-    mobileMenuHref = await getHrefByText(sheet, 'Begin the reading');
+    mobileMenuHref = await getHrefByText(sheet, 'Get your free score');
   }
   report.mobileMenu = mobileMenuHref;
 

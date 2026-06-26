@@ -52,7 +52,7 @@ export function LevelsSection() {
         <Reveal as="div" className="grid items-end gap-10 lg:grid-cols-12 lg:gap-16">
           <div className="lg:col-span-7">
             <p className="eyebrow mb-6 text-foreground/70">
-              IX · What you receive
+              VIII · What you receive
             </p>
             <h2 className="font-serif text-[1.95rem] leading-[1.08] text-ink sm:text-5xl sm:leading-[1.05] lg:text-6xl">
               One door in.
