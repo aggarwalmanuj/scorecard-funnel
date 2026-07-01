@@ -37,11 +37,13 @@ const UTM_KEYS = [
 // conversion matching (Meta fbclid, Google gclid, TikTok ttclid, Microsoft).
 const CLICK_KEYS = ["fbclid", "gclid", "ttclid", "msclkid"] as const
 
-// Cross-reference back to the originating landing page:
-//   ref → the landing page's own lead/record id (lets you JOIN a score on this
-//         site to the exact row already stored in the landing page's DB)
-//   lp  → which landing page / funnel forwarded the user (e.g. "adhd")
-const REF_KEYS = ["ref", "lp"] as const
+// Cross-reference back to the originating landing page + which vertical/funnel
+// the session came from:
+//   ref      → the landing page's own lead/record id (JOIN key back to its DB)
+//   lp       → which landing page forwarded the user (e.g. "adhd")
+//   vertical → the funnel/vertical of the session (e.g. "adhd", "traders",
+//              "main"). Alias of lp; whichever the landing page sends is used.
+const REF_KEYS = ["ref", "lp", "vertical"] as const
 
 const CAPTURE_KEYS = [...UTM_KEYS, ...CLICK_KEYS, ...REF_KEYS] as const
 

@@ -69,9 +69,10 @@ const bodySchema = z.object({
       gclid: z.string().max(500).optional(),
       ttclid: z.string().max(500).optional(),
       msclkid: z.string().max(500).optional(),
-      // Cross-reference back to the originating landing page.
+      // Cross-reference back to the originating landing page + the vertical.
       ref: z.string().max(500).optional(),
       lp: z.string().max(500).optional(),
+      vertical: z.string().max(500).optional(),
       referrer: z.string().max(500).optional(),
       landing_page: z.string().max(500).optional(),
     })

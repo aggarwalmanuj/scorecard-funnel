@@ -119,6 +119,8 @@ export type UserDocument = {
   msclkid?: string
   ref?: string
   lp?: string
+  /** Funnel/vertical the session came from (e.g. "adhd", "traders", "main"). */
+  vertical?: string
   referrer?: string
   landing_page?: string
   // Purchase record. Written by the Stripe webhook (authoritative) and/or the
@@ -142,6 +144,7 @@ export type Attribution = {
   msclkid?: string
   ref?: string
   lp?: string
+  vertical?: string
   referrer?: string
   landing_page?: string
 }
@@ -164,6 +167,7 @@ function sanitizeAttribution(attribution?: Attribution): Record<string, string> 
     "msclkid",
     "ref",
     "lp",
+    "vertical",
     "referrer",
     "landing_page",
   ]

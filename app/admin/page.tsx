@@ -794,7 +794,7 @@ export default function AdminPage() {
     utm_source?: string; utm_medium?: string; utm_campaign?: string
     utm_term?: string; utm_content?: string
     fbclid?: string; gclid?: string; ttclid?: string; msclkid?: string
-    ref?: string; lp?: string
+    ref?: string; lp?: string; vertical?: string
     referrer?: string; landing_page?: string
   }
   const [responses, setResponses] = useState<UserResponse[]>([])
@@ -1003,6 +1003,7 @@ export default function AdminPage() {
       utm_content: r.utm_content ?? "",
       fbclid: r.fbclid ?? "", gclid: r.gclid ?? "", ttclid: r.ttclid ?? "",
       msclkid: r.msclkid ?? "", ref: r.ref ?? "", lp: r.lp ?? "",
+      vertical: r.vertical ?? "",
       referrer: r.referrer ?? "",
       landing_page: r.landing_page ?? "",
     }))
@@ -2313,6 +2314,16 @@ export default function AdminPage() {
                                 </Badge>
                                 <Badge variant="outline" className={`rounded-full text-[10px] uppercase tracking-[0.2em] shrink-0 ${audienceBadge}`}>
                                   {r.audience || "-"}
+                                </Badge>
+                                {/* Vertical/funnel the entry came from (adhd, traders, main…).
+                                    Derived: explicit vertical → lp slug → "main" default so
+                                    entries that predate the tracking still read cleanly. */}
+                                <Badge
+                                  variant="outline"
+                                  className="hidden rounded-full border-signal/30 bg-signal/10 text-[10px] uppercase tracking-[0.2em] text-signal shrink-0 sm:inline-flex"
+                                  title="Vertical / funnel"
+                                >
+                                  {r.vertical || r.lp || "main"}
                                 </Badge>
                                 <div className="flex-1 min-w-0">
                                   <p className="eyebrow text-foreground/70">{r.firstName || "-"}</p>
