@@ -7,7 +7,7 @@ import { ArrowRight, Pause, Play } from "lucide-react"
 import { MagneticButton, Reveal } from "./motion"
 
 /**
- * Walkthrough - the conversion-critical "see the whole reading before you
+ * Walkthrough - the conversion-critical "see the whole assessment before you
  * begin" catalogue. Ad visitors were bouncing because the ask had no
  * visible shape: they couldn't tell what they'd do or what they'd get.
  * This previews the entire funnel with the real product screenshots so the
@@ -37,13 +37,13 @@ type Step = {
 const steps: ReadonlyArray<Step> = [
   {
     n: "01",
-    title: "Tell us who's reading",
+    title: "Tell us who this is for",
     meta: "30 seconds",
     img: "/take/audience.png",
     w: 1880,
     h: 892,
-    alt: "The opening screen - your name, your email, and whether the reading is for you or your team.",
-    what: "Your name, your email, and whether the reading is for you or for your team.",
+    alt: "The opening screen - your name, your email, and whether the assessment is for you or your team.",
+    what: "Your name, your email, and whether the assessment is for you or for your team.",
     why: "The diagnostic calibrates to your level - and your results are sent to you, yours to keep.",
   },
   {
@@ -64,8 +64,8 @@ const steps: ReadonlyArray<Step> = [
     img: "/take/beat.png",
     w: 1879,
     h: 891,
-    alt: "A reflection screen - the reading mirrors what you've just said back to you in composed language.",
-    what: "Between questions, the reading mirrors what you've said back in short, composed reflections.",
+    alt: "A reflection screen - the assessment mirrors what you've just said back to you in composed language.",
+    what: "Between questions, the assessment mirrors what you've said back in short, composed reflections.",
     why: "This is the moment most people feel seen - language for what they already knew but couldn't name.",
   },
   {
@@ -77,7 +77,7 @@ const steps: ReadonlyArray<Step> = [
     h: 815,
     alt: "The results screen - a Clarity Readiness Index score with four pillars scored beneath it.",
     what: "Your Belief Score across four pillars - and the one constraint running underneath.",
-    why: "A precise, honest reading. Not a personality label. It shows you exactly where to look first.",
+    why: "A precise, honest score. Not a personality label. It shows you exactly where to look first.",
   },
   {
     n: "05",
@@ -172,7 +172,7 @@ export function WalkthroughSection() {
               id="walkthrough-heading"
               className="font-serif text-[1.95rem] leading-[1.08] text-ink sm:text-5xl sm:leading-[1.05] lg:text-6xl"
             >
-              See the whole reading
+              See the whole assessment
               <span className="block font-serif-italic text-foreground">
                 before you begin.
               </span>
@@ -180,7 +180,7 @@ export function WalkthroughSection() {
           </div>
           <div className="lg:col-span-5">
             <p className="text-lg leading-[1.8] text-foreground/85">
-              Ten minutes. Five questions. One honest reading.
+              Ten minutes. Five questions. One honest score.
             </p>
             <p className="mt-3 text-[15px] leading-[1.75] text-foreground/70">
               Here is every step, start to finish - so you know exactly what
@@ -216,7 +216,7 @@ export function WalkthroughSection() {
                   className="ml-1 hidden truncate rounded-full bg-background/60 px-3 py-1 text-[11px] tracking-wide text-foreground/55 sm:inline-block"
                   aria-hidden
                 >
-                  honestdecisionchallenge.com / your-reading
+                  aimerge.live / your-score
                 </span>
                 {/* Story-style progress segments double as a step picker. */}
                 <div
@@ -316,7 +316,7 @@ export function WalkthroughSection() {
           <div className="lg:col-span-5">
             <div
               role="tablist"
-              aria-label="The reading, step by step"
+              aria-label="The assessment, step by step"
               aria-orientation="vertical"
               className="flex flex-col"
             >

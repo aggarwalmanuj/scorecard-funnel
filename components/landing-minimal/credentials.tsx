@@ -26,7 +26,7 @@ export function CredentialsSection() {
             <h2 className="font-serif text-[1.75rem] leading-[1.1] text-ink sm:text-4xl sm:leading-[1.08]">
               The work composed
               <span className="block font-serif-italic text-foreground">
-                behind the reading.
+                behind the score.
               </span>
             </h2>
           </div>

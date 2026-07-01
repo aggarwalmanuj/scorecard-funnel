@@ -47,7 +47,7 @@ export function DimensionsSection() {
         <Reveal as="div" className="grid items-end gap-10 lg:grid-cols-12 lg:gap-16">
           <div className="lg:col-span-7">
             <p className="eyebrow mb-6 text-foreground/70">
-              VIII · The Reading
+              VIII · The Score
             </p>
             <h2 className="font-serif text-[1.95rem] leading-[1.08] text-ink sm:text-5xl sm:leading-[1.05] lg:text-6xl">
               A mirror.
@@ -61,8 +61,8 @@ export function DimensionsSection() {
               Ten minutes. Five honest questions. No labels, no archetypes.
             </p>
             <p className="mt-4 font-serif-italic text-xl text-ink">
-              The reading does not give you new information. It gives you the
-              language for what you already knew.
+              Your Belief Score does not give you new information. It gives you
+              the language for what you already knew.
             </p>
           </div>
         </Reveal>

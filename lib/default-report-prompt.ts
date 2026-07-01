@@ -19,7 +19,7 @@ Return ONLY this JSON shape, no prose, no code fences:
   "headline":   "<one sharp sentence - the thesis of their journey, max 14 words>",
   "thread":     "<2-3 sentences naming the throughline running through everything they wrote>",
   "pillars": [
-    { "key": "directionClarity",  "narrative": "<60-90 words on what their direction-clarity reading actually means for them, grounded in their words>", "evidence": "<short direct quote or close paraphrase from their answers, max 120 chars>", "focus": "<one-sentence imperative - the specific lever for this pillar>" },
+    { "key": "directionClarity",  "narrative": "<60-90 words on what their direction-clarity score actually means for them, grounded in their words>", "evidence": "<short direct quote or close paraphrase from their answers, max 120 chars>", "focus": "<one-sentence imperative - the specific lever for this pillar>" },
     { "key": "identityAlignment", "narrative": "<60-90 words, same shape as above>", "evidence": "<short direct quote or close paraphrase, max 120 chars>", "focus": "<one-sentence imperative>" },
     { "key": "decisionReadiness", "narrative": "<60-90 words, same shape as above>", "evidence": "<short direct quote or close paraphrase, max 120 chars>", "focus": "<one-sentence imperative>" },
     { "key": "energyAlignment",   "narrative": "<60-90 words, same shape as above>", "evidence": "<short direct quote or close paraphrase, max 120 chars>", "focus": "<one-sentence imperative>" }

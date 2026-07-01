@@ -592,7 +592,7 @@ export function QuestionScreen({
               disabled={isNavigating || !answer.trim()}
               aria-label={
                 questionNumber === 5
-                  ? "Complete the reading"
+                  ? "Complete the assessment"
                   : "Continue to next question"
               }
               className="s-btn group h-12 flex-1 justify-center"
@@ -601,7 +601,7 @@ export function QuestionScreen({
                 <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border border-current border-t-transparent" />
               ) : (
                 <>
-                  {questionNumber === 5 ? "Complete the reading" : "Continue"}
+                  {questionNumber === 5 ? "Complete the assessment" : "Continue"}
                   <ArrowRight
                     className="h-3.5 w-3.5 transition-transform duration-500 group-hover:translate-x-1"
                     strokeWidth={1.6}

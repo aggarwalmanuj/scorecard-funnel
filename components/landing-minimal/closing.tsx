@@ -55,8 +55,8 @@ export function ClosingSection() {
               delay={500}
               className="mt-6 max-w-xl text-[15.5px] leading-[1.75] text-foreground/85 sm:mt-8 sm:text-[1.05rem] sm:leading-[1.8]"
             >
-              Sit, for ten minutes, with five honest questions. Let the reading
-              compose what you have already been carrying for years -
+              Sit, for ten minutes, with five honest questions. Let your Belief
+              Score compose what you have already been carrying for years -
               somewhere quiet to land.
             </Reveal>
           </div>
@@ -64,7 +64,7 @@ export function ClosingSection() {
           <Reveal as="div" delay={300} className="lg:col-span-5">
             <ReservationForm
               id="closing-form"
-              eyebrow="Reserve your reading"
+              eyebrow="Reserve your score"
               title="Five quiet questions. One personal preview."
             />
           </Reveal>

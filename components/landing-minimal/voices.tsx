@@ -6,7 +6,7 @@ import { VideoTestimonialsWall } from "@/components/video-testimonials-wall"
 const voices = [
   {
     quote:
-      "Life-changing. I didn't know something like this existed - a precise reading instead of another assessment.",
+      "Life-changing. I didn't know something like this existed - a precise diagnostic instead of another personality test.",
     author: "Senior Executive",
     place: "Marbella",
   },
@@ -24,13 +24,13 @@ const voices = [
   },
   {
     quote:
-      "Forty percent operational cost reduction within weeks. Same team, different reading.",
+      "Forty percent operational cost reduction within weeks. Same team, different result.",
     author: "Michelle J.",
     place: "Business Owner",
   },
   {
     quote:
-      "Three consultants. Two restructures. The same ceiling. One reading found what was underneath.",
+      "Three consultants. Two restructures. The same ceiling. One score found what was underneath.",
     author: "Senior Executive",
     place: "Fortune 500",
   },

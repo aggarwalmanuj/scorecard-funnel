@@ -50,7 +50,7 @@ export default function PrivacyPolicyPage() {
             <p>
               AIMerge (&quot;we,&quot; &quot;us,&quot; or &quot;our&quot;) operates the AIMerge
               platform, including the Belief Score assessment
-              (&quot;The Reading&quot;). This Privacy
+              (the &quot;Belief Score&quot;). This Privacy
               Policy explains how we collect, use, disclose, and safeguard
               your information when you visit our website and use our
               services. Please read this policy carefully. By accessing or

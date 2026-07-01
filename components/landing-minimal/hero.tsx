@@ -53,7 +53,7 @@ export function MinimalHero() {
               className="mt-9 max-w-xl scroll-mt-24 sm:mt-12 sm:scroll-mt-28"
             >
               <ReservationForm
-                eyebrow="Begin your free reading"
+                eyebrow="Begin your free assessment"
                 title="Five quiet questions. One personal preview."
                 ctaLabel="Get Your Score - Free"
               />
@@ -83,7 +83,7 @@ export function MinimalHero() {
                   <div className="img-hover-zoom relative overflow-hidden rounded-sm">
                     <Image
                       src="/images/hero-portrait.jpg"
-                      alt="A composed professional in a quiet, reflective moment - the stillness a reading is meant to compose"
+                      alt="A composed professional in a quiet, reflective moment - the stillness the assessment is meant to compose"
                       width={1500}
                       height={2000}
                       sizes="(max-width: 1024px) 100vw, 42vw"
@@ -99,8 +99,8 @@ export function MinimalHero() {
             <div className="mt-5 flex items-start justify-between gap-4 sm:mt-6 sm:gap-6">
               <p className="eyebrow text-foreground/60">I · Arrival</p>
               <p className="max-w-56 text-right font-serif-italic text-[13px] leading-snug text-foreground/80 sm:text-sm">
-                &ldquo;The reading does not give you new information. It gives
-                you the language for what you already knew.&rdquo;
+                &ldquo;Your Belief Score does not give you new information. It
+                gives you the language for what you already knew.&rdquo;
               </p>
             </div>
           </Reveal>

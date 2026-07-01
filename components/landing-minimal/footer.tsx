@@ -5,10 +5,10 @@ import { Linkedin } from "lucide-react"
 
 const cols = [
   {
-    heading: "The reading",
+    heading: "The Belief Score",
     links: [
       { label: "The Pain", href: "#sanctuary" },
-      { label: "The Reading", href: "#how-it-works" },
+      { label: "The Score", href: "#how-it-works" },
       { label: "What you carry home", href: "#take-home" },
       { label: "Voices", href: "#voices" },
       { label: "Notes", href: "#notes" },

@@ -25,8 +25,8 @@ const sections: Array<{ heading: string; body: React.ReactNode }> = [
     body: (
       <p>
         AIMerge provides an AI-powered self-reflection experience called the
-        Belief Score assessment (also referred to as &quot;The
-        Reading&quot;). The Service asks users a series of questions
+        Belief Score assessment (also referred to as the &quot;Belief
+        Score&quot;). The Service asks users a series of questions
         and uses artificial intelligence to generate personalised reflections
         based on their answers. The Service is designed for personal insight
         and self-reflection purposes only.

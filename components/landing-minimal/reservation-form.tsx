@@ -15,7 +15,7 @@ import { MagneticButton } from "./motion"
  */
 export function ReservationForm({
   id,
-  eyebrow = "Reserve your reading",
+  eyebrow = "Reserve your score",
   title = "Five quiet questions. One personal preview.",
   ctaLabel = "Get your free score",
 }: {

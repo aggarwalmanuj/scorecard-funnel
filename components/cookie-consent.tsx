@@ -72,7 +72,7 @@ export function CookieConsent() {
           <p className="eyebrow mb-2 text-foreground/65">A quiet note</p>
           <p className="text-[14px] leading-[1.7] text-foreground/85 sm:text-[14.5px]">
             We use a small set of cookies to keep the site running and to
-            understand which parts of the reading land. Your responses are
+            understand which parts of the assessment land. Your responses are
             confidential and will never be shared with third parties. They may
             be reviewed by the AI Merge team to personalize your experience and
             ensure the right support reaches you.{" "}

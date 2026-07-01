@@ -14,12 +14,12 @@ import { ChallengeMenuButton } from "@/components/challenge/challenge-funnel-hea
 const processingSteps = [
   "Reading what you shared",
   "Finding where the noise is coming from",
-  "Scoring your clarity reading",
+  "Scoring your clarity",
   "Building your mirror",
   "Drafting your detailed report",
   "Writing your closing reflection",
   "Finding the one thing that moves everything else",
-  "Setting your reading aside for you",
+  "Setting your score aside for you",
 ]
 
 const BEAT_READY_MIN_CHARS = 40

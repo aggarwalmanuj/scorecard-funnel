@@ -60,7 +60,7 @@ export interface ChallengeState {
     beat4: string
     beat5: string
   }
-  /** LLM-scored clarity reading — captured once (in the background during
+  /** LLM-scored clarity score — captured once (in the background during
    *  processing) so every downstream surface (summary, report PDF, offer
    *  page) shows identical numbers instead of re-rolling against the LLM. */
   clarityScore: ClarityScoreSnapshot | null

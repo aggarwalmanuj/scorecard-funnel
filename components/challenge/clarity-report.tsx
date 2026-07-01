@@ -964,7 +964,7 @@ function BenchmarkBlock({ overall, mean }: { overall: number; mean: number }) {
       </div>
       <p className="bench-note">
         You score <b>{deltaText}</b>. The pillar with the most leverage to lift
-        your overall score is the one with the lowest reading on page 1.
+        your overall score is the one with the lowest score on page 1.
       </p>
     </div>
   )

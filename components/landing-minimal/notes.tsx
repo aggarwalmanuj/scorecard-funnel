@@ -11,19 +11,19 @@ import { Reveal } from "./motion"
 const faqs = [
   {
     q: "Is this a personality test?",
-    a: "No. There are no labels and no archetypes. Your reading is a precise diagnostic across seven dimensions of life and work - naming the specific pattern quietly limiting your results.",
+    a: "No. There are no labels and no archetypes. Your Belief Score is a precise diagnostic across seven dimensions of life and work - naming the specific pattern quietly limiting your results.",
   },
   {
     q: "I have tried coaching and retreats. How is this different?",
-    a: "Most approaches deliver information or general insight. The reading names the specific pattern running against you - so precisely you recognise it the moment it surfaces. Built on a framework peer-reviewed in the Mensa Research Journal.",
+    a: "Most approaches deliver information or general insight. Your Belief Score names the specific pattern running against you - so precisely you recognise it the moment it surfaces. Built on a framework peer-reviewed in the Mensa Research Journal.",
   },
   {
     q: "Will I be sold something at the end?",
-    a: "There is nothing to buy during the reading. The full PDF report is delivered after your assessment. If you wish to go deeper, an option is offered - only when relevant to what surfaced.",
+    a: "There is nothing to buy during the assessment. The full PDF report is delivered after your assessment. If you wish to go deeper, an option is offered - only when relevant to what surfaced.",
   },
   {
     q: "How long does it actually take?",
-    a: "Ten minutes. Some take longer because they want to sit with a question. That is fine. The reading itself is composed to take ten quiet minutes.",
+    a: "Ten minutes. Some take longer because they want to sit with a question. That is fine. The assessment itself is composed to take ten quiet minutes.",
   },
   {
     q: "Is my data safe?",
@@ -45,7 +45,7 @@ export function NotesSection() {
               </span>
             </h2>
             <p className="mt-6 max-w-md text-[15px] leading-[1.8] text-foreground/80">
-              Answered in the spirit we hope you will bring to the reading
+              Answered in the spirit we hope you will bring to the assessment
               itself - plainly, and without hurry.
             </p>
           </div>

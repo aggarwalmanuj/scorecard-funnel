@@ -278,14 +278,14 @@ export default function AudienceSelectionPage() {
                 <>
                   Tell us who is
                   <span className="block font-serif-italic text-foreground">
-                    taking the reading.
+                    taking the assessment.
                   </span>
                 </>
               ) : (
                 <>
                   Choose the lens
                   <span className="block font-serif-italic text-foreground">
-                    for your reading.
+                    for your score.
                   </span>
                 </>
               )}

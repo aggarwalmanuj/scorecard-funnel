@@ -18,7 +18,7 @@ const items: ReadonlyArray<{
   {
     number: "II",
     title: "A personal audio composition",
-    body: "Your reading, narrated quietly. What it means, what is in the way, what changes when it lifts.",
+    body: "Your Belief Score, narrated quietly. What it means, what is in the way, what changes when it lifts.",
   },
   {
     number: "III",
@@ -54,8 +54,8 @@ export function TakeHomeSection() {
           </div>
           <div className="lg:col-span-5">
             <p className="font-serif-italic text-xl leading-normal text-ink">
-              Delivered the same day. The reading does not need to be repeated
-              to be remembered.
+              Delivered the same day. Your Belief Score does not need to be
+              repeated to be remembered.
             </p>
           </div>
         </Reveal>
@@ -86,7 +86,7 @@ export function TakeHomeSection() {
                   <div className="relative overflow-hidden rounded-[6px] ring-1 ring-foreground/15 shadow-[0_30px_80px_-32px_rgba(5,18,26,0.9)]">
                     <Image
                       src="/take/reportpdf.png"
-                      alt="A page from the personalised diagnostic PDF - your full reading composed around your inputs"
+                      alt="A page from the personalised diagnostic PDF - your full report composed around your inputs"
                       width={988}
                       height={769}
                       sizes="(max-width: 640px) 80vw, (max-width: 1024px) 60vw, 36vw"

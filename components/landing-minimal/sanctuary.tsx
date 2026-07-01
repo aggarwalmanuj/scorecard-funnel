@@ -47,8 +47,8 @@ export function SanctuarySection() {
             <div className="space-y-6 text-[1.05rem] leading-[1.85] text-foreground/85">
               <p>
                 That&apos;s not because you didn&apos;t try hard enough. It&apos;s
-                because those approaches work on the surface. The Reading works
-                underneath.
+                because those approaches work on the surface. Your Belief Score
+                works underneath.
               </p>
               <p>
                 There is a specific pattern in your nervous system - installed
@@ -88,9 +88,9 @@ export function SanctuarySection() {
 
               <blockquote className="my-10 border-l border-foreground/40 pl-6">
                 <p className="font-serif-italic text-2xl leading-snug text-ink sm:text-3xl">
-                  The Reading finds it
+                  Your Belief Score
                   <br />
-                  in ten minutes.
+                  finds it in ten minutes.
                 </p>
               </blockquote>
             </div>
@@ -136,8 +136,8 @@ export function SanctuarySection() {
               </h3>
               <div className="mt-8 space-y-5 text-[1.05rem] leading-[1.85] text-foreground/85">
                 <p>
-                  Most programs teach you to manage how you feel. The Reading
-                  removes what is causing it.
+                  Most programs teach you to manage how you feel. Your Belief
+                  Score removes what is causing it.
                 </p>
                 <p>
                   The difference is the difference between carrying something

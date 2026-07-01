@@ -16,7 +16,7 @@ type Variant = "light" | "dark"
 
 const NAV_LINKS: Array<{ href: string; label: string }> = [
   { href: "/", label: "Home" },
-  { href: "/#how-it-works", label: "The Reading" },
+  { href: "/#how-it-works", label: "The Score" },
   { href: "/#voices", label: "Voices" },
   { href: "/#notes", label: "Notes" },
   { href: "/privacy", label: "Privacy" },
@@ -70,7 +70,7 @@ export function ChallengeMenuButton({
               </SheetTitle>
             </div>
             <p className="font-serif-italic text-[14px] leading-snug text-foreground/75">
-              Navigate the reading.
+              Navigate your Belief Score.
             </p>
           </SheetHeader>
 

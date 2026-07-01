@@ -45,15 +45,15 @@ interface TierCopy {
 // the single deliverable framed on every page (no on-page upsell).
 const TIER_COPY: Record<SuccessTier, TierCopy> = {
   diagnostic: {
-    eyebrow: "Your reading is ready",
-    headLead: "Your reading is",
+    eyebrow: "Your Belief Score is ready",
+    headLead: "Your Belief Score is",
     headEmphasis: "composed.",
     body: [
       "What you felt but couldn't name is now on the page - the specific pattern running quietly underneath your effort, read across all seven dimensions.",
-      "Take your time with it. The reading does not need to be repeated to be remembered.",
+      "Take your time with it. It does not need to be repeated to be remembered.",
     ],
     reportTitle: "Download your report",
-    reportTitleItalic: "your full reading.",
+    reportTitleItalic: "your full report.",
     reportCta: "Download your report",
     reportNote:
       "A copy is also on its way to your inbox. If it hasn't arrived in a few minutes, check your spam folder - then add us to your contacts so the next one lands.",
@@ -65,7 +65,7 @@ const TIER_COPY: Record<SuccessTier, TierCopy> = {
     headLead: "Thank you.",
     headEmphasis: "Your Story is being written.",
     body: [
-      "This is where the reading stops being a page and becomes a narrative - your Purpose Story, built from your actual life and returned to you in your own words.",
+      "This is where your Belief Score stops being a page and becomes a narrative - your Purpose Story, built from your actual life and returned to you in your own words.",
       "First, your report. Download it below - the steps to submit the details for your Story are on their way to your inbox, and your report is the ground it's built on.",
     ],
     reportTitle: "Your report -",
@@ -320,7 +320,7 @@ export default function ThankYouPage() {
               eyebrow="Your report · PDF"
               title={copy.reportTitle}
               titleItalic={copy.reportTitleItalic}
-              description="Your full PDF reading - your scores, the specific pattern named in plain language, three immediate behavioral shifts, and a 90-day benchmark to measure progress."
+              description="Your full PDF report - your scores, the specific pattern named in plain language, three immediate behavioral shifts, and a 90-day benchmark to measure progress."
               actionHref={`/challenge/report?autosave=1&tier=${tier}${
                 sessionId ? `&session_id=${encodeURIComponent(sessionId)}` : ""
               }`}
@@ -331,7 +331,7 @@ export default function ThankYouPage() {
             <DownloadCard
               preview={<AudioPreview />}
               eyebrow="Audio summary · MP3"
-              title="Your reading, in voice -"
+              title="Your Belief Score, in voice -"
               titleItalic="for listening, not reading."
               description="The personalized audio summary generated from your responses. Use it on walks, in transit, or anywhere the written page doesn't reach."
               actionLabel={

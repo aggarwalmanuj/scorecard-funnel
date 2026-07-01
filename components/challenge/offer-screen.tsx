@@ -299,7 +299,7 @@ export function OfferScreen({ audience }: { audience: Audience }) {
         <div className="mx-auto mb-10 max-w-4xl px-6 sm:mb-12 sm:px-8">
           <p className="eyebrow mb-4 text-foreground/70">
             <span className="mr-3 inline-block h-px w-6 align-middle bg-foreground/40" />
-            Voices from the reading
+            Voices from the assessment
           </p>
           <h2
             id="offer-voices-heading"
@@ -321,7 +321,7 @@ export function OfferScreen({ audience }: { audience: Audience }) {
             IX · If now is not the right time
           </p>
           <h3 className="mb-7 font-serif text-[1.6rem] leading-[1.18] text-ink sm:text-[1.95rem] sm:leading-snug">
-            Your reading is yours
+            Your Belief Score is yours
             <span className="block font-serif-italic text-foreground">
               regardless.
             </span>

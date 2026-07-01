@@ -57,7 +57,7 @@ export function ReportPaywall() {
               style={{ background: "var(--signal)" }}
               aria-hidden
             />
-            One step before the full reading
+            One step before the full report
           </p>
 
           <h1 className="mb-7 font-serif text-[1.85rem] leading-[1.12] text-ink sm:text-[2rem] sm:leading-[1.1] md:text-[2.5rem]">
@@ -75,7 +75,7 @@ export function ReportPaywall() {
               $47.
             </p>
             <p className="text-foreground/75">
-              Choose your option to unlock the full reading.
+              Choose your option to unlock the full report.
             </p>
           </div>
 
