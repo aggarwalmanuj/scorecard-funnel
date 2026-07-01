@@ -48,7 +48,7 @@ export function ReservationForm({
       </p>
 
       <p
-        className="mt-4 text-[13.5px] leading-[1.7] sm:text-[14px]"
+        className="mt-4 text-[15px] leading-[1.7] sm:text-[15px]"
         style={{ color: "color-mix(in srgb, var(--foreground) 82%, transparent)" }}
       >
         Take the assessment and receive your Belief Score, a
@@ -73,6 +73,9 @@ export function ReservationForm({
             />
           </Link>
         </MagneticButton>
+        <p className="mt-3 text-center text-[12px] font-semibold uppercase tracking-[0.16em] text-foreground/70">
+          Free · No credit card required
+        </p>
       </div>
 
       <PrivacyNotice className="mt-5" />
