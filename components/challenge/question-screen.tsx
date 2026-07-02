@@ -36,6 +36,27 @@ interface QuestionScreenProps {
   isMissing?: boolean
 }
 
+/**
+ * Apple's mobile Safari (iPhone/iPad) is the one engine where the Web Speech
+ * API's `start()` MUST run inside a live user-gesture call stack. Any restart
+ * fired later - from a `setTimeout` or from inside `onend`/`onerror` - is
+ * silently rejected by Safari (no throw, `onstart` just never fires), which is
+ * exactly why "tapped 'Tap to speak' and nothing happened" reports come almost
+ * entirely from Apple devices: the mic dies the instant the first pause or the
+ * permission grant ends the initial session, and the deferred auto-restart
+ * that works on Android is a no-op here. We therefore run Apple devices as
+ * single-session-per-tap instead of faking Android-style continuous restart.
+ *
+ * iPadOS 13+ reports a desktop "MacIntel" platform, so touch points are the
+ * only reliable tell for an iPad.
+ */
+function isAppleMobile(): boolean {
+  if (typeof navigator === "undefined") return false
+  const ua = navigator.userAgent
+  if (/iPad|iPhone|iPod/.test(ua)) return true
+  return navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1
+}
+
 export function QuestionScreen({
   audience,
   questionNumber,
@@ -59,6 +80,9 @@ export function QuestionScreen({
   const [isListening, setIsListening] = useState(false)
   const [speechInterim, setSpeechInterim] = useState("")
   const [speakSupported, setSpeakSupported] = useState(true)
+  // Human-facing voice status: permission problems, or the Apple-only "we
+  // captured a sentence, tap again to keep going" cue. Null = no notice.
+  const [voiceNotice, setVoiceNotice] = useState<string | null>(null)
   const [isFocused, setIsFocused] = useState(false)
   const hasSetStep = useRef(false)
   const recognitionRef = useRef<SpeechRecognitionInstance | null>(null)
@@ -187,10 +211,16 @@ export function QuestionScreen({
       ) {
         // Permission denied / mic busy - stop trying. User has to clear
         // the denial in browser settings; there's no programmatic re-prompt.
+        // Surface it instead of failing silently (the #1 confusing symptom).
         wantListeningRef.current = false
+        setVoiceNotice(
+          "We couldn't reach your microphone. Check that this site is allowed to use the mic (Safari: aA menu → Website Settings → Microphone), then tap again - or just type your answer.",
+        )
       }
-      // Other errors (no-speech, network, aborted) fall through to onend
-      // and the auto-restart logic.
+      // Other errors (no-speech, network, aborted) fall through to onend.
+      // On Apple devices `no-speech` fires after a short pause and cannot be
+      // recovered by an auto-restart (see isAppleMobile), so onend handles the
+      // clean single-session finish there.
     }
 
     recognition.onend = () => {
@@ -203,6 +233,25 @@ export function QuestionScreen({
       if (!wantListeningRef.current) {
         setSpeechInterim("")
         setIsListening(false)
+        return
+      }
+
+      // Apple / iOS Safari: `start()` only works inside a live user gesture.
+      // The deferred restart below runs OUTSIDE any gesture and Safari rejects
+      // it silently (no throw, `onstart` never fires) - which is precisely the
+      // "tapped Tap to speak, nothing happened" failure reported on iPhones.
+      // So we DON'T fake continuous mode here. We finish this session cleanly,
+      // keep everything transcribed so far, and invite a fresh tap (a new
+      // gesture) to continue. Each tap reliably captures one utterance.
+      if (isAppleMobile()) {
+        wantListeningRef.current = false
+        setSpeechInterim("")
+        setIsListening(false)
+        // Only nudge "tap to continue" if something was actually captured -
+        // otherwise the mic simply idled and the normal button label is clearer.
+        if (sessionFinalRef.current.trim()) {
+          setVoiceNotice("Got it. Tap the mic again to keep adding to your answer.")
+        }
         return
       }
 
@@ -241,14 +290,19 @@ export function QuestionScreen({
     sessionFinalRef.current = ""
     cycleFinalRef.current = ""
     wantListeningRef.current = true
+    setVoiceNotice(null)
 
     try {
       const recognition = buildRecognition()
       recognitionRef.current = recognition
+      // This call is inside the tap's gesture stack - required for Safari.
       recognition.start()
     } catch {
+      // Most commonly an InvalidStateError from a lingering instance. Reset
+      // and tell the user rather than leaving a dead button.
       wantListeningRef.current = false
       setIsListening(false)
+      setVoiceNotice("Voice input didn't start. Give it another tap, or type your answer below.")
     }
   }, [answer, buildRecognition])
 
@@ -516,6 +570,15 @@ export function QuestionScreen({
                 <p className="mt-3 text-center text-[12px] text-foreground/65">
                   Voice typing needs a supported browser (Chrome/Edge). You can
                   still type your answer.
+                </p>
+              )}
+
+              {speakSupported && voiceNotice && (
+                <p
+                  className="mt-3 text-center text-[12px] leading-relaxed text-foreground/70"
+                  aria-live="polite"
+                >
+                  {voiceNotice}
                 </p>
               )}
 
