@@ -73,6 +73,44 @@ function joinWithAnd(parts: string[]): string {
   return `${parts.slice(0, -1).join(", ")} and ${parts[parts.length - 1]}`
 }
 
+// ── Readiness gate (Step 0) ──────────────────────────────────────────────
+// A single honest self-select shown BEFORE any email field. It reframes the
+// signup as a threshold, not a newsletter: only "frustrated" / "ready" proceed
+// to the contact form. "Curious" leaves clean via the homepage - no email is
+// collected and no Lead pixel fires for them, which also keeps ad optimization
+// learning only on qualified people. Copy is verbatim from the readiness-gate
+// spec (management doc).
+type Readiness = "curious" | "frustrated" | "ready"
+
+const GATE_OPTIONS: Array<{ id: Readiness; label: string; body: string }> = [
+  {
+    id: "curious",
+    label: "I'm curious",
+    body: "I like learning about new tools, AI, personal growth, or productivity - but I'm not ready to change a deep pattern right now.",
+  },
+  {
+    id: "frustrated",
+    label: "I'm frustrated",
+    body: "I know something is not working. I've tried tools, advice, systems, or strategies. I'm open to seeing what is underneath the pattern.",
+  },
+  {
+    id: "ready",
+    label: "I'm ready",
+    body: "The cost of staying the same is now higher than the discomfort of changing. I'm willing to answer honestly and hear what is actually driving the loop.",
+  },
+]
+
+// Branch message shown once an option is chosen. Curious gets a clean turn-away;
+// the other two get an honesty primer before the email field is revealed.
+const GATE_BRANCH: Record<Readiness, string> = {
+  curious:
+    "AI Merge is not designed for casual curiosity. It works best when someone is ready to look honestly at the belief, pattern, or identity loop underneath the surface problem. Come back when the cost of staying the same feels higher than the fear of changing.",
+  frustrated:
+    "You may be close. The next five questions will help clarify whether this is a surface problem or a deeper belief loop. Answer honestly - the more truthful you are, the more accurate your reflection will be.",
+  ready:
+    "Good. We'll ask five questions that look beneath the surface pattern. Be honest. Don't perform. Don't answer how you think you should answer. Your reflection will be stronger if your answers are real.",
+}
+
 export default function AudienceSelectionPage() {
   const router = useRouter()
   const { state, setEmail, setFirstName, setAudience, setSerialNumber, reset, isHydrated } =
@@ -97,6 +135,13 @@ export default function AudienceSelectionPage() {
   const [isVisible, setIsVisible] = useState(false)
   // Two-step layout: 1 = contact (name/email/phone), 2 = path (individual/team).
   const [step, setStep] = useState<1 | 2>(1)
+
+  // Readiness gate (Step 0) - precedes the whole contact form. `gatePassed`
+  // flips true only when a frustrated/ready visitor chooses to continue, so the
+  // email form (and everything downstream, including the Lead pixel) is never
+  // reached by someone who self-selected as merely curious.
+  const [readiness, setReadiness] = useState<Readiness | null>(null)
+  const [gatePassed, setGatePassed] = useState(false)
 
   useEffect(() => {
     setIsVisible(true)
@@ -264,6 +309,140 @@ export default function AudienceSelectionPage() {
 
       <main className="flex flex-1 items-start justify-center px-5 py-16 sm:py-20">
         <div className="w-full max-w-4xl">
+          {/* Step 0 - readiness gate. Shown until a frustrated/ready visitor
+              continues; curious visitors exit to the homepage from here. */}
+          {!gatePassed && (
+            <div
+              className={`mx-auto max-w-2xl ${
+                isVisible ? "animate-fade-in-up" : "opacity-0"
+              }`}
+            >
+              <div className="mb-10 text-center">
+                <p className="eyebrow mb-6 text-foreground/70">
+                  <span className="pulse-dot mr-3" aria-hidden />0 · A threshold
+                </p>
+                <h1 className="font-serif text-[2.4rem] leading-[1.04] text-ink sm:text-[3rem] md:text-[3.5rem]">
+                  Where are you
+                  <span className="block font-serif-italic text-foreground">
+                    right now?
+                  </span>
+                </h1>
+                <p className="mx-auto mt-6 max-w-xl text-[15px] leading-[1.8] text-foreground/85 sm:text-base">
+                  Before we ask for your email, choose honestly.
+                </p>
+                <p className="mx-auto mt-4 max-w-lg font-serif-italic text-[15px] leading-snug text-foreground/70">
+                  If you are only curious, this will feel like too much. If you
+                  are ready, it will feel like relief.
+                </p>
+              </div>
+
+              <div
+                role="radiogroup"
+                aria-label="Where are you right now?"
+                className="space-y-3"
+              >
+                {GATE_OPTIONS.map((opt, idx) => {
+                  const isActive = readiness === opt.id
+                  return (
+                    <button
+                      key={opt.id}
+                      type="button"
+                      role="radio"
+                      aria-checked={isActive}
+                      onClick={() => setReadiness(opt.id)}
+                      className={`group block w-full rounded-md p-6 text-left transition-all duration-300 ${
+                        isActive
+                          ? "border border-ink bg-card -translate-y-0.5 shadow-[0_18px_40px_-28px_rgba(var(--shadow-ink),0.45)]"
+                          : "s-card hover:-translate-y-0.5"
+                      } ${isVisible ? "animate-fade-in-up" : "opacity-0"}`}
+                      style={{ animationDelay: `${120 + idx * 70}ms` }}
+                    >
+                      <span className="flex items-start gap-4">
+                        <span
+                          className={`mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition-colors duration-300 ${
+                            isActive
+                              ? "border-ink bg-ink text-background"
+                              : "border-foreground/40 group-hover:border-ink"
+                          }`}
+                          aria-hidden
+                        >
+                          {isActive && (
+                            <Check className="h-3 w-3" strokeWidth={2.5} />
+                          )}
+                        </span>
+                        <span className="min-w-0">
+                          <span className="block font-serif text-[19px] leading-tight text-ink">
+                            {opt.label}
+                          </span>
+                          <span className="mt-1.5 block text-[14px] leading-[1.65] text-foreground/80">
+                            {opt.body}
+                          </span>
+                        </span>
+                      </span>
+                    </button>
+                  )
+                })}
+              </div>
+
+              {/* Branch message - appears once a choice is made. */}
+              {readiness && (
+                <div
+                  className="mt-8 rounded-md border border-border bg-secondary/40 p-6 animate-fade-in-up"
+                  aria-live="polite"
+                >
+                  <p className="text-[15px] leading-[1.75] text-foreground/85">
+                    {GATE_BRANCH[readiness]}
+                  </p>
+                </div>
+              )}
+
+              {/* Action row. Curious → clean exit to home; otherwise → reveal
+                  the contact form. Disabled until a choice is made. */}
+              <div className="mt-8 flex flex-col items-center justify-between gap-5 sm:flex-row">
+                {readiness === "curious" ? (
+                  <Link
+                    href="/"
+                    className="s-btn group mx-auto min-w-44 justify-center"
+                  >
+                    Back to home
+                    <ArrowRight
+                      className="h-3.5 w-3.5 transition-transform duration-500 group-hover:translate-x-1"
+                      strokeWidth={1.6}
+                    />
+                  </Link>
+                ) : (
+                  <>
+                    <Link
+                      href="/"
+                      className="inline-flex items-center gap-1.5 text-[12px] uppercase tracking-[0.22em] text-foreground/65 transition-colors hover:text-ink"
+                    >
+                      <ArrowLeft className="h-3.5 w-3.5" strokeWidth={1.5} />
+                      Back to home
+                    </Link>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (readiness) setGatePassed(true)
+                      }}
+                      aria-disabled={!readiness}
+                      className={`s-btn group min-w-44 justify-center ${
+                        !readiness ? "opacity-60" : ""
+                      }`}
+                    >
+                      Continue
+                      <ArrowRight
+                        className="h-3.5 w-3.5 transition-transform duration-500 group-hover:translate-x-1"
+                        strokeWidth={1.6}
+                      />
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
+
+          {gatePassed && (
+          <>
           <div
             className={`mb-10 text-center ${
               isVisible ? "animate-fade-in-up" : "opacity-0"
@@ -417,6 +596,13 @@ export default function AudienceSelectionPage() {
                 </p>
               )}
             </label>
+            {/* Privacy line at the point of email capture (readiness-gate spec).
+                Kept to one sentence per the doc - the canonical Privacy/Terms
+                links live in <PrivacyNotice> below the CTA. */}
+            <p className="text-[12px] leading-snug text-foreground/60 sm:col-span-2">
+              Your answers are private and used only to generate your
+              personalized reflection. We do not sell your data.
+            </p>
           </form>
           )}
 
@@ -577,6 +763,8 @@ export default function AudienceSelectionPage() {
           </div>
 
           <PrivacyNotice className="mx-auto mt-8 max-w-2xl justify-center text-center" />
+          </>
+          )}
 
         </div>
       </main>
