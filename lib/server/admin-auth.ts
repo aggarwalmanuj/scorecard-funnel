@@ -101,3 +101,20 @@ export function isTechAuthorized(request: Request): boolean {
   if (!provided) return false
   return timingSafeMatch(provided, process.env.TECHADMIN_API_PASSWORD)
 }
+
+/**
+ * Preview-secret check for the report preview bypass. Unlike the request-based
+ * helpers above, this takes the raw secret string (the report preview flow
+ * sends it in a JSON body, not the x-admin-password header). Accepts either the
+ * admin OR tech password, constant-time. Lets us review the paid report layout
+ * without completing a payment; a regular customer can't unlock it because they
+ * don't hold the secret and the check runs server-side.
+ */
+export function isPreviewSecret(secret: string | undefined | null): boolean {
+  const provided = secret?.trim() ?? ""
+  if (!provided) return false
+  return (
+    timingSafeMatch(provided, process.env.ADMIN_API_PASSWORD) ||
+    timingSafeMatch(provided, process.env.TECHADMIN_API_PASSWORD)
+  )
+}

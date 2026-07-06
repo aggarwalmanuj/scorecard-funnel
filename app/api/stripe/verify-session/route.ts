@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { z } from "zod"
 import { getStripe } from "@/lib/stripe"
 import { redactError } from "@/lib/security"
+import { isPreviewSecret } from "@/lib/server/admin-auth"
 
 /**
  * POST /api/stripe/verify-session
@@ -18,9 +19,17 @@ import { redactError } from "@/lib/security"
  *
  * Note: the $497 / $1,997 / $4,997 tiers are paid inside Calendly's hosted flow and have
  * no Stripe session here — those are handled separately on the report page.
+ *
+ * Preview bypass: a `previewSecret` matching the admin/tech password unlocks
+ * (paid:true, tier:"preview") WITHOUT a Stripe call, so we can review the paid
+ * report layout without paying. The check is server-side and constant-time —
+ * a regular customer can't forge it because they don't hold the secret.
  */
 
-const Body = z.object({ sessionId: z.string().trim().min(1).max(120) })
+const Body = z.object({
+  sessionId: z.string().trim().min(1).max(120).optional(),
+  previewSecret: z.string().trim().min(1).max(200).optional(),
+})
 
 // Stripe Checkout Session ids are `cs_test_…` / `cs_live_…`. Reject anything
 // else before spending a Stripe API call (and to avoid leaking lookups).
@@ -38,9 +47,16 @@ export async function POST(req: Request) {
   if (!parsed.success) {
     return NextResponse.json({ ok: false, paid: false, error: "Invalid input" }, { status: 400 })
   }
-  const { sessionId } = parsed.data
+  const { sessionId, previewSecret } = parsed.data
 
-  if (!SESSION_ID_RE.test(sessionId)) {
+  // Preview bypass (review-only): a valid admin/tech secret unlocks the report
+  // layout without a Stripe session. Checked first, server-side, constant-time.
+  if (isPreviewSecret(previewSecret)) {
+    return NextResponse.json({ ok: true, paid: true, tier: "preview" })
+  }
+
+  // Past this point a Stripe session id is required (nothing else unlocks).
+  if (!sessionId || !SESSION_ID_RE.test(sessionId)) {
     return NextResponse.json({ ok: true, paid: false })
   }
 
