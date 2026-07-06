@@ -121,7 +121,7 @@ function ReportRouter() {
     )
   }
 
-  if (access === "allowed") return <ClarityReport />
+  if (access === "allowed") return <ClarityReport preview={previewMode} />
 
   // Preview password gate — only shown on `?preview` and only while still
   // locked. Any other denied access falls through to the normal paywall.

@@ -6,6 +6,7 @@ import Link from "next/link"
 import { useChallenge } from "@/context/challenge-context"
 import type { ClarityScore } from "@/lib/scoring"
 import { UPSELL_OFFERS, offerBookingUrl } from "@/lib/offers"
+import { SAMPLE_REPORT, SAMPLE_REPORT_NAME } from "@/lib/sample-report"
 
 type Pillar = {
   key:
@@ -206,7 +207,7 @@ export function ReportView({
   )
 }
 
-export function ClarityReport() {
+export function ClarityReport({ preview = false }: { preview?: boolean } = {}) {
   const { state, isHydrated } = useChallenge()
   const reportRootRef = useRef<HTMLDivElement>(null)
 
@@ -229,6 +230,21 @@ export function ClarityReport() {
     if (!isHydrated) return
     if (fetchedRef.current) return
     fetchedRef.current = true
+
+    // Preview with an empty session: don't fetch. The sample fallback (below)
+    // supplies the data, so just leave `data` null and stop loading - the
+    // render path swaps in SAMPLE_REPORT when there's no real session content.
+    const hasSession = !!(
+      state.responses.question1 ||
+      state.responses.question2 ||
+      state.beats.beat1 ||
+      state.beats.beat5
+    )
+    if (preview && !state.reportData && !hasSession) {
+      setLoading(false)
+      setError(null)
+      return
+    }
 
     // Fast path: the processing screen pre-generates the report in the
     // background, so by the time the user clicks "Download report" the
@@ -279,10 +295,28 @@ export function ClarityReport() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isHydrated])
 
-  const today = useMemo(() => new Date(), [])
+  // When the preview is showing the hardcoded sample (empty session), pin the
+  // date + report ID to fixed values so the preview reads as fully populated
+  // instead of deriving a blank-seeded id / today's date.
+  const sampleFallback =
+    preview &&
+    isHydrated &&
+    !(
+      state.responses.question1 ||
+      state.responses.question2 ||
+      state.beats.beat1 ||
+      state.beats.beat5
+    )
+  const today = useMemo(
+    () => (sampleFallback ? new Date("2026-04-27T00:00:00") : new Date()),
+    [sampleFallback]
+  )
   const rid = useMemo(
-    () => reportId(`${state.firstName}|${state.email}`),
-    [state.firstName, state.email]
+    () =>
+      sampleFallback
+        ? "CR-20260427-T9F"
+        : reportId(`${state.firstName}|${state.email}`),
+    [sampleFallback, state.firstName, state.email]
   )
 
   const [isDownloading, setIsDownloading] = useState(false)
@@ -327,7 +361,7 @@ export function ClarityReport() {
   }, [loading, error, data])
 
   // Empty-state guard - no data captured locally.
-  const hasContent =
+  const hasSessionContent =
     isHydrated &&
     !!(
       state.responses.question1 ||
@@ -335,6 +369,15 @@ export function ClarityReport() {
       state.beats.beat1 ||
       state.beats.beat5
     )
+
+  // Preview fallback: when an admin opens the preview but this session has no
+  // completed assessment, show the hardcoded "Alex" sample instead of the
+  // empty state - so the layout is reviewable with real, representative data.
+  // A small banner (below) makes clear it's sample data, not a real reading.
+  const usingSample = preview && isHydrated && !hasSessionContent
+  const hasContent = hasSessionContent || usingSample
+  const effectiveData = usingSample ? SAMPLE_REPORT : data
+  const effectiveName = usingSample ? SAMPLE_REPORT_NAME : state.firstName
 
   return (
     <div className="report-root" data-palette="marine" ref={reportRootRef}>
@@ -418,16 +461,25 @@ export function ClarityReport() {
         </div>
       )}
 
+      {/* Sample-data banner - only when the preview is showing the hardcoded
+          fallback because this session has no completed assessment. */}
+      {!loading && !error && usingSample && (
+        <div className="sample-banner" role="status">
+          <AlertCircle size={15} />
+          <span>Sample report — no assessment completed in this session.</span>
+        </div>
+      )}
+
       {/* The report itself */}
-      {!loading && !error && data && hasContent && (
+      {!loading && !error && effectiveData && hasContent && (
         <ReportPages
-          name={state.firstName}
+          name={effectiveName}
           today={today}
           rid={rid}
-          clarity={data.clarity}
-          reasons={data.reasons}
-          nsState={data.nsState}
-          report={data.report}
+          clarity={effectiveData.clarity}
+          reasons={effectiveData.reasons}
+          nsState={effectiveData.nsState}
+          report={effectiveData.report}
           showOffers={showOffers}
           serialNumber={state.serialNumber}
           email={state.email ?? undefined}
@@ -1011,7 +1063,8 @@ function ReportStyles() {
           background: #ffffff !important;
         }
         .toolbar,
-        .status {
+        .status,
+        .sample-banner {
           display: none !important;
         }
         .page {
@@ -1141,6 +1194,22 @@ function ReportStyles() {
       .report-root .status .spin {
         animation: report-spin 1s linear infinite;
         color: var(--brand);
+      }
+      /* Preview-only sample-data notice. Hidden in print (see @media print). */
+      .report-root .sample-banner {
+        max-width: 820px;
+        margin: 20px auto -8px;
+        padding: 10px 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        background: #fdf3d8;
+        border: 1px solid #e6cf8a;
+        border-radius: 999px;
+        color: #7a5b12;
+        font-size: 13px;
+        font-weight: 600;
       }
       .report-root .status-err {
         color: var(--coral);
