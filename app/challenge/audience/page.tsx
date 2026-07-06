@@ -154,12 +154,14 @@ export default function AudienceSelectionPage() {
     setIsVisible(true)
   }, [])
 
-  // Curious modal: lock body scroll while it's open and let Esc dismiss it
-  // (mirrors the mobile-sheet pattern in landing-minimal/header.tsx). Closing
-  // clears the choice so the user drops back to the gate options.
-  const curiousOpen = readiness === "curious"
+  // Readiness modal: any gate choice pops a modal (curious → turn-away with an
+  // offer link; frustrated/ready → message + Continue). While it's open we lock
+  // body scroll and let Esc dismiss it (mirrors the mobile-sheet pattern in
+  // landing-minimal/header.tsx). Closing clears the choice, dropping the user
+  // back to the gate options.
+  const gateModalOpen = step === "gate" && readiness !== null
   useEffect(() => {
-    if (!curiousOpen) return
+    if (!gateModalOpen) return
     const prev = document.body.style.overflow
     document.body.style.overflow = "hidden"
     const onKey = (e: KeyboardEvent) => {
@@ -170,7 +172,7 @@ export default function AudienceSelectionPage() {
       document.body.style.overflow = prev
       window.removeEventListener("keydown", onKey)
     }
-  }, [curiousOpen])
+  }, [gateModalOpen])
 
   // Audience selection survives back-navigation; name + email do not. Each
   // fresh visit starts blank so the user is never confronted with a stale
@@ -574,61 +576,35 @@ export default function AudienceSelectionPage() {
               })}
             </div>
 
-            {/* Branch message - shown for frustrated/ready only. "curious" gets
-                the dedicated inline turn-away card below instead, so we don't
-                stack two conflicting messages (which read as confusing). */}
-            {readiness && readiness !== "curious" && (
-              <div
-                className="mt-8 rounded-md border border-border bg-secondary/40 p-6 animate-fade-in-up"
-                aria-live="polite"
-              >
-                <p className="text-[15px] leading-[1.75] text-foreground/85">
-                  {GATE_BRANCH[readiness]}
-                </p>
-              </div>
-            )}
-
-            {/* Action row (always rendered so the gate never looks empty).
-                • frustrated / ready → Continue advances to the path picker
-                • curious            → a modal overlay pops instantly (below),
-                                       so Continue is inert for that choice */}
-            <div className="mt-8 flex flex-col items-center justify-between gap-5 sm:flex-row">
+            {/* Action row - just "Back" now. Choosing any option pops the
+                readiness modal (below), which carries the message and the
+                forward action, so there's no on-page Continue button. */}
+            <div className="mt-8 flex justify-center">
               <button
                 type="button"
-                onClick={() => setStep(1)}
+                onClick={() => {
+                  setReadiness(null)
+                  setStep(1)
+                }}
                 className="inline-flex items-center gap-1.5 text-[12px] uppercase tracking-[0.22em] text-foreground/65 transition-colors hover:text-ink"
               >
                 <ArrowLeft className="h-3.5 w-3.5" strokeWidth={1.5} />
                 Back
               </button>
-              <button
-                type="button"
-                onClick={() => {
-                  if (readiness && readiness !== "curious") setStep(2)
-                }}
-                aria-disabled={!readiness || readiness === "curious"}
-                className={`s-btn group min-w-44 justify-center ${
-                  !readiness || readiness === "curious" ? "opacity-60" : ""
-                }`}
-              >
-                Continue
-                <ArrowRight
-                  className="h-3.5 w-3.5 transition-transform duration-500 group-hover:translate-x-1"
-                  strokeWidth={1.6}
-                />
-              </button>
             </div>
 
-            {/* Curious modal - a fixed overlay that pops the instant "curious"
-                is selected, so the turn-away is unmissable on any device and
-                never requires scroll. Backdrop-click, the X, "Go back", and
-                Esc all dismiss it (clearing the choice). */}
-            {readiness === "curious" && (
+            {/* Readiness modal - pops the instant any option is selected, so
+                the response is unmissable on any device and never requires
+                scroll. Curious is a turn-away (offer link, no Continue);
+                frustrated/ready show their primer + a Continue that advances
+                to the path picker. Backdrop-click, X, "Go back", and Esc all
+                dismiss it (clearing the choice). */}
+            {readiness && (
               <div
                 className="fixed inset-0 z-50 flex items-center justify-center p-5"
                 role="dialog"
                 aria-modal="true"
-                aria-labelledby="curious-title"
+                aria-labelledby="gate-modal-title"
               >
                 <div
                   className="absolute inset-0 bg-ink/40 backdrop-blur-sm animate-fade-in"
@@ -644,31 +620,64 @@ export default function AudienceSelectionPage() {
                   >
                     <X className="h-4 w-4" strokeWidth={1.6} />
                   </button>
-                  <p
-                    id="curious-title"
-                    className="font-serif text-[22px] leading-snug text-ink sm:text-[24px]"
-                  >
-                    This may not be for you right now.
-                  </p>
-                  <p className="mx-auto mt-3 max-w-sm text-[15px] leading-[1.75] text-foreground/80">
-                    This is for people who are ready to transform. If you want
-                    to see how we do it,{" "}
-                    <Link
-                      href={`/challenge/${selected ?? "individual"}/offer`}
-                      className="font-medium text-ink underline underline-offset-4 transition-opacity hover:opacity-70"
-                    >
-                      click here
-                    </Link>
-                    .
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => setReadiness(null)}
-                    className="mt-7 inline-flex items-center gap-1.5 text-[12px] uppercase tracking-[0.22em] text-foreground/65 transition-colors hover:text-ink"
-                  >
-                    <ArrowLeft className="h-3.5 w-3.5" strokeWidth={1.5} />
-                    Go back
-                  </button>
+
+                  {readiness === "curious" ? (
+                    <>
+                      <p
+                        id="gate-modal-title"
+                        className="font-serif text-[22px] leading-snug text-ink sm:text-[24px]"
+                      >
+                        This may not be for you right now.
+                      </p>
+                      <p className="mx-auto mt-3 max-w-sm text-[15px] leading-[1.75] text-foreground/80">
+                        This is for people who are ready to transform. If you
+                        want to see how we do it,{" "}
+                        <Link
+                          href={`/challenge/${selected ?? "individual"}/offer`}
+                          className="font-medium text-ink underline underline-offset-4 transition-opacity hover:opacity-70"
+                        >
+                          click here
+                        </Link>
+                        .
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => setReadiness(null)}
+                        className="mt-7 inline-flex items-center gap-1.5 text-[12px] uppercase tracking-[0.22em] text-foreground/65 transition-colors hover:text-ink"
+                      >
+                        <ArrowLeft className="h-3.5 w-3.5" strokeWidth={1.5} />
+                        Go back
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <p
+                        id="gate-modal-title"
+                        className="mx-auto max-w-sm font-serif text-[19px] leading-[1.5] text-ink sm:text-[20px]"
+                      >
+                        {GATE_BRANCH[readiness]}
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => setStep(2)}
+                        className="s-btn group mt-7 w-full justify-center"
+                      >
+                        Continue
+                        <ArrowRight
+                          className="h-3.5 w-3.5 transition-transform duration-500 group-hover:translate-x-1"
+                          strokeWidth={1.6}
+                        />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setReadiness(null)}
+                        className="mt-4 inline-flex items-center gap-1.5 text-[12px] uppercase tracking-[0.22em] text-foreground/65 transition-colors hover:text-ink"
+                      >
+                        <ArrowLeft className="h-3.5 w-3.5" strokeWidth={1.5} />
+                        Go back
+                      </button>
+                    </>
+                  )}
                 </div>
               </div>
             )}
