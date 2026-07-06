@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { ArrowLeft, ArrowRight, User, Users, Check } from "lucide-react"
+import { ArrowLeft, ArrowRight, User, Users, Check, X } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { useChallenge, type Audience } from "@/context/challenge-context"
 import { submitSignup } from "@/lib/submit-to-google-sheet"
@@ -153,6 +153,24 @@ export default function AudienceSelectionPage() {
   useEffect(() => {
     setIsVisible(true)
   }, [])
+
+  // Curious modal: lock body scroll while it's open and let Esc dismiss it
+  // (mirrors the mobile-sheet pattern in landing-minimal/header.tsx). Closing
+  // clears the choice so the user drops back to the gate options.
+  const curiousOpen = readiness === "curious"
+  useEffect(() => {
+    if (!curiousOpen) return
+    const prev = document.body.style.overflow
+    document.body.style.overflow = "hidden"
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setReadiness(null)
+    }
+    window.addEventListener("keydown", onKey)
+    return () => {
+      document.body.style.overflow = prev
+      window.removeEventListener("keydown", onKey)
+    }
+  }, [curiousOpen])
 
   // Audience selection survives back-navigation; name + email do not. Each
   // fresh visit starts blank so the user is never confronted with a stale
@@ -570,57 +588,88 @@ export default function AudienceSelectionPage() {
               </div>
             )}
 
-            {/* Action row.
-                • curious    → inline "not for you right now" card + offer link
-                • frustrated → Continue advances to the path picker
-                • ready      → Continue advances to the path picker */}
-            {readiness === "curious" ? (
-              <div
-                className="mt-8 rounded-md border border-ink/30 bg-card p-6 text-center animate-fade-in-up sm:p-8"
-                role="status"
-                aria-live="polite"
+            {/* Action row (always rendered so the gate never looks empty).
+                • frustrated / ready → Continue advances to the path picker
+                • curious            → a modal overlay pops instantly (below),
+                                       so Continue is inert for that choice */}
+            <div className="mt-8 flex flex-col items-center justify-between gap-5 sm:flex-row">
+              <button
+                type="button"
+                onClick={() => setStep(1)}
+                className="inline-flex items-center gap-1.5 text-[12px] uppercase tracking-[0.22em] text-foreground/65 transition-colors hover:text-ink"
               >
-                <p className="font-serif text-[20px] leading-snug text-ink sm:text-[22px]">
-                  This may not be for you right now.
-                </p>
-                <p className="mx-auto mt-3 max-w-md text-[15px] leading-[1.75] text-foreground/80">
-                  This is for people who are ready to transform. If you want to
-                  see how we do it,{" "}
-                  <Link
-                    href={`/challenge/${selected ?? "individual"}/offer`}
-                    className="font-medium text-ink underline underline-offset-4 transition-opacity hover:opacity-70"
+                <ArrowLeft className="h-3.5 w-3.5" strokeWidth={1.5} />
+                Back
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (readiness && readiness !== "curious") setStep(2)
+                }}
+                aria-disabled={!readiness || readiness === "curious"}
+                className={`s-btn group min-w-44 justify-center ${
+                  !readiness || readiness === "curious" ? "opacity-60" : ""
+                }`}
+              >
+                Continue
+                <ArrowRight
+                  className="h-3.5 w-3.5 transition-transform duration-500 group-hover:translate-x-1"
+                  strokeWidth={1.6}
+                />
+              </button>
+            </div>
+
+            {/* Curious modal - a fixed overlay that pops the instant "curious"
+                is selected, so the turn-away is unmissable on any device and
+                never requires scroll. Backdrop-click, the X, "Go back", and
+                Esc all dismiss it (clearing the choice). */}
+            {readiness === "curious" && (
+              <div
+                className="fixed inset-0 z-50 flex items-center justify-center p-5"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="curious-title"
+              >
+                <div
+                  className="absolute inset-0 bg-ink/40 backdrop-blur-sm animate-fade-in"
+                  onClick={() => setReadiness(null)}
+                  aria-hidden
+                />
+                <div className="relative z-10 w-full max-w-md rounded-lg border border-border bg-card p-7 text-center shadow-[0_30px_80px_-30px_rgba(var(--shadow-ink),0.6)] animate-fade-in-up sm:p-9">
+                  <button
+                    type="button"
+                    onClick={() => setReadiness(null)}
+                    aria-label="Close"
+                    className="absolute right-4 top-4 inline-flex h-8 w-8 items-center justify-center rounded-full text-foreground/50 transition-colors hover:bg-secondary hover:text-ink"
                   >
-                    click here
-                  </Link>
-                  .
-                </p>
-              </div>
-            ) : (
-              <div className="mt-8 flex flex-col items-center justify-between gap-5 sm:flex-row">
-                <button
-                  type="button"
-                  onClick={() => setStep(1)}
-                  className="inline-flex items-center gap-1.5 text-[12px] uppercase tracking-[0.22em] text-foreground/65 transition-colors hover:text-ink"
-                >
-                  <ArrowLeft className="h-3.5 w-3.5" strokeWidth={1.5} />
-                  Back
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (readiness) setStep(2)
-                  }}
-                  aria-disabled={!readiness}
-                  className={`s-btn group min-w-44 justify-center ${
-                    !readiness ? "opacity-60" : ""
-                  }`}
-                >
-                  Continue
-                  <ArrowRight
-                    className="h-3.5 w-3.5 transition-transform duration-500 group-hover:translate-x-1"
-                    strokeWidth={1.6}
-                  />
-                </button>
+                    <X className="h-4 w-4" strokeWidth={1.6} />
+                  </button>
+                  <p
+                    id="curious-title"
+                    className="font-serif text-[22px] leading-snug text-ink sm:text-[24px]"
+                  >
+                    This may not be for you right now.
+                  </p>
+                  <p className="mx-auto mt-3 max-w-sm text-[15px] leading-[1.75] text-foreground/80">
+                    This is for people who are ready to transform. If you want
+                    to see how we do it,{" "}
+                    <Link
+                      href={`/challenge/${selected ?? "individual"}/offer`}
+                      className="font-medium text-ink underline underline-offset-4 transition-opacity hover:opacity-70"
+                    >
+                      click here
+                    </Link>
+                    .
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setReadiness(null)}
+                    className="mt-7 inline-flex items-center gap-1.5 text-[12px] uppercase tracking-[0.22em] text-foreground/65 transition-colors hover:text-ink"
+                  >
+                    <ArrowLeft className="h-3.5 w-3.5" strokeWidth={1.5} />
+                    Go back
+                  </button>
+                </div>
               </div>
             )}
           </div>
