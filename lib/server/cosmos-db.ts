@@ -208,16 +208,18 @@ export async function fetchUsers(
 
   // Fetch pageSize + 1 to detect hasMore in a single round-trip.
   const probe = pageSize + 1
-  // IMPORTANT: order by the system `_ts` (last-write timestamp), NOT by
-  // `c.createdAt`. Cosmos silently DROPS any document missing the ORDER BY
-  // field, so `ORDER BY c.createdAt` excluded legacy rows that predate that
-  // field — capping the admin list (and making "Load More" disappear because
-  // hasMore came back false) even though more rows exist. `_ts` is defined on
-  // every document, so the full dataset paginates. The `IS_DEFINED(c.email)`
-  // filter keeps the internal serial-counter doc out of the user list.
+  // Order by SIGNUP DATE, newest first, so the list matches the `createdAt`
+  // shown in the admin UI. We coalesce with `?? c._ts` so the ORDER BY key is
+  // ALWAYS defined: Cosmos silently drops any document missing the ORDER BY
+  // field, so a bare `ORDER BY c.createdAt` excluded legacy rows that predate
+  // that field (capping the list and breaking "Load More"). `_ts` (the system
+  // last-write timestamp, in epoch seconds) is defined on every document, so
+  // legacy rows still sort in — just by their last write instead of a real
+  // createdAt. The `IS_DEFINED(c.email)` filter keeps the internal
+  // serial-counter doc out of the user list.
   const querySpec = {
     query:
-      "SELECT * FROM c WHERE IS_DEFINED(c.email) ORDER BY c._ts DESC OFFSET @offset LIMIT @limit",
+      "SELECT * FROM c WHERE IS_DEFINED(c.email) ORDER BY (c.createdAt ?? c._ts) DESC OFFSET @offset LIMIT @limit",
     parameters: [
       { name: "@offset", value: offset },
       { name: "@limit", value: probe },
@@ -272,11 +274,12 @@ export async function searchUsers(opts: {
   }
 
   // Always filter to real user rows (excludes the serial-counter doc) and order
-  // by the always-defined system `_ts` rather than `c.createdAt` — see the note
-  // in fetchUsers: ordering by createdAt silently drops rows that lack it.
+  // by signup date, newest first, coalescing to `_ts` so the ORDER BY key is
+  // always defined — see the note in fetchUsers: a bare `ORDER BY c.createdAt`
+  // silently drops rows that lack it.
   const where = ` WHERE ${["IS_DEFINED(c.email)", ...conditions].join(" AND ")}`
   const querySpec = {
-    query: `SELECT * FROM c${where} ORDER BY c._ts DESC`,
+    query: `SELECT * FROM c${where} ORDER BY (c.createdAt ?? c._ts) DESC`,
     parameters: params,
   }
 
