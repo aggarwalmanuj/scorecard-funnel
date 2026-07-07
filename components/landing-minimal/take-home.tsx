@@ -28,7 +28,7 @@ const items: ReadonlyArray<{
   {
     number: "IV",
     title: "The full diagnostic PDF",
-    body: "Your complete personalised report - composed specifically around your inputs, not a templated archetype.",
+    body: "Your complete personalised action plan - composed specifically around your inputs, not a templated archetype.",
     paid: true,
   },
 ]
@@ -86,7 +86,7 @@ export function TakeHomeSection() {
                   <div className="relative overflow-hidden rounded-[6px] ring-1 ring-foreground/15 shadow-[0_30px_80px_-32px_rgba(5,18,26,0.9)]">
                     <Image
                       src="/take/reportpdf.png"
-                      alt="A page from the personalised diagnostic PDF - your full report composed around your inputs"
+                      alt="A page from the personalised diagnostic PDF - your full action plan composed around your inputs"
                       width={988}
                       height={769}
                       sizes="(max-width: 640px) 80vw, (max-width: 1024px) 60vw, 36vw"

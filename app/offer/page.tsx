@@ -20,7 +20,7 @@ const TRUST_LOGOS = [
 export const metadata: Metadata = {
   title: "Your Belief Score - Choose how deep you want to go",
   description:
-    "Start with the full report, or go all the way. Read The Pattern, Hear Your Story, the four-week Protocol, or the full Elevated experience.",
+    "Start with the full action plan, or go all the way. Read The Pattern, Hear Your Story, the four-week Protocol, or the full Elevated experience.",
   robots: { index: false, follow: false },
 }
 
@@ -39,13 +39,13 @@ const OFFER_TIERS: OfferTier[] = [
     id: "diagnostic",
     price: "$47",
     name: "Read The Pattern",
-    blurb: "Your full personalised report.",
+    blurb: "Your full personalised action plan.",
     bullets: [
       "Built from your exact answers",
       "The specific pattern named in plain language",
       "Concrete next moves, specific to you",
     ],
-    cta: "Get my report",
+    cta: "Get my action plan",
     featured: true,
   },
   {
@@ -105,8 +105,8 @@ export default function OfferPage() {
             </span>
           </h1>
           <p className="mx-auto mt-6 max-w-xl text-[15px] leading-[1.8] text-foreground/85 sm:text-base">
-            Start with the full report at $47, or go as deep as you choose. Each
-            step includes everything before it.
+            Start with the full action plan at $47, or go as deep as you choose.
+            Each step includes everything before it.
           </p>
         </div>
 
@@ -114,7 +114,7 @@ export default function OfferPage() {
           <div className="relative aspect-[21/9] w-full">
             <Image
               src="/images/offer-product.jpg"
-              alt="A premium, minimalist workspace - the actionable intelligence your report delivers"
+              alt="A premium, minimalist workspace - the actionable intelligence your action plan delivers"
               fill
               sizes="(max-width: 768px) 100vw, 768px"
               className="object-cover"

@@ -16,7 +16,7 @@ const processingSteps = [
   "Finding where the noise is coming from",
   "Scoring your clarity",
   "Building your mirror",
-  "Drafting your detailed report",
+  "Drafting your detailed action plan",
   "Writing your closing reflection",
   "Finding the one thing that moves everything else",
   "Setting your score aside for you",

@@ -52,9 +52,9 @@ const TIER_COPY: Record<SuccessTier, TierCopy> = {
       "What you felt but couldn't name is now on the page - the specific pattern running quietly underneath your effort, read across all seven dimensions.",
       "Take your time with it. It does not need to be repeated to be remembered.",
     ],
-    reportTitle: "Download your report",
-    reportTitleItalic: "your full report.",
-    reportCta: "Download your report",
+    reportTitle: "Download your action plan",
+    reportTitleItalic: "your full action plan.",
+    reportCta: "Download your action plan",
     reportNote:
       "A copy is also on its way to your inbox. If it hasn't arrived in a few minutes, check your spam folder - then add us to your contacts so the next one lands.",
     footerLine:
@@ -66,13 +66,13 @@ const TIER_COPY: Record<SuccessTier, TierCopy> = {
     headEmphasis: "Your Story is being written.",
     body: [
       "This is where your Belief Score stops being a page and becomes a narrative - your Purpose Story, built from your actual life and returned to you in your own words.",
-      "First, your report. Download it below - the steps to submit the details for your Story are on their way to your inbox, and your report is the ground it's built on.",
+      "First, your action plan. Download it below - the steps to submit the details for your Story are on their way to your inbox, and your action plan is the ground it's built on.",
     ],
-    reportTitle: "Your report -",
+    reportTitle: "Your action plan -",
     reportTitleItalic: "the ground your Story is built on.",
-    reportCta: "Download your report",
+    reportCta: "Download your action plan",
     reportNote:
-      "Your Story submission steps and a copy of the report are on their way to your inbox. If they haven't arrived in a few minutes, check your spam folder - then add us to your contacts so the next one lands.",
+      "Your Story submission steps and a copy of the action plan are on their way to your inbox. If they haven't arrived in a few minutes, check your spam folder - then add us to your contacts so the next one lands.",
   },
   transformation: {
     eyebrow: "Payment received · Your Protocol is reserved",
@@ -80,13 +80,13 @@ const TIER_COPY: Record<SuccessTier, TierCopy> = {
     headEmphasis: "The four weeks are yours.",
     body: [
       "What you've reserved is the full arc - four personalised narratives, an intake with a trained practitioner, and the 28-day Signal Wall that makes your own change visible.",
-      "Start with your report. Download it below and sit with it before your intake; it's the map the Protocol works from.",
+      "Start with your action plan. Download it below and sit with it before your intake; it's the map the Protocol works from.",
     ],
-    reportTitle: "Your report -",
+    reportTitle: "Your action plan -",
     reportTitleItalic: "the map your Protocol works from.",
-    reportCta: "Download your report",
+    reportCta: "Download your action plan",
     reportNote:
-      "Your intake details and a copy of the report are on their way to your inbox. If anything needs to change, the reschedule link is in that email - and check your spam folder if it hasn't arrived shortly.",
+      "Your intake details and a copy of the action plan are on their way to your inbox. If anything needs to change, the reschedule link is in that email - and check your spam folder if it hasn't arrived shortly.",
   },
   elevated: {
     eyebrow: "Payment received · Your Elevated experience is reserved",
@@ -94,13 +94,13 @@ const TIER_COPY: Record<SuccessTier, TierCopy> = {
     headEmphasis: "This is the full container.",
     body: [
       "Eight weeks, produced - your narratives layered with original music, direct access to your practitioner throughout, and a shareable version your family can hear.",
-      "Start with your report. Download it below and sit with it before your intake; it's where the whole arc begins.",
+      "Start with your action plan. Download it below and sit with it before your intake; it's where the whole arc begins.",
     ],
-    reportTitle: "Your report -",
+    reportTitle: "Your action plan -",
     reportTitleItalic: "where the whole arc begins.",
-    reportCta: "Download your report",
+    reportCta: "Download your action plan",
     reportNote:
-      "Your intake details and a copy of the report are on their way to your inbox. If the timing needs to shift, the reschedule link is in that email - and check your spam folder if it hasn't arrived shortly.",
+      "Your intake details and a copy of the action plan are on their way to your inbox. If the timing needs to shift, the reschedule link is in that email - and check your spam folder if it hasn't arrived shortly.",
   },
 }
 
@@ -317,10 +317,10 @@ export default function ThankYouPage() {
           >
             <DownloadCard
               preview={<PdfPreview />}
-              eyebrow="Your report · PDF"
+              eyebrow="Your action plan · PDF"
               title={copy.reportTitle}
               titleItalic={copy.reportTitleItalic}
-              description="Your full PDF report - your scores, the specific pattern named in plain language, three immediate behavioral shifts, and a 90-day benchmark to measure progress."
+              description="Your full PDF action plan - your scores, the specific pattern named in plain language, three immediate behavioral shifts, and a 90-day benchmark to measure progress."
               actionHref={`/challenge/report?autosave=1&tier=${tier}${
                 sessionId ? `&session_id=${encodeURIComponent(sessionId)}` : ""
               }`}

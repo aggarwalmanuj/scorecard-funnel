@@ -49,14 +49,14 @@ const TIERS: TierConfig[] = [
     headline: "Read the pattern.",
     headlineItalic: "In plain language.",
     included: [
-      "Your full personalised report, built from your exact answers",
+      "Your full personalised action plan, built from your exact answers",
       "Four scored dimensions - where the friction is coming from",
       "The specific pattern named, sometimes for the first time",
       "Concrete next moves, specific to what you wrote",
     ],
     valueStatement:
       "Not generic advice. Not a quiz result. Your exact words reflected back, with the mechanism underneath made visible - a document you return to.",
-    cta: "Get my report",
+    cta: "Get my action plan",
   },
   {
     id: "session",
@@ -65,7 +65,7 @@ const TIERS: TierConfig[] = [
     headline: "Hear your story.",
     headlineItalic: "In your own voice.",
     included: [
-      "Everything in the report",
+      "Everything in the action plan",
       "Your first personalised narrative - your Purpose Story",
       "Built from your exact words and your actual life",
       "No call required - a structured submission at your own pace",
@@ -366,12 +366,12 @@ export function OfferScreen({ audience }: { audience: Audience }) {
           title="Most people who read the pattern"
           titleItalic="want to hear it in their own voice."
           body={[
-            "Most people who unlock the report want their story told back to them - in their own words.",
+            "Most people who unlock the action plan want their story told back to them - in their own words.",
             "For $450 more, you get your first personalised narrative, your Purpose Story - built from your actual life and yours permanently.",
             "That's $497 total instead of $47 - credited in full toward the Protocol if you go deeper within 30 days.",
           ]}
           acceptLabel="Yes, hear my Story - $497"
-          declineLabel="No thanks, just the report"
+          declineLabel="No thanks, just the action plan"
           onAccept={() => acceptUpsell("session")}
           onDecline={() => declineUpsell("diagnostic")}
         />

@@ -56,7 +56,7 @@ export function ReservationForm({
         <span style={{ color: "var(--ink)" }}>
           - all free, no credit card required.
         </span>{" "}
-        A detailed diagnostic report is available to unlock after your
+        A detailed diagnostic action plan is available to unlock after your
         assessment.
       </p>
 

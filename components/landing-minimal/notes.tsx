@@ -19,7 +19,7 @@ const faqs = [
   },
   {
     q: "Will I be sold something at the end?",
-    a: "There is nothing to buy during the assessment. The full PDF report is delivered after your assessment. If you wish to go deeper, an option is offered - only when relevant to what surfaced.",
+    a: "There is nothing to buy during the assessment. The full PDF action plan is delivered after your assessment. If you wish to go deeper, an option is offered - only when relevant to what surfaced.",
   },
   {
     q: "How long does it actually take?",
@@ -27,7 +27,7 @@ const faqs = [
   },
   {
     q: "Is my data safe?",
-    a: "Yes. Your data belongs to you, always. Nothing is shared, sold, or templated. Your score and report are composed specifically around your inputs - not a generic algorithm.",
+    a: "Yes. Your data belongs to you, always. Nothing is shared, sold, or templated. Your score and action plan are composed specifically around your inputs - not a generic algorithm.",
   },
 ] as const
 

@@ -953,7 +953,7 @@ function ClarityScoreCard({
                     "0 14px 40px -16px rgba(var(--glow), 0.55)",
                 }}
               >
-                Unlock Your Full Report
+                Unlock Your Full Action Plan
                 <span
                   aria-hidden
                   className="ml-1 inline-block transition-transform duration-500 group-hover:translate-x-1"

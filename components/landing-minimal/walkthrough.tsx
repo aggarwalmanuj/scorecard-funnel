@@ -86,8 +86,8 @@ const steps: ReadonlyArray<Step> = [
     img: "/take/reportpdf.png",
     w: 988,
     h: 769,
-    alt: "The full diagnostic report - an expanded, personalised breakdown across every dimension.",
-    what: "A full diagnostic report and a personal audio composition, built around your exact answers.",
+    alt: "The full diagnostic action plan - an expanded, personalised breakdown across every dimension.",
+    what: "A full diagnostic action plan and a personal audio composition, built around your exact answers.",
     why: "The complete picture: what the pattern means, what's in the way, and what shifts when it lifts.",
   },
 ]

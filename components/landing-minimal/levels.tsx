@@ -22,7 +22,7 @@ const tiers: ReadonlyArray<{
     body: "Five questions. Your score across four dimensions appears instantly - the pattern that has been running your results, named clearly for the first time.",
   },
   {
-    name: "Full Report",
+    name: "Full Action Plan",
     price: "$47",
     body: "Your exact answers reflected back with the mechanism underneath them made visible. Concrete next moves, specific to you.",
   },

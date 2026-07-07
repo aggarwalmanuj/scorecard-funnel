@@ -46,7 +46,7 @@ export function ReportPaywall() {
             <figcaption className="mt-3 flex items-center gap-3">
               <span className="h-px w-8 bg-foreground/40" aria-hidden />
               <span className="eyebrow text-foreground/65">
-                Your full report · Locked
+                Your full action plan · Locked
               </span>
             </figcaption>
           </figure>
@@ -57,11 +57,11 @@ export function ReportPaywall() {
               style={{ background: "var(--signal)" }}
               aria-hidden
             />
-            One step before the full report
+            One step before the full action plan
           </p>
 
           <h1 className="mb-7 font-serif text-[1.85rem] leading-[1.12] text-ink sm:text-[2rem] sm:leading-[1.1] md:text-[2.5rem]">
-            {state.firstName ? `${state.firstName}, your` : "Your"} full report is
+            {state.firstName ? `${state.firstName}, your` : "Your"} full action plan is
             <span className="block font-serif-italic text-foreground">
               one step away.
             </span>
@@ -69,13 +69,13 @@ export function ReportPaywall() {
 
           <div className="mb-10 max-w-xl space-y-5 text-[16px] leading-[1.8] text-foreground/85">
             <p>
-              Your full personalised report - your scored dimensions, the
+              Your full personalised action plan - your scored dimensions, the
               specific pattern named in plain language, and concrete next moves
               built from your exact answers - unlocks with Read The Pattern, at
               $47.
             </p>
             <p className="text-foreground/75">
-              Choose your option to unlock the full report.
+              Choose your option to unlock the full action plan.
             </p>
           </div>
 

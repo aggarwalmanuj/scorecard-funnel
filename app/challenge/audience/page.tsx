@@ -386,7 +386,7 @@ export default function AudienceSelectionPage() {
             </h1>
             <p className="mx-auto mt-6 max-w-xl text-[15px] leading-[1.8] text-foreground/85 sm:text-base">
               {step === 1
-                ? "Your score and report are sent to the email you provide. A phone number is optional - only if you'd like a personal follow-up on WhatsApp."
+                ? "Your score and action plan are sent to the email you provide. A phone number is optional - only if you'd like a personal follow-up on WhatsApp."
                 : step === "gate"
                   ? "Choose honestly. If you are only curious, this will feel like too much. If you are ready, it will feel like relief."
                   : "The diagnostic adapts to the level of the system you are trying to unlock."}

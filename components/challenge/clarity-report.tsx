@@ -287,7 +287,7 @@ export function ClarityReport({ preview = false }: { preview?: boolean } = {}) {
       .then((json) => setData(json))
       .catch((e) => {
         if (e?.name === "AbortError") return
-        setError(e instanceof Error ? e.message : "Failed to generate report")
+        setError(e instanceof Error ? e.message : "Failed to generate action plan")
       })
       .finally(() => setLoading(false))
 
@@ -333,7 +333,7 @@ export function ClarityReport({ preview = false }: { preview?: boolean } = {}) {
     try {
       await downloadReportPdf(
         root,
-        `${reportFileSlug(state.firstName)}-belief-score-report.pdf`
+        `${reportFileSlug(state.firstName)}-belief-score-action-plan.pdf`
       )
     } catch (e) {
       console.error("PDF download failed:", e)
@@ -400,7 +400,7 @@ export function ClarityReport({ preview = false }: { preview?: boolean } = {}) {
         <div className="toolbar-title">
           <span className="brand-mark brand-mark-sm" aria-hidden />
           <span style={{ fontFamily: "var(--font-serif)", fontWeight: 400, letterSpacing: "0.18em", textTransform: "uppercase", fontSize: 11, color: "var(--ink-soft)" }}>
-            Belief Score Report
+            Belief Score Action Plan
           </span>
         </div>
         <button
@@ -417,7 +417,7 @@ export function ClarityReport({ preview = false }: { preview?: boolean } = {}) {
           ) : (
             <>
               <Download size={14} />
-              Download PDF
+              Download Action Plan
             </>
           )}
         </button>
@@ -427,7 +427,7 @@ export function ClarityReport({ preview = false }: { preview?: boolean } = {}) {
       {loading && (
         <div className="status">
           <Loader2 className="spin" size={28} />
-          <p className="status-title">Building your tailored report…</p>
+          <p className="status-title">Building your tailored action plan…</p>
           <p className="status-sub">
             Reading your five answers and five beats, scoring across the four
             pillars, and writing the synthesis. Usually 15-25 seconds.
@@ -439,7 +439,7 @@ export function ClarityReport({ preview = false }: { preview?: boolean } = {}) {
       {!loading && error && (
         <div className="status status-err">
           <AlertCircle size={28} />
-          <p className="status-title">We couldn&apos;t generate the report.</p>
+          <p className="status-title">We couldn&apos;t generate the action plan.</p>
           <p className="status-sub">
             {error}. You can close this tab and try again from the offer page.
           </p>
@@ -450,10 +450,10 @@ export function ClarityReport({ preview = false }: { preview?: boolean } = {}) {
       {!loading && !error && !hasContent && (
         <div className="status">
           <AlertCircle size={28} />
-          <p className="status-title">Nothing to report on yet.</p>
+          <p className="status-title">Nothing here yet.</p>
           <p className="status-sub">
-            Complete the Belief Score assessment first - your report is built
-            from your answers.
+            Complete the Belief Score assessment first - your action plan is
+            built from your answers.
           </p>
           <Link href="/" className="status-link">
             Start the challenge
@@ -466,7 +466,7 @@ export function ClarityReport({ preview = false }: { preview?: boolean } = {}) {
       {!loading && !error && usingSample && (
         <div className="sample-banner" role="status">
           <AlertCircle size={15} />
-          <span>Sample report — no assessment completed in this session.</span>
+          <span>Sample action plan — no assessment completed in this session.</span>
         </div>
       )}
 
@@ -681,8 +681,8 @@ function ReportPages({
           <div className="eyebrow">Go deeper</div>
           <h1 className="title small">Two ways to move what you just saw</h1>
           <p className="lede" style={{ marginBottom: 18 }}>
-            Your report names the pattern. These take it further - from seeing
-            it, to moving it, to making the shift part of how you operate.
+            Your action plan names the pattern. These take it further - from
+            seeing it, to moving it, to making the shift part of how you operate.
           </p>
 
           <div style={{ display: "grid", gap: 16 }}>
@@ -833,19 +833,19 @@ function ReportHeader({
           legible; html2canvas-pro renders CSS mask correctly into the PDF. */}
       <div className="logo">
         <span className="brand-mark brand-mark-sm" aria-hidden />
-        <span className="report-name">Belief Score Report</span>
+        <span className="report-name">Belief Score Action Plan</span>
       </div>
       {compact ? (
         <div className="meta">
-          <b>{name || "Your report"}</b> · {formatDate(today)}
+          <b>{name || "Your action plan"}</b> · {formatDate(today)}
         </div>
       ) : (
         <div className="meta">
-          <b>{name || "Your report"}</b>
+          <b>{name || "Your action plan"}</b>
           <br />
           {formatDate(today)}
           <br />
-          Report ID · {rid}
+          Action Plan ID · {rid}
         </div>
       )}
     </header>
@@ -864,7 +864,7 @@ function ReportFooter({
   return (
     <div className="foot">
       <span>
-        Belief Score Report · Page {page} of {of}
+        Belief Score Action Plan · Page {page} of {of}
       </span>
       <span>Confidential · prepared for {name || "you"}</span>
     </div>
