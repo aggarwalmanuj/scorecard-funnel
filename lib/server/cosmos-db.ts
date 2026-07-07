@@ -36,6 +36,42 @@ async function ensureInitialized(): Promise<void> {
   await db.containers.createIfNotExists({ id: "users", partitionKey: { paths: ["/email"] } })
   await db.containers.createIfNotExists({ id: "prompts", partitionKey: { paths: ["/id"] } })
   _initialized = true
+  // One-time (best-effort): give any legacy row a `createdAt` so the admin
+  // list can ORDER BY it without dropping rows. Never blocks init.
+  await backfillCreatedAt().catch(() => {})
+}
+
+/**
+ * Backfill `createdAt` onto user rows that predate the field, deriving it from
+ * the Cosmos system `_ts` (epoch SECONDS). The admin list orders by a bare
+ * `ORDER BY c.createdAt`, which silently drops rows missing that field — so
+ * without this, legacy rows would vanish. Idempotent (only touches rows where
+ * createdAt is absent) and best-effort: any failure is swallowed so a
+ * transient DB hiccup never breaks reads. Runs at most once per process.
+ */
+let _backfilledCreatedAt = false
+async function backfillCreatedAt(): Promise<void> {
+  if (_backfilledCreatedAt) return
+  _backfilledCreatedAt = true
+  const container = getDatabase().container("users")
+  // Find real user rows lacking createdAt. Projecting id/email/_ts keeps the
+  // scan cheap; no ORDER BY (which would itself drop these very rows).
+  const { resources } = await container.items
+    .query<{ id: string; email: string; _ts: number }>(
+      "SELECT c.id, c.email, c._ts FROM c WHERE IS_DEFINED(c.email) AND (NOT IS_DEFINED(c.createdAt) OR c.createdAt = '' OR c.createdAt = null)"
+    )
+    .fetchAll()
+  if (!resources?.length) return
+  for (const row of resources) {
+    const iso = new Date((row._ts ?? 0) * 1000).toISOString()
+    try {
+      await container.item(row.id, row.email).patch([
+        { op: "add", path: "/createdAt", value: iso },
+      ])
+    } catch {
+      /* skip this row; a later init will retry it */
+    }
+  }
 }
 
 function usersContainer(): Container {
@@ -209,17 +245,16 @@ export async function fetchUsers(
   // Fetch pageSize + 1 to detect hasMore in a single round-trip.
   const probe = pageSize + 1
   // Order by SIGNUP DATE, newest first, so the list matches the `createdAt`
-  // shown in the admin UI. We coalesce with `?? c._ts` so the ORDER BY key is
-  // ALWAYS defined: Cosmos silently drops any document missing the ORDER BY
-  // field, so a bare `ORDER BY c.createdAt` excluded legacy rows that predate
-  // that field (capping the list and breaking "Load More"). `_ts` (the system
-  // last-write timestamp, in epoch seconds) is defined on every document, so
-  // legacy rows still sort in — just by their last write instead of a real
-  // createdAt. The `IS_DEFINED(c.email)` filter keeps the internal
-  // serial-counter doc out of the user list.
+  // shown in the admin UI. NOTE: Cosmos only supports ORDER BY on a bare
+  // indexed property path — an expression like `(c.createdAt ?? c._ts)` throws
+  // a query error (500 -> our 502). And Cosmos silently DROPS any document
+  // missing the ORDER BY field. Both concerns are handled by backfilling
+  // `createdAt` onto every legacy row at init (see backfillCreatedAt), so a
+  // plain `ORDER BY c.createdAt` is now safe and complete. The
+  // `IS_DEFINED(c.email)` filter keeps the internal serial-counter doc out.
   const querySpec = {
     query:
-      "SELECT * FROM c WHERE IS_DEFINED(c.email) ORDER BY (c.createdAt ?? c._ts) DESC OFFSET @offset LIMIT @limit",
+      "SELECT * FROM c WHERE IS_DEFINED(c.email) ORDER BY c.createdAt DESC OFFSET @offset LIMIT @limit",
     parameters: [
       { name: "@offset", value: offset },
       { name: "@limit", value: probe },
@@ -274,12 +309,12 @@ export async function searchUsers(opts: {
   }
 
   // Always filter to real user rows (excludes the serial-counter doc) and order
-  // by signup date, newest first, coalescing to `_ts` so the ORDER BY key is
-  // always defined — see the note in fetchUsers: a bare `ORDER BY c.createdAt`
-  // silently drops rows that lack it.
+  // by signup date, newest first. Bare `ORDER BY c.createdAt` — Cosmos rejects
+  // expression ORDER BYs; every row has createdAt after the init backfill, so
+  // none are dropped. See the note in fetchUsers.
   const where = ` WHERE ${["IS_DEFINED(c.email)", ...conditions].join(" AND ")}`
   const querySpec = {
-    query: `SELECT * FROM c${where} ORDER BY (c.createdAt ?? c._ts) DESC`,
+    query: `SELECT * FROM c${where} ORDER BY c.createdAt DESC`,
     parameters: params,
   }
 
