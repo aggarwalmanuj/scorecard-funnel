@@ -112,11 +112,21 @@ export async function downloadReportPdf(
   const pageElements = root.querySelectorAll<HTMLElement>(".page")
   if (pageElements.length === 0) return
 
-  const pdf = new jsPDF({ format: "a4", unit: "mm", orientation: "portrait" })
-  const pageWidthMm = 210
-  const pageHeightMm = 297
+  // Neutralize the mobile scale-to-fit `zoom` (see the @media rule in
+  // ReportStyles) for the duration of the capture, so the pages rasterize at
+  // true A4 and getBoundingClientRect returns unscaled boxes for the link
+  // overlay math below. Restored in `finally` no matter how we exit.
+  root.setAttribute("data-capturing", "")
+  // Force a synchronous reflow so the un-zoomed geometry is in effect before
+  // html2canvas / getBoundingClientRect read it.
+  void root.getBoundingClientRect()
 
-  for (let i = 0; i < pageElements.length; i++) {
+  try {
+    const pdf = new jsPDF({ format: "a4", unit: "mm", orientation: "portrait" })
+    const pageWidthMm = 210
+    const pageHeightMm = 297
+
+    for (let i = 0; i < pageElements.length; i++) {
     const el = pageElements[i]
     const canvas = await html2canvas(el, {
       scale: 2,
@@ -153,9 +163,13 @@ export async function downloadReportPdf(
         )
       })
     }
-  }
+    }
 
-  pdf.save(fileName)
+    pdf.save(fileName)
+  } finally {
+    // Restore the mobile scale-to-fit zoom.
+    root.removeAttribute("data-capturing")
+  }
 }
 
 /** Slug a name for use in a download filename. */
@@ -1248,6 +1262,23 @@ function ReportStyles() {
         position: relative;
         overflow: hidden;
         color: var(--ink);
+      }
+
+      /* Mobile scale-to-fit. The A4 page is a fixed 210mm (~794px) - wider than
+         a phone - so on narrow screens we shrink the whole page to fit the
+         viewport width instead of forcing a horizontal pan. We use the zoom
+         property rather than transform:scale because zoom reflows layout: the
+         page's reserved height shrinks with it, so pages stay tightly stacked
+         with no empty gaps and no margin hacks. zoom affects
+         getBoundingClientRect (used by the PDF link overlay) AND the
+         html2canvas raster, so downloadReportPdf sets data-capturing on
+         .report-root to disable this for the duration of the capture - keeping
+         the downloaded PDF at true A4 with correct clickable-link boxes.
+         210mm is about 793.7px; 32px = the viewport side gutters. */
+      @media screen and (max-width: 820px) {
+        .report-root:not([data-capturing]) .page {
+          zoom: calc((100vw - 32px) / 793.7);
+        }
       }
       .report-root .page::before {
         content: "";
