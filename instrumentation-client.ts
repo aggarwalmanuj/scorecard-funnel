@@ -39,8 +39,20 @@ const IS_DEV = process.env.NODE_ENV !== "production"
 const POSTHOG_DEV_ENABLED =
   process.env.NEXT_PUBLIC_POSTHOG_ENABLE_DEV === "true"
 
+// True when the app is booting directly on an admin console URL. Used to
+// prevent session replay from ever starting there (init-time), closing the
+// brief window before the `loaded` callback could call stopSessionRecording().
+const BOOTED_ON_ADMIN =
+  typeof window !== "undefined" &&
+  /^\/(admin|techadmin)(\/|$|\?)/.test(window.location.pathname)
+
 if (typeof window !== "undefined" && POSTHOG_KEY && (!IS_DEV || POSTHOG_DEV_ENABLED)) {
   posthog.init(POSTHOG_KEY, {
+    // Don't start session replay at all when booting on an admin route — the
+    // recorder would otherwise capture a beat before `loaded` stops it. SPA
+    // navigation into admin is handled by stopSessionRecording() in the admin
+    // page effect.
+    disable_session_recording: BOOTED_ON_ADMIN,
     // Route ALL PostHog traffic (events, feature flags, lazy-loaded
     // chunks) through our same-origin `/ingest` reverse proxy defined in
     // next.config.mjs. This is what makes ad/tracker blockers (uBlock,
@@ -88,34 +100,26 @@ if (typeof window !== "undefined" && POSTHOG_KEY && (!IS_DEV || POSTHOG_DEV_ENAB
         }
         return "*".repeat(text.length)
       },
-      // Never record the internal admin consoles. These are our own team's
-      // sessions (reviewing submissions, prompts, analytics), not customer
-      // behaviour — recording them wastes replay quota and can capture other
-      // testers' data on screen. Matches /admin and /techadmin (with or
-      // without a trailing path). Pairs with the pathname opt-out in
-      // `loaded` below, which also stops events/pageviews on those routes.
-      //
-      // `urlBlocklist` is a valid runtime session-recording option but the
-      // posthog-js init typings only expose it on the remote-config type, not
-      // on the init param — so we widen the object literal to include it.
-      ...({
-        urlBlocklist: [
-          { url: "/admin", matching: "regex" },
-          { url: "/techadmin", matching: "regex" },
-        ],
-      } as Record<string, unknown>),
     },
     loaded: (ph) => {
-      // Keep ALL PostHog capture (events, pageviews, autocapture, replay) off
-      // while the user is inside the admin consoles. `urlBlocklist` above
-      // covers replay; this covers everything else. Client-side navigation
-      // into/out of /admin is handled by a matching effect in the admin page,
-      // which calls opt_out/opt_in as the route changes.
+      // Keep ALL PostHog capture off while the user is inside the admin
+      // consoles (/admin, /techadmin) — our own team's sessions, not customer
+      // behaviour, and recording them wastes replay quota and can capture
+      // other testers' data on screen.
+      //
+      // NOTE: the `session_recording.urlBlocklist` init option does NOT work
+      // client-side — the recorder reads its blocklist from PostHog's REMOTE
+      // config, not the local init param, so setting it here is silently
+      // ignored. Instead we stop replay explicitly with stopSessionRecording()
+      // (definitive, tears down the active rrweb recorder) AND opt out of event
+      // capture. Client-side navigation into/out of admin is handled by a
+      // matching effect in the admin page.
       const onAdminRoute = /^\/(admin|techadmin)(\/|$|\?)/.test(
         window.location.pathname
       )
       try {
         if (onAdminRoute) {
+          ph.stopSessionRecording()
           ph.opt_out_capturing()
         } else if (ph.has_opted_out_capturing()) {
           // Defensive: `opt_out_capturing()` sets a sticky "NO" flag in

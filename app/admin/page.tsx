@@ -766,20 +766,26 @@ export default function AdminPage() {
   const isTech = (pathname ?? "").startsWith("/techadmin")
 
   // Keep PostHog off inside the admin consoles, even when reached via client-
-  // side navigation (init only checks the boot URL). Opt out on mount / while
-  // on an admin route, and opt back in when this console unmounts (i.e. the
-  // team navigates back to a customer page). urlBlocklist in
-  // instrumentation-client.ts separately guarantees no session REPLAY here.
+  // side navigation (the init check only sees the boot URL). On an admin route
+  // we STOP session replay (stopSessionRecording tears down the active rrweb
+  // recorder — the init `urlBlocklist` option is ignored client-side) and opt
+  // out of event capture; on unmount (team navigates back to a customer page)
+  // we resume both.
   useEffect(() => {
-    const onAdmin = (pathname ?? "").startsWith("/admin") || (pathname ?? "").startsWith("/techadmin")
+    const onAdmin =
+      (pathname ?? "").startsWith("/admin") ||
+      (pathname ?? "").startsWith("/techadmin")
+    if (!onAdmin) return
     try {
-      if (onAdmin) posthog.opt_out_capturing()
+      posthog.stopSessionRecording()
+      posthog.opt_out_capturing()
     } catch {
       /* posthog not initialized (e.g. dev without token) — nothing to do */
     }
     return () => {
       try {
         posthog.opt_in_capturing()
+        posthog.startSessionRecording()
       } catch {
         /* noop */
       }
