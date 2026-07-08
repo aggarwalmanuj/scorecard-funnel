@@ -1,4 +1,5 @@
 import { getAttribution } from "@/lib/client/attribution"
+import { getHeadlineAttribution } from "@/lib/client/headline"
 
 export type Audience = "individual" | "team"
 
@@ -64,8 +65,9 @@ export async function submitSignup(
   leadEventId?: string
 ): Promise<number | null> {
   try {
-    // First-touch attribution (utm_* / referrer) captured at the landing.
-    const attribution = getAttribution()
+    // First-touch attribution (utm_* / referrer) captured at the landing,
+    // plus the headline A/B variant this visitor was assigned (if any).
+    const attribution = { ...getAttribution(), ...getHeadlineAttribution() }
     const res = await fetch("/api/sheets/append", {
       method: "POST",
       headers: { "Content-Type": "application/json" },

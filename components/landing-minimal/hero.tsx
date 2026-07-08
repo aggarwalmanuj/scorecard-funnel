@@ -1,6 +1,13 @@
 "use client"
 
+import { useEffect, useState } from "react"
 import Image from "next/image"
+import { Skeleton } from "@/components/ui/skeleton"
+import {
+  getStoredHeadline,
+  resolveHeadline,
+  type HeadlineVariant,
+} from "@/lib/client/headline"
 import { ReservationForm } from "./reservation-form"
 import {
   CursorHalo,
@@ -10,7 +17,60 @@ import {
   WordReveal,
 } from "./motion"
 
+// Default headline — shown on first paint and whenever the A/B experiment is
+// off (no active variants in the admin's Headlines tab).
+const DEFAULT_HEADLINE: HeadlineVariant = {
+  id: "default",
+  line1: "You already know",
+  line2: "there is more in you.",
+}
+
+// How long the headline skeleton may hold the hero before we give up on the
+// variant fetch and show the default. Keeps a slow/failed API from ever
+// leaving the fold blank.
+const HEADLINE_RESOLVE_TIMEOUT_MS = 2500
+
 export function MinimalHero() {
+  // null = still resolving → skeleton. The server render and first client
+  // paint both show the skeleton (no hydration mismatch), so a visitor never
+  // sees one headline replaced by another. Repeat visitors skip the skeleton:
+  // their sticky assignment renders synchronously on mount while we
+  // revalidate in the background.
+  const [headline, setHeadline] = useState<HeadlineVariant | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+
+    const stored = getStoredHeadline()
+    if (stored) setHeadline(stored)
+
+    // First visit: cap how long the skeleton can hold the fold.
+    const fallback = stored
+      ? null
+      : setTimeout(() => {
+          if (!cancelled) {
+            setHeadline((current) => current ?? DEFAULT_HEADLINE)
+          }
+        }, HEADLINE_RESOLVE_TIMEOUT_MS)
+
+    void resolveHeadline().then((variant) => {
+      if (cancelled) return
+      // Never swap copy the visitor is already reading: only apply the
+      // resolved variant if nothing is on screen yet, or it's the same
+      // assignment (text may have been reworded by the admin).
+      setHeadline((current) =>
+        !current || (variant && variant.id === current.id)
+          ? (variant ?? DEFAULT_HEADLINE)
+          : current
+      )
+    })
+
+    return () => {
+      cancelled = true
+      if (fallback) clearTimeout(fallback)
+    }
+  }, [])
+
   return (
     <section className="relative" id="hero">
       <div className="mx-auto max-w-7xl px-5 pt-8 pb-16 sm:px-10 sm:pt-14 sm:pb-24 lg:px-16 lg:pt-16">
@@ -26,13 +86,28 @@ export function MinimalHero() {
                 three-line layout doesn't exceed the fold; loosens up
                 cleanly through tablet to desktop. */}
             <h1 className="wrap-break-word font-serif text-[2.15rem] leading-[1.06] text-ink sm:text-6xl sm:leading-[1.02] lg:text-7xl xl:text-[5.6rem]">
-              <WordReveal
-                segments={[
-                  { kind: "text", text: "You already know" },
-                  { kind: "br" },
-                  { kind: "italic", text: "there is more in you." },
-                ]}
-              />
+              {headline ? (
+                <WordReveal
+                  key={headline.id}
+                  segments={[
+                    { kind: "text", text: headline.line1 },
+                    ...(headline.line2
+                      ? ([
+                          { kind: "br" },
+                          { kind: "italic", text: headline.line2 },
+                        ] as const)
+                      : []),
+                  ]}
+                />
+              ) : (
+                // Skeleton sized in `em` so it tracks the responsive type
+                // scale — two bars matching the two headline lines, holding
+                // the same vertical space so nothing below shifts on resolve.
+                <span aria-hidden className="block space-y-[0.18em] py-[0.06em]">
+                  <Skeleton className="h-[0.82em] w-[88%] max-w-[9em] rounded-sm" />
+                  <Skeleton className="h-[0.82em] w-[72%] max-w-[7.5em] rounded-sm" />
+                </span>
+              )}
             </h1>
 
             <Reveal

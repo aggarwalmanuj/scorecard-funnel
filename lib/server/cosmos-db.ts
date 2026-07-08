@@ -35,6 +35,8 @@ async function ensureInitialized(): Promise<void> {
   const db = getDatabase()
   await db.containers.createIfNotExists({ id: "users", partitionKey: { paths: ["/email"] } })
   await db.containers.createIfNotExists({ id: "prompts", partitionKey: { paths: ["/id"] } })
+  // Headline A/B-test variants (see the Headlines section below).
+  await db.containers.createIfNotExists({ id: "headlines", partitionKey: { paths: ["/id"] } })
   _initialized = true
   // One-time (best-effort): give any legacy row a `createdAt` so the admin
   // list can ORDER BY it without dropping rows. Never blocks init.
@@ -80,6 +82,10 @@ function usersContainer(): Container {
 
 function promptsContainer(): Container {
   return getDatabase().container("prompts")
+}
+
+function headlinesContainer(): Container {
+  return getDatabase().container("headlines")
 }
 
 export function isCosmosConfigured(): boolean {
@@ -159,6 +165,11 @@ export type UserDocument = {
   vertical?: string
   referrer?: string
   landing_page?: string
+  // Headline A/B test: which landing-headline variant this user was shown.
+  // headline_text is a snapshot (like questionN_text) so results stay
+  // interpretable after the admin edits or deletes the variant.
+  headline_id?: string
+  headline_text?: string
   // Purchase record. Written by the Stripe webhook (authoritative) and/or the
   // thank-you page (covers Calendly tiers, which never hit the Stripe webhook).
   paid_tier?: string
@@ -183,6 +194,8 @@ export type Attribution = {
   vertical?: string
   referrer?: string
   landing_page?: string
+  headline_id?: string
+  headline_text?: string
 }
 
 // Per-field cap for attribution values. URLs/UTM tags are short; this guards
@@ -206,6 +219,8 @@ function sanitizeAttribution(attribution?: Attribution): Record<string, string> 
     "vertical",
     "referrer",
     "landing_page",
+    "headline_id",
+    "headline_text",
   ]
   const out: Record<string, string> = {}
   if (!attribution) return out
@@ -828,4 +843,141 @@ export async function fetchFunnelStats(): Promise<FunnelStats> {
   }
 
   return { total: rows.length, stages, byTier, revenue }
+}
+
+/* ═══════════════════════════════════════════════
+   Headline A/B testing
+   ═══════════════════════════════════════════════ */
+
+export type HeadlineDocument = {
+  id: string
+  /** First headline line (regular serif). */
+  line1: string
+  /** Second headline line (italic serif). Optional — single-line headlines are fine. */
+  line2: string
+  /** Only active variants are served to visitors; traffic splits equally among them. */
+  active: boolean
+  /** Unique visitors this variant was assigned to (client fires one impression per assignment). */
+  impressions: number
+  createdAt: string
+}
+
+const MAX_HEADLINE_LEN = 200
+
+const trimHeadlineLine = (v: unknown) =>
+  typeof v === "string" ? v.trim().slice(0, MAX_HEADLINE_LEN) : ""
+
+export async function listHeadlines(): Promise<HeadlineDocument[]> {
+  await ensureInitialized()
+  const { resources } = await headlinesContainer()
+    .items.query<HeadlineDocument>(
+      "SELECT * FROM c WHERE IS_DEFINED(c.line1) ORDER BY c.createdAt ASC"
+    )
+    .fetchAll()
+  return resources ?? []
+}
+
+/** Active variants only — the public shape served to landing visitors. */
+export async function listActiveHeadlines(): Promise<
+  Pick<HeadlineDocument, "id" | "line1" | "line2">[]
+> {
+  const all = await listHeadlines()
+  return all
+    .filter((h) => h.active)
+    .map((h) => ({ id: h.id, line1: h.line1, line2: h.line2 }))
+}
+
+export async function createHeadline(input: {
+  line1: string
+  line2?: string
+  active?: boolean
+}): Promise<HeadlineDocument> {
+  await ensureInitialized()
+  const doc: HeadlineDocument = {
+    id: crypto.randomUUID(),
+    line1: trimHeadlineLine(input.line1),
+    line2: trimHeadlineLine(input.line2),
+    active: input.active !== false,
+    impressions: 0,
+    createdAt: new Date().toISOString(),
+  }
+  if (!doc.line1) throw new Error("Headline line1 is required")
+  await headlinesContainer().items.create(doc)
+  return doc
+}
+
+export async function updateHeadline(
+  id: string,
+  updates: { line1?: string; line2?: string; active?: boolean }
+): Promise<void> {
+  await ensureInitialized()
+  const ops: { op: "set"; path: string; value: string | boolean }[] = []
+  if (updates.line1 !== undefined) ops.push({ op: "set", path: "/line1", value: trimHeadlineLine(updates.line1) })
+  if (updates.line2 !== undefined) ops.push({ op: "set", path: "/line2", value: trimHeadlineLine(updates.line2) })
+  if (updates.active !== undefined) ops.push({ op: "set", path: "/active", value: Boolean(updates.active) })
+  if (ops.length === 0) return
+  await headlinesContainer().item(id, id).patch(ops)
+}
+
+export async function deleteHeadline(id: string): Promise<void> {
+  await ensureInitialized()
+  await headlinesContainer().item(id, id).delete()
+}
+
+/** Count one unique visitor assignment. Best-effort — a missing/deleted
+ *  variant id is a no-op, never an error surfaced to the visitor. */
+export async function recordHeadlineImpression(id: string): Promise<void> {
+  await ensureInitialized()
+  try {
+    await headlinesContainer()
+      .item(id, id)
+      .patch([{ op: "incr", path: "/impressions", value: 1 }])
+  } catch {
+    /* variant deleted since assignment, or transient — impression dropped */
+  }
+}
+
+/** Per-variant funnel outcomes, derived from user docs stamped with
+ *  headline_id at signup (same projection approach as fetchFunnelStats). */
+export type HeadlineFunnelRow = FunnelStats["stages"] & { revenue: number }
+
+export async function fetchHeadlineStats(): Promise<Record<string, HeadlineFunnelRow>> {
+  await ensureInitialized()
+  const { resources } = await usersContainer()
+    .items.query(
+      "SELECT c.headline_id, c.question1, c.question5, c.beat5_output, c.score_json, c.report_json, c.summary_text, c.paid_tier, c.paid_amount FROM c WHERE IS_DEFINED(c.headline_id)"
+    )
+    .fetchAll()
+
+  const nonEmpty = (v: unknown) => typeof v === "string" && v.trim().length > 0
+  const byHeadline: Record<string, HeadlineFunnelRow> = {}
+
+  for (const r of resources ?? []) {
+    const key = String(r.headline_id)
+    const row = (byHeadline[key] ??= {
+      signedUp: 0,
+      answeredQ1: 0,
+      answeredAll: 0,
+      reachedBeats: 0,
+      scored: 0,
+      reported: 0,
+      summarized: 0,
+      purchased: 0,
+      revenue: 0,
+    })
+    row.signedUp++
+    if (nonEmpty(r.question1)) row.answeredQ1++
+    if (nonEmpty(r.question5)) row.answeredAll++
+    if (nonEmpty(r.beat5_output)) row.reachedBeats++
+    if (nonEmpty(r.score_json)) row.scored++
+    if (nonEmpty(r.report_json)) row.reported++
+    if (nonEmpty(r.summary_text)) row.summarized++
+    if (nonEmpty(r.paid_tier)) {
+      row.purchased++
+      const amt = Number.parseFloat(String(r.paid_amount ?? ""))
+      if (Number.isFinite(amt)) row.revenue += amt
+    }
+  }
+
+  return byHeadline
 }

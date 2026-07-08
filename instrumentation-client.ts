@@ -53,6 +53,17 @@ if (typeof window !== "undefined" && POSTHOG_KEY && (!IS_DEV || POSTHOG_DEV_ENAB
     // navigation into admin is handled by stopSessionRecording() in the admin
     // page effect.
     disable_session_recording: BOOTED_ON_ADMIN,
+    // Belt-and-braces: drop ANY event whose send happens while the user is on
+    // an admin route. The `loaded` callback below opts out of capture, but it
+    // runs async — on a direct boot to /admin the forced initial pageview (and
+    // early autocapture) could otherwise race it and land in PostHog. Same for
+    // the brief SPA-navigation window before the admin page effect runs.
+    before_send: (event) => {
+      if (/^\/(admin|techadmin)(\/|$|\?)/.test(window.location.pathname)) {
+        return null
+      }
+      return event
+    },
     // Route ALL PostHog traffic (events, feature flags, lazy-loaded
     // chunks) through our same-origin `/ingest` reverse proxy defined in
     // next.config.mjs. This is what makes ad/tracker blockers (uBlock,

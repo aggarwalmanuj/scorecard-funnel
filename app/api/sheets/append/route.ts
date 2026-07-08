@@ -75,6 +75,9 @@ const bodySchema = z.object({
       vertical: z.string().max(500).optional(),
       referrer: z.string().max(500).optional(),
       landing_page: z.string().max(500).optional(),
+      // Headline A/B test: assigned variant id + text snapshot.
+      headline_id: z.string().max(500).optional(),
+      headline_text: z.string().max(500).optional(),
     })
     .optional(),
 })
