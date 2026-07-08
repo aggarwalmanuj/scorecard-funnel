@@ -787,8 +787,8 @@ function ReportPages({
                     }}
                   >
                     {offer.id === "session"
-                      ? "Book your session"
-                      : "Begin the transformation"}{" "}
+                      ? "Start your story"
+                      : "Build from that belief"}{" "}
                     →
                   </span>
                   <div
