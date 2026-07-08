@@ -88,16 +88,45 @@ if (typeof window !== "undefined" && POSTHOG_KEY && (!IS_DEV || POSTHOG_DEV_ENAB
         }
         return "*".repeat(text.length)
       },
+      // Never record the internal admin consoles. These are our own team's
+      // sessions (reviewing submissions, prompts, analytics), not customer
+      // behaviour — recording them wastes replay quota and can capture other
+      // testers' data on screen. Matches /admin and /techadmin (with or
+      // without a trailing path). Pairs with the pathname opt-out in
+      // `loaded` below, which also stops events/pageviews on those routes.
+      //
+      // `urlBlocklist` is a valid runtime session-recording option but the
+      // posthog-js init typings only expose it on the remote-config type, not
+      // on the init param — so we widen the object literal to include it.
+      ...({
+        urlBlocklist: [
+          { url: "/admin", matching: "regex" },
+          { url: "/techadmin", matching: "regex" },
+        ],
+      } as Record<string, unknown>),
     },
     loaded: (ph) => {
-      // Defensive: if a previous build called `opt_out_capturing()`,
-      // the "NO" flag is sticky in localStorage and silently blocks
-      // every subsequent capture even after the code is removed.
-      // Clear it on every boot.
+      // Keep ALL PostHog capture (events, pageviews, autocapture, replay) off
+      // while the user is inside the admin consoles. `urlBlocklist` above
+      // covers replay; this covers everything else. Client-side navigation
+      // into/out of /admin is handled by a matching effect in the admin page,
+      // which calls opt_out/opt_in as the route changes.
+      const onAdminRoute = /^\/(admin|techadmin)(\/|$|\?)/.test(
+        window.location.pathname
+      )
       try {
-        if (ph.has_opted_out_capturing()) ph.opt_in_capturing()
+        if (onAdminRoute) {
+          ph.opt_out_capturing()
+        } else if (ph.has_opted_out_capturing()) {
+          // Defensive: `opt_out_capturing()` sets a sticky "NO" flag in
+          // localStorage that silently blocks all future capture. Clear it
+          // whenever we boot on a non-admin route (e.g. an admin left the
+          // tab opted-out, then a customer opens the funnel in the same
+          // browser).
+          ph.opt_in_capturing()
+        }
       } catch {
-        /* older SDKs may not expose the helper */
+        /* older SDKs may not expose these helpers */
       }
     },
   })

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react"
 import { usePathname } from "next/navigation"
+import posthog from "posthog-js"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -763,6 +764,27 @@ export default function AdminPage() {
   // Analytics tab + per-user telemetry (PostHog session, purchase, journey).
   const pathname = usePathname()
   const isTech = (pathname ?? "").startsWith("/techadmin")
+
+  // Keep PostHog off inside the admin consoles, even when reached via client-
+  // side navigation (init only checks the boot URL). Opt out on mount / while
+  // on an admin route, and opt back in when this console unmounts (i.e. the
+  // team navigates back to a customer page). urlBlocklist in
+  // instrumentation-client.ts separately guarantees no session REPLAY here.
+  useEffect(() => {
+    const onAdmin = (pathname ?? "").startsWith("/admin") || (pathname ?? "").startsWith("/techadmin")
+    try {
+      if (onAdmin) posthog.opt_out_capturing()
+    } catch {
+      /* posthog not initialized (e.g. dev without token) — nothing to do */
+    }
+    return () => {
+      try {
+        posthog.opt_in_capturing()
+      } catch {
+        /* noop */
+      }
+    }
+  }, [pathname])
 
   // Per-audience editor state. Both audiences persist in memory so switching
   // between them doesn't lose unsaved work.
