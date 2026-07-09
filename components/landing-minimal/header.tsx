@@ -1,11 +1,11 @@
 "use client"
 
 import Link from "next/link"
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useState } from "react"
 import { Menu, X, ArrowUpRight } from "lucide-react"
 
 const navLinks = [
-  { href: "#how-it-works", label: "The Score" },
+  { href: "#walkthrough", label: "The Score" },
   { href: "#voices", label: "Voices" },
   { href: "#guides", label: "Guides" },
   { href: "#notes", label: "Notes" },
@@ -13,31 +13,23 @@ const navLinks = [
 
 export function MinimalHeader() {
   const [scrolled, setScrolled] = useState(false)
-  const [hidden, setHidden] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
-  const lastY = useRef(0)
 
-  // Auto-hide on scroll-down (mobile only - desktop overrides), reveal on
-  // scroll-up. Header is always visible near the top of the page.
+  // The header stays visible at all times: on mobile it carries the only
+  // persistent CTA on the page, so auto-hiding it on scroll-down (the old
+  // behaviour) meant the CTA vanished exactly while the visitor was
+  // reading. The bar is one compact line — the reclaimed 56px isn't worth
+  // losing the ask.
   useEffect(() => {
-    const onScroll = () => {
-      const y = window.scrollY
-      setScrolled(y > 8)
-      if (y < 64) setHidden(false)
-      else if (y > lastY.current + 6) setHidden(true)
-      else if (y < lastY.current - 6) setHidden(false)
-      lastY.current = y
-    }
+    const onScroll = () => setScrolled(window.scrollY > 8)
     onScroll()
     window.addEventListener("scroll", onScroll, { passive: true })
     return () => window.removeEventListener("scroll", onScroll)
   }, [])
 
-  // Lock body scroll while the mobile sheet is open + always reveal the
-  // header so the close button stays reachable.
+  // Lock body scroll while the mobile sheet is open.
   useEffect(() => {
     if (mobileOpen) {
-      setHidden(false)
       const prev = document.body.style.overflow
       document.body.style.overflow = "hidden"
       return () => {
@@ -61,8 +53,6 @@ export function MinimalHeader() {
     <>
       <header
         className={`sticky top-0 z-40 w-full transition-all duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${
-          hidden ? "-translate-y-full lg:translate-y-0" : "translate-y-0"
-        } ${
           scrolled
             ? "bg-background/85 backdrop-blur-xl border-b border-border"
             : "bg-transparent border-b border-transparent"
@@ -96,11 +86,16 @@ export function MinimalHeader() {
           </nav>
 
           <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+            {/* The CTA is always in the bar. On phones it's the only
+                persistent ask on the page (the old build tucked it inside
+                the hamburger sheet — three taps away from a reader mid-
+                page), so it earns its spot next to the menu button. */}
             <Link
               href="/challenge/audience"
-              className="s-btn hidden text-[0.7rem] lg:inline-flex"
+              className="s-btn text-[0.62rem] px-3.5 py-2.5 lg:text-[0.7rem] lg:px-5 lg:py-3"
             >
-              Get your free score
+              <span className="lg:hidden">Free score</span>
+              <span className="hidden lg:inline">Get your free score</span>
             </Link>
 
             {/* Hamburger - animated to morph into an X when opened. The

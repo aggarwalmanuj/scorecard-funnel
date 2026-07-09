@@ -13,7 +13,6 @@ import {
   CursorHalo,
   LetterReveal,
   ParallaxImage,
-  Reveal,
   WordReveal,
 } from "./motion"
 
@@ -27,7 +26,11 @@ const DEFAULT_HEADLINE: HeadlineVariant = {
 
 // How long the headline skeleton may hold the hero before we give up on the
 // variant fetch and show the default. Keeps a slow/failed API from ever
-// leaving the fold blank.
+// leaving the fold blank. The skeleton exists so a visitor never watches one
+// headline replaced by another (A/B integrity) — latency is kept short by
+// the boot-time prefetch + localStorage list cache in lib/client/headline.
+// Only the headline slot waits: the body copy, CTA card, and image paint
+// immediately via the CSS rise-in entrances below.
 const HEADLINE_RESOLVE_TIMEOUT_MS = 2500
 
 export function MinimalHero() {
@@ -110,34 +113,34 @@ export function MinimalHero() {
               )}
             </h1>
 
-            <Reveal
-              as="div"
-              delay={300}
-              className="mt-7 max-w-xl space-y-4 text-[15.5px] leading-[1.7] text-foreground/90 sm:mt-10 sm:space-y-5 sm:text-[1.05rem] sm:leading-[1.75]"
+            {/* rise-in (pure CSS) rather than the JS Reveal: this is the
+                fold — it must compose immediately on first paint, even
+                while the bundle is still downloading on a slow phone. */}
+            <div
+              className="rise-in mt-7 max-w-xl space-y-4 text-[15.5px] leading-[1.7] text-foreground/90 sm:mt-10 sm:space-y-5 sm:text-[1.05rem] sm:leading-[1.75]"
+              style={{ ["--rise-delay" as string]: "300ms" }}
             >
               <p>
                 Something underneath is still running the show. The answer has
                 been in your own voice all along - you just haven&apos;t heard it
                 clearly yet.
               </p>
-            </Reveal>
+            </div>
 
-            <Reveal
-              as="div"
-              delay={500}
-              className="mt-9 max-w-xl scroll-mt-24 sm:mt-12 sm:scroll-mt-28"
+            <div
+              className="rise-in mt-9 max-w-xl scroll-mt-24 sm:mt-12 sm:scroll-mt-28"
+              style={{ ["--rise-delay" as string]: "500ms" }}
             >
               <ReservationForm
                 eyebrow="Begin your free assessment"
                 title="Five quiet questions. One personal preview."
                 ctaLabel="Get Your Score - Free"
               />
-            </Reveal>
+            </div>
 
-            <Reveal
-              as="div"
-              delay={700}
-              className="mt-12 flex items-center gap-4 sm:mt-16 sm:gap-6"
+            <div
+              className="rise-in mt-12 flex items-center gap-4 sm:mt-16 sm:gap-6"
+              style={{ ["--rise-delay" as string]: "700ms" }}
             >
               <span className="hairline-anim block h-px w-10 bg-foreground/40 sm:w-12" />
               <p className="text-[0.74rem] leading-snug tracking-wide text-foreground/70 sm:text-[0.78rem]">
@@ -147,11 +150,14 @@ export function MinimalHero() {
                 <span className="mx-2 text-foreground/40">·</span>
                 Published in the Mensa Research Journal.
               </p>
-            </Reveal>
+            </div>
           </div>
 
           {/* Right - atmospheric image with halo + cursor-follow + parallax */}
-          <Reveal as="div" delay={200} className="lg:col-span-5">
+          <div
+            className="rise-in lg:col-span-5"
+            style={{ ["--rise-delay" as string]: "200ms" }}
+          >
             <CursorHalo>
               <div className="signal-halo relative">
                 <ParallaxImage amount={28}>
@@ -178,7 +184,7 @@ export function MinimalHero() {
                 gives you the language for what you already knew.&rdquo;
               </p>
             </div>
-          </Reveal>
+          </div>
         </div>
       </div>
 

@@ -48,7 +48,10 @@ export function ChallengeNavHome({
 
   const isGuarded = GUARDED_PATTERNS.some((p) => p.test(pathname))
 
-  const linkClass = `text-[11px] uppercase tracking-[0.22em] shrink-0 transition-colors duration-300 ${styles} ${className}`
+  // Padding + negative margin expand the tap target to ~44px without
+  // growing the layout box — this link lives inside a fixed h-14 header
+  // (sometimes stacked over a step label), so it can't get visually taller.
+  const linkClass = `-m-3 inline-flex items-center p-3 text-[12px] uppercase tracking-[0.22em] shrink-0 transition-colors duration-300 ${styles} ${className}`
 
   if (!isGuarded) {
     return (

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import Link from "next/link"
 import {
   ArrowRight,
@@ -8,6 +8,7 @@ import {
   Check,
   Shield,
   Sparkles,
+  X,
 } from "lucide-react"
 import { useChallenge, type Audience } from "@/context/challenge-context"
 import { ChallengeNavHome } from "@/components/challenge/challenge-nav-home"
@@ -374,6 +375,7 @@ export function OfferScreen({ audience }: { audience: Audience }) {
           declineLabel="No thanks, just the action plan"
           onAccept={() => acceptUpsell("session")}
           onDecline={() => declineUpsell("diagnostic")}
+          onClose={() => setModal("none")}
         />
       )}
 
@@ -391,6 +393,7 @@ export function OfferScreen({ audience }: { audience: Audience }) {
           declineLabel="No thanks, keep my Story"
           onAccept={() => acceptUpsell("transformation")}
           onDecline={() => declineUpsell("session")}
+          onClose={() => setModal("none")}
         />
       )}
     </div>
@@ -565,6 +568,7 @@ function UpsellModal({
   declineLabel,
   onAccept,
   onDecline,
+  onClose,
 }: {
   eyebrow: string
   title: string
@@ -574,7 +578,20 @@ function UpsellModal({
   declineLabel: string
   onAccept: () => void
   onDecline: () => void
+  onClose: () => void
 }) {
+  // A dialog the user cannot close reads as a trap, especially on mobile
+  // where there's no Esc key. NOTE: closing is NOT declining — decline
+  // proceeds to the original tier's Stripe checkout, so X / Esc / backdrop
+  // must instead return the user to the tier grid with nothing purchased.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose()
+    }
+    window.addEventListener("keydown", onKey)
+    return () => window.removeEventListener("keydown", onKey)
+  }, [onClose])
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto overscroll-contain px-5 py-8 sm:px-8 animate-fade-in-up"
@@ -586,6 +603,7 @@ function UpsellModal({
       role="dialog"
       aria-modal="true"
       aria-labelledby="upsell-modal-title"
+      onClick={onClose}
     >
       <div
         className="relative w-full max-w-lg rounded-md p-7 shadow-2xl sm:p-8"
@@ -594,7 +612,16 @@ function UpsellModal({
           border: "1px solid color-mix(in srgb, var(--ink) 22%, transparent)",
           color: "var(--foreground)",
         }}
+        onClick={(e) => e.stopPropagation()}
       >
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Close"
+          className="absolute right-3 top-3 inline-flex h-10 w-10 items-center justify-center rounded-full text-foreground/50 transition-colors hover:bg-secondary hover:text-ink"
+        >
+          <X className="h-4 w-4" strokeWidth={1.6} />
+        </button>
         <span
           className="absolute inset-x-0 top-0 h-px"
           style={{

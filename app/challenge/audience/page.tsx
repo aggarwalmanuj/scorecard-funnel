@@ -7,6 +7,7 @@ import { ArrowLeft, ArrowRight, User, Users, Check } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { useChallenge, type Audience } from "@/context/challenge-context"
 import { submitSignup } from "@/lib/submit-to-google-sheet"
+import { prefetchPrompts } from "@/lib/client/prompt-cache"
 import { persistTelemetry } from "@/lib/persist-outputs"
 import { trackWhenReady } from "@/lib/fbpixel"
 import { ChallengeMenuButton } from "@/components/challenge/challenge-funnel-header-actions"
@@ -94,7 +95,6 @@ export default function AudienceSelectionPage() {
     phone: false,
   })
   const [isNavigating, setIsNavigating] = useState(false)
-  const [isVisible, setIsVisible] = useState(false)
   // Two-phase layout: 1 = contact (name/email/phone), 2 = path
   // (individual/team). Contact comes FIRST so the Lead event fires for
   // everyone who submits email/phone. The readiness-gate MCQ that used to sit
@@ -108,10 +108,6 @@ export default function AudienceSelectionPage() {
   const [leadFired, setLeadFired] = useState(false)
   const leadEventIdRef = useRef<string | null>(null)
 
-  useEffect(() => {
-    setIsVisible(true)
-  }, [])
-
   // Audience selection survives back-navigation; name + email do not. Each
   // fresh visit starts blank so the user is never confronted with a stale
   // value, and browser autofill is suppressed on the inputs below.
@@ -119,6 +115,13 @@ export default function AudienceSelectionPage() {
     if (!isHydrated) return
     if (state.audience) setSelected(state.audience)
   }, [isHydrated, state.audience])
+
+  // Warm the question/beat copy cache the moment a path is chosen (covers
+  // restored selections too) — the fetch overlaps the signup round-trip, so
+  // question-1 renders with its copy already in hand instead of a skeleton.
+  useEffect(() => {
+    if (selected) prefetchPrompts(selected)
+  }, [selected])
 
   // Pre-fill from query params if the landing form passed them in. The
   // landing reservation form posts `?first=…&email=…` here; reading those
@@ -284,12 +287,12 @@ export default function AudienceSelectionPage() {
         <div className="w-full max-w-4xl">
           {/* Adaptive header for both phases: 1 = contact, 2 = path. Contact
               comes first so the Lead event fires the moment email/phone are
-              captured. */}
-          <div
-            className={`mb-10 text-center ${
-              isVisible ? "animate-fade-in-up" : "opacity-0"
-            }`}
-          >
+              captured.
+              The entrance animation runs straight from the SSR classes —
+              the old isVisible-gate held the whole page at opacity-0 until
+              hydration, which on a mid-range phone meant seconds of blank
+              screen on the funnel's most critical page. */}
+          <div className="mb-10 text-center animate-fade-in-up">
             <p className="eyebrow mb-6 text-foreground/70">
               <span className="pulse-dot mr-3" aria-hidden />
               {step === 1 ? "I · Your details" : "II · Your path"}
@@ -340,10 +343,7 @@ export default function AudienceSelectionPage() {
               e.preventDefault()
               handleNext()
             }}
-            className={`mx-auto mb-10 grid max-w-2xl grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 ${
-              isVisible ? "animate-fade-in-up delay-100" : "opacity-0"
-            }`}
-            autoComplete="off"
+            className="mx-auto mb-10 grid max-w-2xl grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 animate-fade-in-up delay-100"
           >
             <label className="block">
               <span className="eyebrow mb-2 block text-foreground/70">
@@ -353,14 +353,18 @@ export default function AudienceSelectionPage() {
                   replays so we can identify which tester a recording belongs
                   to. Email + all other inputs stay masked - see the
                   maskInputFn in instrumentation-client.ts. */}
+              {/* Autofill is deliberately ENABLED. The old
+                  autoComplete="off" + name mangling forced every mobile
+                  visitor to hand-type their name and email at the very
+                  first gate — the exact step with the funnel's worst
+                  drop-off. One keyboard-suggestion tap beats a pristine
+                  empty field. */}
               <Input
                 id="firstName"
-                name="firstName-no-autofill"
+                name="firstName"
                 placeholder="As you would like to be addressed"
                 type="text"
-                autoComplete="off"
-                data-lpignore="true"
-                data-form-type="other"
+                autoComplete="given-name"
                 data-ph-unmask="true"
                 value={firstNameValue}
                 onChange={(e) => setFirstNameValue(e.target.value)}
@@ -385,13 +389,11 @@ export default function AudienceSelectionPage() {
               </span>
               <Input
                 id="email"
-                name="email-no-autofill"
+                name="email"
                 placeholder="name@email.com"
                 type="email"
                 inputMode="email"
-                autoComplete="off"
-                data-lpignore="true"
-                data-form-type="other"
+                autoComplete="email"
                 value={emailValue}
                 onChange={(e) => setEmailValue(e.target.value)}
                 onBlur={() => setTouched((t) => ({ ...t, email: true }))}
@@ -465,7 +467,7 @@ export default function AudienceSelectionPage() {
                       isActive
                         ? "border border-ink bg-card -translate-y-0.5 shadow-[0_18px_40px_-28px_rgba(var(--shadow-ink),0.45)]"
                         : "s-card hover:-translate-y-0.5"
-                    } ${isVisible ? "animate-fade-in-up" : "opacity-0"}`}
+                    } animate-fade-in-up`}
                     style={{ animationDelay: `${200 + idx * 80}ms` }}
                   >
                     {isActive && (
@@ -537,11 +539,7 @@ export default function AudienceSelectionPage() {
             </p>
           )}
 
-          <div
-            className={`mt-10 flex flex-col items-center justify-between gap-5 sm:flex-row ${
-              isVisible ? "animate-fade-in-up delay-400" : "opacity-0"
-            }`}
-          >
+          <div className="mt-10 flex flex-col items-center justify-between gap-5 animate-fade-in-up delay-400 sm:flex-row">
             {step === 1 ? (
               <Link
                 href="/"

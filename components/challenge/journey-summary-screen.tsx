@@ -644,9 +644,9 @@ export function JourneySummaryScreen({ audience }: { audience: Audience }) {
                     ? "Stop audio"
                     : isLoadingAudio
                       ? "Preparing audio"
-                      : "Click here to listen"
+                      : "Listen to your summary"
                 }
-                className="group relative w-full max-w-md flex items-center justify-center gap-3 px-8 py-4 sm:py-5 rounded-2xl font-black uppercase tracking-[0.14em] transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] disabled:cursor-wait disabled:opacity-90"
+                className="group relative w-full max-w-md flex items-center justify-center gap-3 px-8 py-4 sm:py-5 rounded-2xl font-semibold uppercase tracking-[0.14em] transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] disabled:cursor-wait disabled:opacity-90"
                 style={{
                   fontSize: "clamp(16px, 2.2vw, 20px)",
                   // On-palette teal (the brand --signal accent) - vibrant and
@@ -677,7 +677,7 @@ export function JourneySummaryScreen({ audience }: { audience: Audience }) {
                 ) : (
                   <>
                     <Volume2 className="h-4 w-4" strokeWidth={1.6} />
-                    Click here to listen
+                    Listen to your summary
                   </>
                 )}
               </button>
@@ -755,6 +755,18 @@ export function JourneySummaryScreen({ audience }: { audience: Audience }) {
                 </p>
               ))}
             </div>
+
+            {/* Visible skip for the typewriter — double-click (above) is
+                undiscoverable and impossible on touch. */}
+            {isCursorVisible && summaryText && (
+              <button
+                type="button"
+                onClick={handleSkipReveal}
+                className="mt-6 inline-flex min-h-11 items-center rounded-full border border-border px-4 text-[11px] uppercase tracking-[0.18em] text-foreground/70 transition-colors hover:border-foreground/40 hover:text-ink"
+              >
+                Show all
+              </button>
+            )}
           </div>
         </div>
 
@@ -909,7 +921,7 @@ function ClarityScoreCard({
             <div className="mb-2 flex items-center justify-between gap-3">
               <span className="eyebrow text-foreground/65">Peer benchmark</span>
               <span className="font-serif-italic text-[13px] text-foreground/65">
-                Estimated for leaders carrying unresolved clarity gaps
+                Among professionals who take this assessment
               </span>
             </div>
             <BenchmarkBar overall={clarity.overall} mean={clarity.benchmarkMean} />
@@ -917,8 +929,11 @@ function ClarityScoreCard({
               {clarity.comparisonLabel}
             </p>
             {source === "fallback" ? (
+              // Internal degradation, phrased for a reader — never expose
+              // "model scoring unavailable" on the number we ask them to
+              // trust (and pay to unlock).
               <p className="mt-2 text-[11px] uppercase tracking-[0.2em] text-foreground/45">
-                Offline estimate · full model scoring unavailable
+                Preliminary score · refined in your full report
               </p>
             ) : null}
           </div>

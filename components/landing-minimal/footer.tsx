@@ -8,7 +8,7 @@ const cols = [
     heading: "The Belief Score",
     links: [
       { label: "The Pain", href: "#sanctuary" },
-      { label: "The Score", href: "#how-it-works" },
+      { label: "The Score", href: "#walkthrough" },
       { label: "What you carry home", href: "#take-home" },
       { label: "Voices", href: "#voices" },
       { label: "Notes", href: "#notes" },
@@ -72,7 +72,7 @@ export function MinimalFooter() {
             <Link
               href="https://www.linkedin.com/company/tetranoodle"
               aria-label="LinkedIn"
-              className="flex h-10 w-10 items-center justify-center rounded-full border border-border text-foreground/70 transition-colors hover:border-ink hover:text-ink"
+              className="flex h-11 w-11 items-center justify-center rounded-full border border-border text-foreground/70 transition-colors hover:border-ink hover:text-ink"
             >
               <Linkedin className="h-4 w-4" strokeWidth={1.5} />
             </Link>

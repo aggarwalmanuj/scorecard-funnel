@@ -67,15 +67,19 @@ export function CookieConsent() {
         exiting ? "is-exit" : ""
       }`}
     >
-      <div className="mx-auto flex max-w-3xl flex-col gap-4 rounded-md border border-border bg-card p-5 shadow-[0_30px_80px_-30px_rgba(var(--shadow-ink),0.65)] backdrop-blur-xl sm:flex-row sm:items-start sm:gap-6 sm:p-6">
+      {/* Kept deliberately shallow on phones: at 390px the previous tall
+          card (eyebrow + 5-line paragraph + stacked full-width buttons)
+          buried the hero CTA under a wall of legalese. One tight paragraph
+          and a side-by-side button row keep the fold's ask visible. */}
+      <div className="mx-auto flex max-w-3xl flex-col gap-3 rounded-md border border-border bg-card p-4 shadow-[0_30px_80px_-30px_rgba(var(--shadow-ink),0.65)] backdrop-blur-xl sm:flex-row sm:items-start sm:gap-6 sm:p-6">
         <div className="flex-1">
-          <p className="eyebrow mb-2 text-foreground/65">A quiet note</p>
-          <p className="text-[14px] leading-[1.7] text-foreground/85 sm:text-[14.5px]">
+          <p className="eyebrow mb-2 hidden text-foreground/65 sm:block">
+            A quiet note
+          </p>
+          <p className="text-[13px] leading-[1.6] text-foreground/85 sm:text-[14.5px] sm:leading-[1.7]">
             We use a small set of cookies to keep the site running and to
             understand which parts of the assessment land. Your responses are
-            confidential and will never be shared with third parties. They may
-            be reviewed by the AI Merge team to personalize your experience and
-            ensure the right support reaches you.{" "}
+            confidential and never shared with third parties.{" "}
             <Link
               href="/privacy"
               className="font-serif-italic underline-offset-4 hover:underline"
@@ -85,18 +89,18 @@ export function CookieConsent() {
             .
           </p>
         </div>
-        <div className="flex shrink-0 flex-col gap-2.5 sm:flex-row sm:items-center">
+        <div className="flex shrink-0 flex-row items-center gap-2.5">
           <button
             type="button"
             onClick={() => dismiss("rejected")}
-            className="s-btn-ghost justify-center text-[0.7rem]"
+            className="s-btn-ghost flex-1 justify-center text-[0.7rem] sm:flex-none"
           >
             Reject
           </button>
           <button
             type="button"
             onClick={() => dismiss("accepted")}
-            className="s-btn justify-center text-[0.7rem]"
+            className="s-btn flex-1 justify-center text-[0.7rem] sm:flex-none"
           >
             Accept
           </button>

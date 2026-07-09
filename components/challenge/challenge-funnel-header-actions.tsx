@@ -46,7 +46,7 @@ export function ChallengeMenuButton({
           type="button"
           aria-label="Open menu"
           className={cn(
-            "flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-border text-foreground/85 transition-colors duration-300 hover:border-ink hover:text-ink",
+            "flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-border text-foreground/85 transition-colors duration-300 hover:border-ink hover:text-ink",
             className,
           )}
         >

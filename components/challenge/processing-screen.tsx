@@ -441,7 +441,13 @@ export function ProcessingScreen({ audience }: { audience: Audience }) {
     missingPrompts,
   ])
 
-  const progressPercent = ((activeStep + 1) / processingSteps.length) * 100
+  // The step ticker is choreography (one step per 2s), not real pipeline
+  // state — left alone it hit 100% in ~16s while generation can run to the
+  // 75s hard timeout, leaving the user staring at a full ring wondering if
+  // the page is broken. Hold the ring at 94% until everything is actually
+  // ready; the last 6% is the truth.
+  const tickerPercent = ((activeStep + 1) / processingSteps.length) * 100
+  const progressPercent = allReady ? 100 : Math.min(tickerPercent, 94)
 
   if (missingPrompts) {
     return (

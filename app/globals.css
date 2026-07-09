@@ -601,7 +601,10 @@
   .signal-halo::before {
     content: '';
     position: absolute;
-    inset: -10%;
+    /* No negative x-inset: on a 390px phone the hero glow poked 15px past
+       the viewport edge and made the whole page scroll sideways. The 48px
+       blur still reads as a halo without the bleed. */
+    inset: -10% 0;
     background: radial-gradient(circle at 30% 30%,
                 rgba(var(--glow), 0.22), transparent 65%);
     filter: blur(48px);
@@ -725,18 +728,45 @@
 }
 
 /* Reveal — single-element fade + slight lift, controlled by IntersectionObserver
-   via the .is-revealed class on a parent. Slower easing keeps it editorial. */
+   via the .is-revealed class on a parent. Slower easing keeps it editorial.
+   IMPORTANT: the server-rendered state is VISIBLE. Hiding is opted into by
+   JS after hydration (.reveal-pending), and only for elements still below
+   the viewport — so a slow connection (or no JS) reads a full page, never
+   a blank one. The pending state hides without transitioning so the user
+   never sees content blink out. */
 [data-palette] .reveal {
-  opacity: 0;
-  transform: translateY(28px);
   transition:
     opacity 1s cubic-bezier(0.22, 1, 0.36, 1),
     transform 1s cubic-bezier(0.22, 1, 0.36, 1);
   transition-delay: var(--reveal-delay, 0ms);
 }
+[data-palette] .reveal.reveal-pending {
+  opacity: 0;
+  transform: translateY(28px);
+  transition: none;
+}
 [data-palette] .reveal.is-revealed {
   opacity: 1;
   transform: translateY(0);
+}
+
+/* Rise-in — pure-CSS entrance for above-the-fold hero content. Runs the
+   moment styles parse (no JS, no observer), so the fold composes itself
+   immediately even while the bundle is still hydrating on a slow phone. */
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(22px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+[data-palette] .rise-in {
+  opacity: 0;
+  animation: rise-in 0.9s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: var(--rise-delay, 0ms);
 }
 
 /* List-row hover — used on the seven-dimensions and take-home rows. The
@@ -1026,7 +1056,10 @@ a:hover > .brand-mark {
 }
 .take-deck .take-halo {
   position: absolute;
-  inset: -10% -8% -10% -8%;
+  /* Horizontal inset stays at 0 on phones: a negative x-inset pushed the
+     halo past the viewport edge and gave the whole page a 15px sideways
+     wiggle at 390px. The blur still reads as a glow without the bleed. */
+  inset: -10% 0;
   background: radial-gradient(
     ellipse at 55% 45%,
     rgba(var(--glow), 0.18) 0%,
@@ -1200,7 +1233,9 @@ a:hover > .brand-mark {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
-  [data-palette] .reveal {
+  [data-palette] .reveal,
+  [data-palette] .reveal.reveal-pending,
+  [data-palette] .rise-in {
     opacity: 1;
     transform: none;
   }

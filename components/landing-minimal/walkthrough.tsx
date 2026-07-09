@@ -103,15 +103,19 @@ export function WalkthroughSection() {
   const tabRefs = useRef<Array<HTMLButtonElement | null>>([])
 
   // Start auto-advance after mount unless the visitor prefers reduced
-  // motion. Doing this in an effect (rather than at init) keeps SSR output
-  // deterministic and honours the OS setting.
+  // motion — or is on a touch device. The pause-on-hover/focus guards below
+  // never fire on touch, so auto-play there meant the slide yanked every
+  // 6.5s while someone was reading; on phones the visitor drives via the
+  // step list (or the Play button) instead. Doing this in an effect (rather
+  // than at init) keeps SSR output deterministic and honours the OS setting.
   useEffect(() => {
     const mq = window.matchMedia("(prefers-reduced-motion: reduce)")
+    const hoverless = window.matchMedia("(hover: none)")
     setReduced(mq.matches)
-    setUserPlaying(!mq.matches)
+    setUserPlaying(!mq.matches && !hoverless.matches)
     const onChange = (e: MediaQueryListEvent) => {
       setReduced(e.matches)
-      setUserPlaying(!e.matches)
+      setUserPlaying(!e.matches && !hoverless.matches)
     }
     mq.addEventListener("change", onChange)
     return () => mq.removeEventListener("change", onChange)
@@ -298,7 +302,7 @@ export function WalkthroughSection() {
                 type="button"
                 onClick={() => setUserPlaying((p) => !p)}
                 aria-pressed={userPlaying ? "true" : "false"}
-                className="inline-flex items-center gap-2 rounded-full border border-border px-3 py-1.5 text-[11px] uppercase tracking-[0.18em] text-foreground/70 transition-colors duration-300 hover:border-foreground/40 hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--signal)]"
+                className="inline-flex min-h-11 items-center gap-2 rounded-full border border-border px-4 py-2 text-[12px] uppercase tracking-[0.18em] text-foreground/70 transition-colors duration-300 hover:border-foreground/40 hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--signal)]"
               >
                 {userPlaying ? (
                   <Pause className="h-3 w-3" strokeWidth={2} aria-hidden />

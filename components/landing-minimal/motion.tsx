@@ -10,10 +10,14 @@ import {
 
 /**
  * Reveal - fades + lifts its children when they enter the viewport. Pairs
- * with the `.reveal` / `.is-revealed` CSS in globals.css. The class-based
- * approach (rather than inline transforms) means staggered children can
- * use a single CSS rule and the browser keeps the transition on a single
- * compositor layer.
+ * with the `.reveal` / `.reveal-pending` / `.is-revealed` CSS in globals.css.
+ *
+ * The server-rendered markup is VISIBLE: hiding is opted into here, after
+ * hydration, and only for elements still below the viewport. Content the
+ * user can already see (above the fold, or reached by scrolling before the
+ * bundle finished on a slow phone) is never blanked out — it simply skips
+ * the entrance. Elements still below the fold get the scroll-triggered
+ * fade + lift as before.
  */
 export function Reveal({
   children,
@@ -29,15 +33,24 @@ export function Reveal({
   threshold?: number
 }) {
   const ref = useRef<HTMLElement>(null)
-  const [shown, setShown] = useState(false)
+  const [phase, setPhase] = useState<"visible" | "pending" | "revealed">(
+    "visible",
+  )
 
   useEffect(() => {
     const el = ref.current
     if (!el) return
+
+    // Already on screen at hydration → leave it visible; animating now would
+    // mean hiding content the user is reading.
+    const rect = el.getBoundingClientRect()
+    if (rect.top < window.innerHeight * 0.92 && rect.bottom > 0) return
+
+    setPhase("pending")
     const obs = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
-          setShown(true)
+          setPhase("revealed")
           obs.disconnect()
         }
       },
@@ -51,7 +64,13 @@ export function Reveal({
   return (
     <Component
       ref={ref}
-      className={`reveal ${shown ? "is-revealed" : ""} ${className}`}
+      className={`reveal ${
+        phase === "pending"
+          ? "reveal-pending"
+          : phase === "revealed"
+            ? "is-revealed"
+            : ""
+      } ${className}`}
       style={{ ["--reveal-delay" as string]: `${delay}ms` } as CSSProperties}
     >
       {children}

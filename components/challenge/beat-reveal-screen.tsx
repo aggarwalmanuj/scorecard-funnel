@@ -165,9 +165,27 @@ export function BeatRevealScreen({
     }
   }, [isRevealed, tokens, skipReveal])
 
-  // Double-click anywhere on the reflection card to skip the typewriter
-  // straight to the end. Why: testers found the 38ms-per-token pace too
-  // slow on re-reads.
+  // If no content ever arrives, don't spin forever. Beats stream in from
+  // the processing step (which may still be finishing in the background),
+  // so we wait generously — but past this point the stream has almost
+  // certainly died and "Composing…" becomes a lie. Swap it for an honest
+  // recovery card: rebuild (processing regenerates missing beats) or move
+  // on without this reflection.
+  const STALL_MS = 60_000
+  const [stalled, setStalled] = useState(false)
+  useEffect(() => {
+    if (tokens.length > 0) {
+      setStalled(false)
+      return
+    }
+    const t = setTimeout(() => setStalled(true), STALL_MS)
+    return () => clearTimeout(t)
+  }, [tokens.length])
+
+  // Skip the typewriter straight to the end — wired to both the visible
+  // Skip button (the only affordance that works on touch) and the legacy
+  // double-click. Why: testers found the 38ms-per-token pace too slow on
+  // re-reads, and mobile users had no way to skip at all.
   const handleSkipReveal = () => {
     if (tokens.length === 0) return
     if (isComplete) return
@@ -376,17 +394,45 @@ export function BeatRevealScreen({
             <div className="min-h-16">
               <p className="font-sans text-[16.5px] leading-[1.85] text-foreground/90 whitespace-pre-wrap">
                 {tokens.length === 0 ? (
-                  <span className="flex flex-col gap-1 font-serif-italic text-foreground/65">
-                    <span className="flex items-center gap-2">
-                      <span className="pulse-dot" aria-hidden />
-                      Composing your reflection…
-                    </span>
-                    {showTimeHint && (
-                      <span className="ml-4 text-[13px] not-italic uppercase tracking-[0.18em] text-foreground/55">
-                        Usually 20-40 seconds
+                  stalled ? (
+                    <span className="flex flex-col gap-4">
+                      <span className="font-serif-italic text-foreground/80">
+                        This reflection is taking longer than it should. Your
+                        answers are safe — we can rebuild it, or you can keep
+                        going and come back to it.
                       </span>
-                    )}
-                  </span>
+                      <span className="flex flex-col gap-2.5 not-italic sm:flex-row">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            router.push(`/challenge/${audience}/processing`)
+                          }
+                          className="s-btn justify-center text-[0.68rem]"
+                        >
+                          Rebuild this reflection
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => router.push(nextRoute)}
+                          className="s-btn-ghost justify-center text-[0.68rem]"
+                        >
+                          Continue without it
+                        </button>
+                      </span>
+                    </span>
+                  ) : (
+                    <span className="flex flex-col gap-1 font-serif-italic text-foreground/65">
+                      <span className="flex items-center gap-2">
+                        <span className="pulse-dot" aria-hidden />
+                        Composing your reflection…
+                      </span>
+                      {showTimeHint && (
+                        <span className="ml-4 text-[13px] not-italic uppercase tracking-[0.18em] text-foreground/55">
+                          Usually 20-40 seconds
+                        </span>
+                      )}
+                    </span>
+                  )
                 ) : (
                   <>
                     {tokens.slice(0, visibleTokenCount).join("")}
@@ -403,16 +449,27 @@ export function BeatRevealScreen({
 
             <div className="mt-5">
               {tokens.length > 0 && !isComplete && (
-                <span className="flex flex-col gap-0.5 text-[12px] uppercase tracking-[0.18em] text-foreground/65">
-                  <span className="flex items-center gap-2">
-                    <span className="pulse-dot" aria-hidden />
-                    Composing
-                  </span>
-                  {showTimeHint && (
-                    <span className="ml-4 text-foreground/45">
-                      Usually 20-40 seconds
+                <span className="flex items-center justify-between gap-3 text-[12px] uppercase tracking-[0.18em] text-foreground/65">
+                  <span className="flex flex-col gap-0.5">
+                    <span className="flex items-center gap-2">
+                      <span className="pulse-dot" aria-hidden />
+                      Composing
                     </span>
-                  )}
+                    {showTimeHint && (
+                      <span className="ml-4 text-foreground/45">
+                        Usually 20-40 seconds
+                      </span>
+                    )}
+                  </span>
+                  {/* Visible skip — double-click was the only skip before,
+                      which doesn't exist on touch. */}
+                  <button
+                    type="button"
+                    onClick={handleSkipReveal}
+                    className="inline-flex min-h-11 shrink-0 items-center rounded-full border border-border px-4 text-[11px] uppercase tracking-[0.18em] text-foreground/70 transition-colors hover:border-foreground/40 hover:text-ink"
+                  >
+                    Show all
+                  </button>
                 </span>
               )}
               {isComplete && (

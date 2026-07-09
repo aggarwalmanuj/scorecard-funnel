@@ -51,7 +51,7 @@ export function CredentialsSection() {
                     alt={logo.alt}
                     fill
                     sizes="(min-width: 640px) 120px, 100px"
-                    className="object-contain opacity-60 grayscale transition-all duration-700 hover:opacity-100 hover:grayscale-0"
+                    className="object-contain transition-all duration-700 [@media(hover:hover)]:opacity-60 [@media(hover:hover)]:grayscale [@media(hover:hover)]:hover:opacity-100 [@media(hover:hover)]:hover:grayscale-0"
                   />
                 </Reveal>
               ))}
