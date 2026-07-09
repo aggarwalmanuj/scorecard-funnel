@@ -10,7 +10,8 @@ export async function OPTIONS(request: Request) {
 
 /**
  * GET /api/admin/responses/search - Search user responses with filters.
- * Query params: q (text search), dateFrom, dateTo, completed (true/false)
+ * Query params: q (text search), dateFrom, dateTo, completed (true/false),
+ * purchased (true/false)
  */
 export async function GET(request: Request) {
   const headers = corsHeaders(request)
@@ -35,9 +36,11 @@ export async function GET(request: Request) {
   const dateTo = url.searchParams.get("dateTo") || undefined
   const completedParam = url.searchParams.get("completed")
   const hasCompleted = completedParam === "true" ? true : completedParam === "false" ? false : undefined
+  const purchasedParam = url.searchParams.get("purchased")
+  const hasPurchased = purchasedParam === "true" ? true : purchasedParam === "false" ? false : undefined
 
   try {
-    const users = await searchUsers({ query: q, dateFrom, dateTo, hasCompleted })
+    const users = await searchUsers({ query: q, dateFrom, dateTo, hasCompleted, hasPurchased })
     return NextResponse.json({ ok: true, users }, { headers })
   } catch (e) {
     console.error("[admin/responses/search GET]", redactError(e))

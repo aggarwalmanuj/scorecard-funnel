@@ -292,6 +292,7 @@ export async function searchUsers(opts: {
   dateFrom?: string
   dateTo?: string
   hasCompleted?: boolean
+  hasPurchased?: boolean
 }): Promise<UserDocument[]> {
   await ensureInitialized()
   const container = usersContainer()
@@ -321,6 +322,14 @@ export async function searchUsers(opts: {
     conditions.push("(IS_DEFINED(c.question5) AND c.question5 != '')")
   } else if (opts.hasCompleted === false) {
     conditions.push("(NOT IS_DEFINED(c.question5) OR c.question5 = '')")
+  }
+
+  // Purchase filter — a row counts as purchased once the Stripe webhook /
+  // thank-you page has stamped paid_tier (same signal fetchFunnelStats uses).
+  if (opts.hasPurchased === true) {
+    conditions.push("(IS_DEFINED(c.paid_tier) AND c.paid_tier != '')")
+  } else if (opts.hasPurchased === false) {
+    conditions.push("(NOT IS_DEFINED(c.paid_tier) OR c.paid_tier = '')")
   }
 
   // Always filter to real user rows (excludes the serial-counter doc) and order

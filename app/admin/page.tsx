@@ -1212,6 +1212,7 @@ export default function AdminPage() {
   const [searchDateFrom, setSearchDateFrom] = useState("")
   const [searchDateTo, setSearchDateTo] = useState("")
   const [searchCompleted, setSearchCompleted] = useState<"all" | "true" | "false">("all")
+  const [searchPurchased, setSearchPurchased] = useState<"all" | "true" | "false">("all")
   const [isSearchActive, setIsSearchActive] = useState(false)
   const [searchResults, setSearchResults] = useState<UserResponse[]>([])
   const [searchLoading, setSearchLoading] = useState(false)
@@ -1331,6 +1332,7 @@ export default function AdminPage() {
       if (searchDateFrom) params.set("dateFrom", searchDateFrom)
       if (searchDateTo) params.set("dateTo", searchDateTo)
       if (searchCompleted !== "all") params.set("completed", searchCompleted)
+      if (searchPurchased !== "all") params.set("purchased", searchPurchased)
       const headers: Record<string, string> = {}
       const stored = sessionStorage.getItem("admin-api-password")
       if (stored) headers["X-Admin-Password"] = stored
@@ -1348,13 +1350,14 @@ export default function AdminPage() {
     } finally {
       setSearchLoading(false)
     }
-  }, [searchQuery, searchDateFrom, searchDateTo, searchCompleted])
+  }, [searchQuery, searchDateFrom, searchDateTo, searchCompleted, searchPurchased])
 
   const clearSearch = () => {
     setSearchQuery("")
     setSearchDateFrom("")
     setSearchDateTo("")
     setSearchCompleted("all")
+    setSearchPurchased("all")
     setIsSearchActive(false)
     setSearchResults([])
     setSearchError("")
@@ -2605,7 +2608,7 @@ export default function AdminPage() {
                     </form>
 
                     {showFilters && (
-                      <div className="grid sm:grid-cols-3 gap-3 pt-2 border-t border-border/60 animate-in fade-in slide-in-from-top-1 duration-200">
+                      <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-2 border-t border-border/60 animate-in fade-in slide-in-from-top-1 duration-200">
                         <div>
                           <label className="block eyebrow text-foreground/65 mb-1.5">From Date</label>
                           <Input type="date" value={searchDateFrom} onChange={(e) => setSearchDateFrom(e.target.value)} className="h-9 s-input text-sm" />
@@ -2625,6 +2628,19 @@ export default function AdminPage() {
                             <option value="all">All responses</option>
                             <option value="true">Completed (all 5 questions)</option>
                             <option value="false">Incomplete</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block eyebrow text-foreground/65 mb-1.5">Purchase</label>
+                          <select
+                            title="Filter by purchase status"
+                            value={searchPurchased}
+                            onChange={(e) => setSearchPurchased(e.target.value as "all" | "true" | "false")}
+                            className="w-full h-9 s-input text-sm bg-background px-3"
+                          >
+                            <option value="all">All</option>
+                            <option value="true">Purchased</option>
+                            <option value="false">Not purchased</option>
                           </select>
                         </div>
                       </div>
