@@ -877,14 +877,32 @@ export async function listHeadlines(): Promise<HeadlineDocument[]> {
   return resources ?? []
 }
 
+export type ActiveHeadline = Pick<HeadlineDocument, "id" | "line1" | "line2">
+
+// Per-instance cache for the public active-headline read. The landing page is
+// the hottest path in the app and headlines change rarely, so a warm lambda
+// answering a CDN cache-miss should not pay a Cosmos round-trip (~200-500ms)
+// every time. Admin mutations bust it (same instance) so the editor sees its
+// own writes immediately; other instances converge within the TTL.
+const ACTIVE_HEADLINES_TTL_MS = 30_000
+let _activeHeadlinesCache: { data: ActiveHeadline[]; at: number } | null = null
+
+function bustActiveHeadlinesCache(): void {
+  _activeHeadlinesCache = null
+}
+
 /** Active variants only — the public shape served to landing visitors. */
-export async function listActiveHeadlines(): Promise<
-  Pick<HeadlineDocument, "id" | "line1" | "line2">[]
-> {
+export async function listActiveHeadlines(): Promise<ActiveHeadline[]> {
+  const cached = _activeHeadlinesCache
+  if (cached && Date.now() - cached.at < ACTIVE_HEADLINES_TTL_MS) {
+    return cached.data
+  }
   const all = await listHeadlines()
-  return all
+  const data = all
     .filter((h) => h.active)
     .map((h) => ({ id: h.id, line1: h.line1, line2: h.line2 }))
+  _activeHeadlinesCache = { data, at: Date.now() }
+  return data
 }
 
 export async function createHeadline(input: {
@@ -903,6 +921,7 @@ export async function createHeadline(input: {
   }
   if (!doc.line1) throw new Error("Headline line1 is required")
   await headlinesContainer().items.create(doc)
+  bustActiveHeadlinesCache()
   return doc
 }
 
@@ -917,11 +936,13 @@ export async function updateHeadline(
   if (updates.active !== undefined) ops.push({ op: "set", path: "/active", value: Boolean(updates.active) })
   if (ops.length === 0) return
   await headlinesContainer().item(id, id).patch(ops)
+  bustActiveHeadlinesCache()
 }
 
 export async function deleteHeadline(id: string): Promise<void> {
   await ensureInitialized()
   await headlinesContainer().item(id, id).delete()
+  bustActiveHeadlinesCache()
 }
 
 /** Count one unique visitor assignment. Best-effort — a missing/deleted

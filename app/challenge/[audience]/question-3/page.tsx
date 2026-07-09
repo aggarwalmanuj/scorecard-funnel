@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { use } from "react"
 import { QuestionScreen } from "@/components/challenge/question-screen"
@@ -16,7 +16,7 @@ export default function Question3Page({ params }: { params: Promise<{ audience: 
       audience={audience}
       questionNumber={3}
       stageFraming={prompt?.stageFraming ?? ""}
-      question={prompt?.question ?? (isLoading ? "Loading..." : "")}
+      question={prompt?.question ?? ""}
       prompt={prompt?.prompt ?? ""}
       hintBox={prompt?.hintBox ?? ""}
       placeholder={prompt?.placeholder ?? ""}
@@ -26,6 +26,7 @@ export default function Question3Page({ params }: { params: Promise<{ audience: 
       nextRoute={`/challenge/${audience}/question-4`}
       prevRoute={`/challenge/${audience}/question-2`}
       isMissing={isMissing}
+      isLoading={isLoading}
     />
   )
 }

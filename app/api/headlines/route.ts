@@ -25,7 +25,11 @@ export async function GET() {
     const headlines = await listActiveHeadlines()
     return NextResponse.json(
       { ok: true, headlines },
-      { headers: { "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300" } }
+      // Headlines change rarely, so let the CDN hold them for 5 minutes and
+      // serve stale while revalidating for another 10 — a fresh admin edit
+      // reaches new visitors within ~5 min, and virtually every visitor hits
+      // the CDN instead of the function.
+      { headers: { "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600" } }
     )
   } catch (e) {
     console.error("[headlines GET]", redactError(e))

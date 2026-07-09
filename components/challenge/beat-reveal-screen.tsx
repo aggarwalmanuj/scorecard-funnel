@@ -11,6 +11,7 @@ import { preloadBeatAudio } from "@/lib/client/beat-audio-cache"
 import { useAudioPlayback } from "@/hooks/use-audio-playback"
 import { ChallengeNavHome } from "@/components/challenge/challenge-nav-home"
 import { ChallengeMenuButton } from "@/components/challenge/challenge-funnel-header-actions"
+import { Skeleton } from "@/components/ui/skeleton"
 
 interface BeatRevealScreenProps {
   audience: Audience
@@ -29,6 +30,13 @@ interface BeatRevealScreenProps {
   imageAlt?: string
   nextRoute: string
   prevRoute: string
+  /**
+   * True while the beat's title/subtitle copy is still being fetched.
+   * Renders a skeleton in place of the title so the card never shows a
+   * blank heading. (The beat BODY has its own designed "Composing your
+   * reflection…" state — that's AI streaming, not this fetch.)
+   */
+  isLoading?: boolean
 }
 
 export function BeatRevealScreen({
@@ -41,6 +49,7 @@ export function BeatRevealScreen({
   imageAlt,
   nextRoute,
   prevRoute,
+  isLoading = false,
 }: BeatRevealScreenProps) {
   const router = useRouter()
   const { state } = useChallenge()
@@ -354,9 +363,13 @@ export function BeatRevealScreen({
                 isRevealed ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"
               }`}
             >
-              <h1 className="font-serif text-[1.45rem] leading-[1.22] text-ink sm:text-[26px] sm:leading-[1.2] md:text-[30px]">
-                {title}
-              </h1>
+              {isLoading && !title ? (
+                <Skeleton className="h-7 w-3/4 max-w-sm sm:h-8" aria-hidden />
+              ) : (
+                <h1 className="font-serif text-[1.45rem] leading-[1.22] text-ink sm:text-[26px] sm:leading-[1.2] md:text-[30px]">
+                  {title}
+                </h1>
+              )}
             </div>
 
             {/* Body - typewriter reveal */}
@@ -418,9 +431,16 @@ export function BeatRevealScreen({
                   <span className="h-1 w-1 rounded-full bg-foreground/30" />
                   <span className="h-px flex-1 bg-foreground/15" />
                 </div>
-                <p className="font-serif-italic text-[18px] leading-snug text-foreground/85">
-                  {subtitle}
-                </p>
+                {isLoading && !subtitle ? (
+                  <div className="space-y-2" aria-hidden>
+                    <Skeleton className="h-5 w-full max-w-md" />
+                    <Skeleton className="h-5 w-2/3 max-w-64" />
+                  </div>
+                ) : (
+                  <p className="font-serif-italic text-[18px] leading-snug text-foreground/85">
+                    {subtitle}
+                  </p>
+                )}
 
                 {/* xAI Grok voice playback for this beat */}
                 <div className="mt-6 flex items-center gap-3">

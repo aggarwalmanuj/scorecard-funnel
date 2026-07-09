@@ -10,6 +10,20 @@ import posthog from "posthog-js"
  * recorded per NEW assignment, so the admin's "Visitors" column counts unique
  * assigned visitors, comparable across variants.
  *
+ * Latency design — three layers keep the hero skeleton as short as possible:
+ *  1. `prefetchHeadlines()` is called from instrumentation-client.ts at app
+ *     boot, BEFORE React hydrates, so the network round-trip overlaps
+ *     hydration instead of running after it. `resolveHeadline()` awaits the
+ *     same in-flight promise (never a second request).
+ *  2. The active-variant list (INCLUDING the empty "experiment off" result)
+ *     is cached in localStorage with a freshness TTL. While fresh, repeat
+ *     visits resolve with zero network wait — for both the variant case and
+ *     the default case — and skip the request entirely; once the TTL lapses
+ *     the next boot's prefetch refreshes it. Admin edits therefore reach
+ *     returning visitors within one TTL window (≤5 min).
+ *  3. A stale cache still beats no data: on fetch failure we fall back to
+ *     the stale list, then to the stored assignment, then to null (default).
+ *
  * The assignment also flows into the funnel:
  *  - `getHeadlineAttribution()` is merged into the signup attribution payload,
  *    stamping headline_id + a text snapshot onto the user's Cosmos document —
@@ -22,11 +36,22 @@ import posthog from "posthog-js"
  */
 
 const STORAGE_KEY = "ufa_headline"
+const LIST_KEY = "ufa_headline_list"
+
+// How long a cached variant list counts as fresh. Within this window repeat
+// visits render without awaiting the network at all; the background
+// revalidation still runs so an admin edit propagates one visit later.
+const LIST_TTL_MS = 5 * 60_000
 
 export type HeadlineVariant = {
   id: string
   line1: string
   line2: string
+}
+
+type CachedList = {
+  headlines: HeadlineVariant[]
+  fetchedAt: number
 }
 
 /** The visitor's sticky assignment, if one exists (synchronous — lets the
@@ -49,6 +74,38 @@ function readStored(): HeadlineVariant | null {
   }
 }
 
+function writeStored(variant: HeadlineVariant): void {
+  try {
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(variant))
+  } catch {
+    /* quota — still serve the variant, just not sticky */
+  }
+}
+
+function readCachedList(): CachedList | null {
+  try {
+    const raw = window.localStorage.getItem(LIST_KEY)
+    if (!raw) return null
+    const parsed = JSON.parse(raw) as CachedList
+    return parsed && Array.isArray(parsed.headlines) && typeof parsed.fetchedAt === "number"
+      ? parsed
+      : null
+  } catch {
+    return null
+  }
+}
+
+function writeCachedList(headlines: HeadlineVariant[]): void {
+  try {
+    window.localStorage.setItem(
+      LIST_KEY,
+      JSON.stringify({ headlines, fetchedAt: Date.now() } satisfies CachedList),
+    )
+  } catch {
+    /* quota */
+  }
+}
+
 function registerSuperProperty(id: string): void {
   try {
     posthog.register({ headline_id: id })
@@ -57,50 +114,59 @@ function registerSuperProperty(id: string): void {
   }
 }
 
+// Single in-flight fetch shared between the boot-time prefetch and
+// resolveHeadline — whichever runs first starts it, the other awaits it.
+let inflight: Promise<HeadlineVariant[] | null> | null = null
+
+/** Fetch the active list, updating the localStorage cache on success.
+ *  Returns null on failure (callers fall back to cached/stored data). */
+function fetchActiveList(): Promise<HeadlineVariant[] | null> {
+  if (inflight) return inflight
+  inflight = (async () => {
+    try {
+      const res = await fetch("/api/headlines")
+      if (!res.ok) throw new Error(String(res.status))
+      const json = (await res.json()) as { headlines?: HeadlineVariant[] }
+      const active = Array.isArray(json.headlines) ? json.headlines : []
+      writeCachedList(active)
+      return active
+    } catch {
+      return null
+    } finally {
+      inflight = null
+    }
+  })()
+  return inflight
+}
+
 /**
- * Resolve this visitor's headline variant. Returns null when the experiment
- * is off (no active variants / fetch failed) — caller renders the default.
+ * Kick off the variant fetch as early as possible (called from
+ * instrumentation-client.ts at boot, before hydration). Skips the request
+ * when the cached list is still fresh — the hero will resolve from cache.
  */
-export async function resolveHeadline(): Promise<HeadlineVariant | null> {
-  if (typeof window === "undefined") return null
+export function prefetchHeadlines(): void {
+  if (typeof window === "undefined") return
+  const cached = readCachedList()
+  if (cached && Date.now() - cached.fetchedAt < LIST_TTL_MS) return
+  void fetchActiveList()
+}
 
-  let active: HeadlineVariant[] = []
-  try {
-    const res = await fetch("/api/headlines")
-    if (!res.ok) throw new Error(String(res.status))
-    const json = (await res.json()) as { headlines?: HeadlineVariant[] }
-    active = Array.isArray(json.headlines) ? json.headlines : []
-  } catch {
-    // Network/API failure: honour a previous assignment so the visitor at
-    // least sees consistent copy; otherwise fall back to the default.
-    const stored = readStored()
-    if (stored) registerSuperProperty(stored.id)
-    return stored
-  }
-
+/** Pick from an active list: keep the sticky assignment when still active
+ *  (refreshing its text), otherwise assign uniformly at random + record the
+ *  impression. Returns null when the list is empty (experiment off). */
+function assignFrom(active: HeadlineVariant[]): HeadlineVariant | null {
   if (active.length === 0) return null
 
-  // Sticky: keep the earlier assignment as long as that variant is still
-  // active (refresh its text in case the admin reworded it).
   const stored = readStored()
   const still = stored && active.find((h) => h.id === stored.id)
   if (still) {
-    try {
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(still))
-    } catch {
-      /* quota */
-    }
+    writeStored(still)
     registerSuperProperty(still.id)
     return still
   }
 
-  // New assignment: equal-probability split across active variants.
   const picked = active[Math.floor(Math.random() * active.length)]
-  try {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(picked))
-  } catch {
-    /* quota — still serve the variant, just not sticky */
-  }
+  writeStored(picked)
   registerSuperProperty(picked.id)
 
   // Count this unique visitor once, at assignment time. keepalive so an
@@ -113,6 +179,38 @@ export async function resolveHeadline(): Promise<HeadlineVariant | null> {
   }).catch(() => {})
 
   return picked
+}
+
+/**
+ * Resolve this visitor's headline variant. Returns null when the experiment
+ * is off (no active variants / nothing recoverable) — caller renders the
+ * default. Resolves synchronously-fast from the localStorage list cache when
+ * fresh; otherwise awaits the (usually already in-flight) fetch.
+ */
+export async function resolveHeadline(): Promise<HeadlineVariant | null> {
+  if (typeof window === "undefined") return null
+
+  const cached = readCachedList()
+
+  // Fresh cache: resolve immediately with no network wait. The boot-time
+  // prefetch already skipped the request in this case; the cache expiring
+  // (≤5 min) is what triggers the next revalidation.
+  if (cached && Date.now() - cached.fetchedAt < LIST_TTL_MS) {
+    return assignFrom(cached.headlines)
+  }
+
+  // No fresh cache: await the fetch (typically started at boot by
+  // prefetchHeadlines, so most of it has already overlapped hydration).
+  const active = await fetchActiveList()
+  if (active) return assignFrom(active)
+
+  // Fetch failed — degrade gracefully: a stale list is still a coherent
+  // experiment state; failing that, honour a previous assignment so the
+  // visitor at least sees consistent copy.
+  if (cached) return assignFrom(cached.headlines)
+  const stored = readStored()
+  if (stored) registerSuperProperty(stored.id)
+  return stored
 }
 
 /** The assignment as attribution fields for the signup payload (empty when

@@ -10,6 +10,7 @@ import { submitToGoogleSheet } from "@/lib/submit-to-google-sheet"
 import { ChallengeNavHome } from "@/components/challenge/challenge-nav-home"
 import { ChallengeMenuButton } from "@/components/challenge/challenge-funnel-header-actions"
 import { PrivacyNotice } from "@/components/privacy-notice"
+import { Skeleton } from "@/components/ui/skeleton"
 
 interface QuestionScreenProps {
   audience: Audience
@@ -34,6 +35,12 @@ interface QuestionScreenProps {
    * Renders an empty-state instead of the question form.
    */
   isMissing?: boolean
+  /**
+   * True while the prompt copy is still being fetched. Renders layout-matched
+   * skeletons in place of the question/prompt/hint/quote text so the screen
+   * never shows literal "Loading..." or blank blocks.
+   */
+  isLoading?: boolean
 }
 
 /**
@@ -70,6 +77,7 @@ export function QuestionScreen({
   imageAlt,
   nextRoute,
   prevRoute,
+  isLoading = false,
   isMissing = false,
 }: QuestionScreenProps) {
   const router = useRouter()
@@ -474,16 +482,34 @@ export function QuestionScreen({
             <div className="min-w-0 animate-fade-in-up md:sticky md:top-24 md:self-start">
               <p className="eyebrow mb-5 flex items-center gap-3 text-foreground/70">
                 <span className="h-px w-6 bg-foreground/40" aria-hidden />
-                {stageFraming}
+                {isLoading ? <Skeleton className="h-3 w-32" /> : stageFraming}
               </p>
 
-              <h1 className="mb-5 whitespace-pre-line font-serif text-[1.5rem] leading-[1.2] text-ink sm:text-[28px] sm:leading-[1.15] md:text-[32px]">
-                {question}
-              </h1>
+              {isLoading ? (
+                // Skeleton matches the question H1's two-line shape and the
+                // prompt paragraph below, so nothing shifts when copy lands.
+                <>
+                  <div className="mb-5 space-y-2" aria-hidden>
+                    <Skeleton className="h-7 w-full max-w-md sm:h-8" />
+                    <Skeleton className="h-7 w-4/5 max-w-sm sm:h-8" />
+                  </div>
+                  <div className="mb-7 space-y-2" aria-hidden>
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-4 w-11/12" />
+                    <Skeleton className="h-4 w-3/5" />
+                  </div>
+                </>
+              ) : (
+                <>
+                  <h1 className="mb-5 whitespace-pre-line font-serif text-[1.5rem] leading-[1.2] text-ink sm:text-[28px] sm:leading-[1.15] md:text-[32px]">
+                    {question}
+                  </h1>
 
-              <p className="mb-7 whitespace-pre-line text-[15px] leading-[1.8] text-foreground/85">
-                {prompt}
-              </p>
+                  <p className="mb-7 whitespace-pre-line text-[15px] leading-[1.8] text-foreground/85">
+                    {prompt}
+                  </p>
+                </>
+              )}
 
               <div className="relative">
                 <Textarea
@@ -612,9 +638,16 @@ export function QuestionScreen({
               </figure>
 
               <blockquote className="border-l border-foreground/30 pl-5">
-                <p className="font-serif-italic text-[18px] leading-snug text-ink">
-                  &ldquo;{quoteZone}&rdquo;
-                </p>
+                {isLoading ? (
+                  <div className="space-y-2" aria-hidden>
+                    <Skeleton className="h-5 w-full max-w-xs" />
+                    <Skeleton className="h-5 w-2/3 max-w-56" />
+                  </div>
+                ) : (
+                  <p className="font-serif-italic text-[18px] leading-snug text-ink">
+                    &ldquo;{quoteZone}&rdquo;
+                  </p>
+                )}
               </blockquote>
 
               <aside className="rounded-md border border-border bg-secondary/50 p-5">
@@ -622,9 +655,16 @@ export function QuestionScreen({
                   <span className="mt-0.5 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-ink/10 text-ink">
                     <Lightbulb className="h-3.5 w-3.5" strokeWidth={1.6} aria-hidden />
                   </span>
-                  <p className="text-[14.5px] leading-[1.75] text-foreground/85">
-                    {hintBox}
-                  </p>
+                  {isLoading ? (
+                    <div className="flex-1 space-y-2 pt-1" aria-hidden>
+                      <Skeleton className="h-3.5 w-full" />
+                      <Skeleton className="h-3.5 w-4/5" />
+                    </div>
+                  ) : (
+                    <p className="text-[14.5px] leading-[1.75] text-foreground/85">
+                      {hintBox}
+                    </p>
+                  )}
                 </div>
               </aside>
             </div>

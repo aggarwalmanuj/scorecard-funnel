@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { use } from "react"
 import { BeatRevealScreen } from "@/components/challenge/beat-reveal-screen"
@@ -8,6 +8,7 @@ import type { Audience } from "@/context/challenge-context"
 export default function Beat2Page({ params }: { params: Promise<{ audience: Audience }> }) {
   const { audience } = use(params)
   const beat = useBeatPrompt(audience, 2)
+  const isLoading = beat === undefined
   return (
     <BeatRevealScreen
       audience={audience}
@@ -20,6 +21,7 @@ export default function Beat2Page({ params }: { params: Promise<{ audience: Audi
       imageAlt="An open horizon stretching forward - reflection 2 of the AIMerge clarity diagnostic surfaces the direction your subconscious has already chosen."
       nextRoute={`/challenge/${audience}/beat-3`}
       prevRoute={`/challenge/${audience}/beat-1`}
+      isLoading={isLoading}
     />
   )
 }

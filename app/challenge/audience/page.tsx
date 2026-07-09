@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { ArrowLeft, ArrowRight, User, Users, Check, X } from "lucide-react"
+import { ArrowLeft, ArrowRight, User, Users, Check } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { useChallenge, type Audience } from "@/context/challenge-context"
 import { submitSignup } from "@/lib/submit-to-google-sheet"
@@ -73,44 +73,6 @@ function joinWithAnd(parts: string[]): string {
   return `${parts.slice(0, -1).join(", ")} and ${parts[parts.length - 1]}`
 }
 
-// ── Readiness gate (Step 0) ──────────────────────────────────────────────
-// A single honest self-select shown BEFORE any email field. It reframes the
-// signup as a threshold, not a newsletter: only "frustrated" / "ready" proceed
-// to the contact form. "Curious" leaves clean via the homepage - no email is
-// collected and no Lead pixel fires for them, which also keeps ad optimization
-// learning only on qualified people. Copy is verbatim from the readiness-gate
-// spec (management doc).
-type Readiness = "curious" | "frustrated" | "ready"
-
-const GATE_OPTIONS: Array<{ id: Readiness; label: string; body: string }> = [
-  {
-    id: "curious",
-    label: "I'm curious",
-    body: "I like learning about new tools, AI, personal growth, or productivity - but I'm not ready to change a deep pattern right now.",
-  },
-  {
-    id: "frustrated",
-    label: "I'm frustrated",
-    body: "I know something is not working. I've tried tools, advice, systems, or strategies. I'm open to seeing what is underneath the pattern.",
-  },
-  {
-    id: "ready",
-    label: "I'm ready",
-    body: "The cost of staying the same is now higher than the discomfort of changing. I'm willing to answer honestly and hear what is actually driving the loop.",
-  },
-]
-
-// Branch message shown once an option is chosen. Curious gets a clean turn-away;
-// the other two get an honesty primer before the email field is revealed.
-const GATE_BRANCH: Record<Readiness, string> = {
-  curious:
-    "AI Merge is not designed for casual curiosity. It works best when someone is ready to look honestly at the belief, pattern, or identity loop underneath the surface problem. Come back when the cost of staying the same feels higher than the fear of changing.",
-  frustrated:
-    "You may be close. The next five questions will help clarify whether this is a surface problem or a deeper belief loop. Answer honestly - the more truthful you are, the more accurate your reflection will be.",
-  ready:
-    "Good. We'll ask five questions that look beneath the surface pattern. Be honest. Don't perform. Don't answer how you think you should answer. Your reflection will be stronger if your answers are real.",
-}
-
 export default function AudienceSelectionPage() {
   const router = useRouter()
   const { state, setEmail, setFirstName, setAudience, setSerialNumber, reset, isHydrated } =
@@ -133,17 +95,13 @@ export default function AudienceSelectionPage() {
   })
   const [isNavigating, setIsNavigating] = useState(false)
   const [isVisible, setIsVisible] = useState(false)
-  // Three-phase layout: 1 = contact (name/email/phone), "gate" = readiness
-  // self-select, 2 = path (individual/team). Contact now comes FIRST so the
-  // Lead event fires for everyone who submits email/phone, regardless of the
-  // gate choice that follows (per Manuj: once contact info is entered, Lead
-  // should fire no matter what they pick next).
-  const [step, setStep] = useState<1 | "gate" | 2>(1)
+  // Two-phase layout: 1 = contact (name/email/phone), 2 = path
+  // (individual/team). Contact comes FIRST so the Lead event fires for
+  // everyone who submits email/phone. The readiness-gate MCQ that used to sit
+  // between the two steps was removed — it was qualifying friction that cost
+  // signups more than it filtered.
+  const [step, setStep] = useState<1 | 2>(1)
 
-  // Readiness gate - now shown AFTER contact capture. Selecting "curious"
-  // reveals an inline turn-away card (with a link to the offer) instead of
-  // dead-ending home; "frustrated"/"ready" advance to the path picker.
-  const [readiness, setReadiness] = useState<Readiness | null>(null)
   // Lead fires once, when leaving the contact step. `leadFired` guards against
   // a re-fire if the user navigates back to step 1 and forward again; the id is
   // stashed so the later signup row can dedup against the same event.
@@ -153,26 +111,6 @@ export default function AudienceSelectionPage() {
   useEffect(() => {
     setIsVisible(true)
   }, [])
-
-  // Readiness modal: any gate choice pops a modal (curious → turn-away with an
-  // offer link; frustrated/ready → message + Continue). While it's open we lock
-  // body scroll and let Esc dismiss it (mirrors the mobile-sheet pattern in
-  // landing-minimal/header.tsx). Closing clears the choice, dropping the user
-  // back to the gate options.
-  const gateModalOpen = step === "gate" && readiness !== null
-  useEffect(() => {
-    if (!gateModalOpen) return
-    const prev = document.body.style.overflow
-    document.body.style.overflow = "hidden"
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setReadiness(null)
-    }
-    window.addEventListener("keydown", onKey)
-    return () => {
-      document.body.style.overflow = prev
-      window.removeEventListener("keydown", onKey)
-    }
-  }, [gateModalOpen])
 
   // Audience selection survives back-navigation; name + email do not. Each
   // fresh visit starts blank so the user is never confronted with a stale
@@ -313,9 +251,9 @@ export default function AudienceSelectionPage() {
     setEmail(trimmedEmail)
 
     // Fire the Meta standard "Lead" once, right after contact capture — for
-    // EVERYONE who enters email/phone, regardless of the gate choice that
-    // follows (including "curious"). The generated id is stashed so the later
-    // signup row can dedup its server-side Lead against this browser pixel.
+    // EVERYONE who enters email/phone. The generated id is stashed so the
+    // later signup row can dedup its server-side Lead against this browser
+    // pixel.
     if (!leadFired) {
       const leadEventId =
         typeof crypto !== "undefined" && "randomUUID" in crypto
@@ -326,7 +264,7 @@ export default function AudienceSelectionPage() {
       setLeadFired(true)
     }
 
-    setStep("gate")
+    setStep(2)
   }
 
   return (
@@ -344,9 +282,9 @@ export default function AudienceSelectionPage() {
 
       <main className="flex flex-1 items-start justify-center px-5 py-16 sm:py-20">
         <div className="w-full max-w-4xl">
-          {/* Adaptive header for all three phases: 1 = contact, "gate" =
-              readiness threshold, 2 = path. Contact now comes first so the
-              Lead event fires the moment email/phone are captured. */}
+          {/* Adaptive header for both phases: 1 = contact, 2 = path. Contact
+              comes first so the Lead event fires the moment email/phone are
+              captured. */}
           <div
             className={`mb-10 text-center ${
               isVisible ? "animate-fade-in-up" : "opacity-0"
@@ -354,11 +292,7 @@ export default function AudienceSelectionPage() {
           >
             <p className="eyebrow mb-6 text-foreground/70">
               <span className="pulse-dot mr-3" aria-hidden />
-              {step === 1
-                ? "I · Your details"
-                : step === "gate"
-                  ? "II · A threshold"
-                  : "III · Your path"}
+              {step === 1 ? "I · Your details" : "II · Your path"}
             </p>
             <h1 className="font-serif text-[2.4rem] leading-[1.04] text-ink sm:text-[3rem] md:text-[3.5rem]">
               {step === 1 ? (
@@ -366,13 +300,6 @@ export default function AudienceSelectionPage() {
                   Tell us who is
                   <span className="block font-serif-italic text-foreground">
                     taking the assessment.
-                  </span>
-                </>
-              ) : step === "gate" ? (
-                <>
-                  Where are you
-                  <span className="block font-serif-italic text-foreground">
-                    right now?
                   </span>
                 </>
               ) : (
@@ -387,17 +314,15 @@ export default function AudienceSelectionPage() {
             <p className="mx-auto mt-6 max-w-xl text-[15px] leading-[1.8] text-foreground/85 sm:text-base">
               {step === 1
                 ? "Your score and action plan are sent to the email you provide. A phone number is optional - only if you'd like a personal follow-up on WhatsApp."
-                : step === "gate"
-                  ? "Choose honestly. If you are only curious, this will feel like too much. If you are ready, it will feel like relief."
-                  : "The diagnostic adapts to the level of the system you are trying to unlock."}
+                : "The diagnostic adapts to the level of the system you are trying to unlock."}
             </p>
 
-            {/* Three-phase progress indicator */}
+            {/* Two-phase progress indicator */}
             <div
               className="mt-7 flex items-center justify-center gap-2"
               aria-hidden
             >
-              {([1, "gate", 2] as const).map((s) => (
+              {([1, 2] as const).map((s) => (
                 <span
                   key={String(s)}
                   className={`h-1.5 rounded-full transition-all duration-500 ${
@@ -523,167 +448,6 @@ export default function AudienceSelectionPage() {
           </form>
           )}
 
-          {/* "gate" phase - readiness self-select, shown AFTER contact capture.
-              "curious" reveals an inline turn-away card (linking to the offer);
-              "frustrated"/"ready" advance to the path picker. */}
-          {step === "gate" && (
-          <div className="mx-auto max-w-2xl">
-            <div
-              role="radiogroup"
-              aria-label="Where are you right now?"
-              className="space-y-3"
-            >
-              {GATE_OPTIONS.map((opt, idx) => {
-                const isActive = readiness === opt.id
-                return (
-                  <button
-                    key={opt.id}
-                    type="button"
-                    role="radio"
-                    aria-checked={isActive}
-                    onClick={() => setReadiness(opt.id)}
-                    className={`group block w-full rounded-md p-6 text-left transition-all duration-300 ${
-                      isActive
-                        ? "border border-ink bg-card -translate-y-0.5 shadow-[0_18px_40px_-28px_rgba(var(--shadow-ink),0.45)]"
-                        : "s-card hover:-translate-y-0.5"
-                    } ${isVisible ? "animate-fade-in-up" : "opacity-0"}`}
-                    style={{ animationDelay: `${120 + idx * 70}ms` }}
-                  >
-                    <span className="flex items-start gap-4">
-                      <span
-                        className={`mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition-colors duration-300 ${
-                          isActive
-                            ? "border-ink bg-ink text-background"
-                            : "border-foreground/40 group-hover:border-ink"
-                        }`}
-                        aria-hidden
-                      >
-                        {isActive && (
-                          <Check className="h-3 w-3" strokeWidth={2.5} />
-                        )}
-                      </span>
-                      <span className="min-w-0">
-                        <span className="block font-serif text-[19px] leading-tight text-ink">
-                          {opt.label}
-                        </span>
-                        <span className="mt-1.5 block text-[14px] leading-[1.65] text-foreground/80">
-                          {opt.body}
-                        </span>
-                      </span>
-                    </span>
-                  </button>
-                )
-              })}
-            </div>
-
-            {/* Action row - just "Back" now. Choosing any option pops the
-                readiness modal (below), which carries the message and the
-                forward action, so there's no on-page Continue button. */}
-            <div className="mt-8 flex justify-center">
-              <button
-                type="button"
-                onClick={() => {
-                  setReadiness(null)
-                  setStep(1)
-                }}
-                className="inline-flex items-center gap-1.5 text-[12px] uppercase tracking-[0.22em] text-foreground/65 transition-colors hover:text-ink"
-              >
-                <ArrowLeft className="h-3.5 w-3.5" strokeWidth={1.5} />
-                Back
-              </button>
-            </div>
-
-            {/* Readiness modal - pops the instant any option is selected, so
-                the response is unmissable on any device and never requires
-                scroll. Curious is a turn-away (offer link, no Continue);
-                frustrated/ready show their primer + a Continue that advances
-                to the path picker. Backdrop-click, X, "Go back", and Esc all
-                dismiss it (clearing the choice). */}
-            {readiness && (
-              <div
-                className="fixed inset-0 z-50 flex items-center justify-center p-5"
-                role="dialog"
-                aria-modal="true"
-                aria-labelledby="gate-modal-title"
-              >
-                <div
-                  className="absolute inset-0 bg-ink/40 backdrop-blur-sm animate-fade-in"
-                  onClick={() => setReadiness(null)}
-                  aria-hidden
-                />
-                <div className="relative z-10 w-full max-w-md rounded-lg border border-border bg-card p-7 text-center shadow-[0_30px_80px_-30px_rgba(var(--shadow-ink),0.6)] animate-fade-in-up sm:p-9">
-                  <button
-                    type="button"
-                    onClick={() => setReadiness(null)}
-                    aria-label="Close"
-                    className="absolute right-4 top-4 inline-flex h-8 w-8 items-center justify-center rounded-full text-foreground/50 transition-colors hover:bg-secondary hover:text-ink"
-                  >
-                    <X className="h-4 w-4" strokeWidth={1.6} />
-                  </button>
-
-                  {readiness === "curious" ? (
-                    <>
-                      <p
-                        id="gate-modal-title"
-                        className="font-serif text-[22px] leading-snug text-ink sm:text-[24px]"
-                      >
-                        This may not be for you right now.
-                      </p>
-                      <p className="mx-auto mt-3 max-w-sm text-[15px] leading-[1.75] text-foreground/80">
-                        This is for people who are ready to transform. If you
-                        want to see how we do it,{" "}
-                        <Link
-                          href={`/challenge/${selected ?? "individual"}/offer`}
-                          className="font-medium text-ink underline underline-offset-4 transition-opacity hover:opacity-70"
-                        >
-                          click here
-                        </Link>
-                        .
-                      </p>
-                      <button
-                        type="button"
-                        onClick={() => setReadiness(null)}
-                        className="mt-7 inline-flex items-center gap-1.5 text-[12px] uppercase tracking-[0.22em] text-foreground/65 transition-colors hover:text-ink"
-                      >
-                        <ArrowLeft className="h-3.5 w-3.5" strokeWidth={1.5} />
-                        Go back
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      <p
-                        id="gate-modal-title"
-                        className="mx-auto max-w-sm font-serif text-[19px] leading-[1.5] text-ink sm:text-[20px]"
-                      >
-                        {GATE_BRANCH[readiness]}
-                      </p>
-                      <button
-                        type="button"
-                        onClick={() => setStep(2)}
-                        className="s-btn group mt-7 w-full justify-center"
-                      >
-                        Continue
-                        <ArrowRight
-                          className="h-3.5 w-3.5 transition-transform duration-500 group-hover:translate-x-1"
-                          strokeWidth={1.6}
-                        />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setReadiness(null)}
-                        className="mt-4 inline-flex items-center gap-1.5 text-[12px] uppercase tracking-[0.22em] text-foreground/65 transition-colors hover:text-ink"
-                      >
-                        <ArrowLeft className="h-3.5 w-3.5" strokeWidth={1.5} />
-                        Go back
-                      </button>
-                    </>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
-          )}
-
           {/* Step 2 - path: two editorial cards */}
           {step === 2 && (
           <div id="path-cards" className="mx-auto max-w-3xl scroll-mt-24">
@@ -753,10 +517,6 @@ export default function AudienceSelectionPage() {
           </div>
           )}
 
-          {/* Shared hints + action row - the "gate" phase carries its own
-              actions, so this block is hidden there. */}
-          {step !== "gate" && (
-          <>
           {/* Gentle, neutral hint that explains the greyed button - updates live
               so "why is the button dim?" is never a mystery. Per-field red
               messages handle format errors. */}
@@ -793,7 +553,7 @@ export default function AudienceSelectionPage() {
             ) : (
               <button
                 type="button"
-                onClick={() => setStep("gate")}
+                onClick={() => setStep(1)}
                 className="inline-flex items-center gap-1.5 text-[12px] uppercase tracking-[0.22em] text-foreground/65 transition-colors hover:text-ink"
               >
                 <ArrowLeft className="h-3.5 w-3.5" strokeWidth={1.5} />
@@ -845,8 +605,6 @@ export default function AudienceSelectionPage() {
           </div>
 
           <PrivacyNotice className="mx-auto mt-8 max-w-2xl justify-center text-center" />
-          </>
-          )}
 
         </div>
       </main>
