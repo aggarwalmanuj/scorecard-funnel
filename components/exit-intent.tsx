@@ -1,19 +1,51 @@
 "use client"
 
-import { useEffect } from "react"
-import { useRouter } from "next/navigation"
+import { useEffect, useState } from "react"
+import Link from "next/link"
+import { ArrowRight, X } from "lucide-react"
 
 const SESSION_KEY = "exit-intent-fired"
 
 /**
- * Desktop exit-intent capture. When the cursor leaves through the TOP of the
- * viewport (heading for the tab bar / close / address bar), redirect once per
- * browser session to the standalone offer page so a bounce still sees the
- * $47/$497 offer. Mouse-based, so it's desktop-only by nature — mobile back/
- * close can't be intercepted without hostile history hacks, which we avoid.
+ * Stats shown in the exit modal. Widely-reported figures from published ADHD
+ * outcome research (Barkley life-expectancy analyses; 2025 UK cohort study;
+ * adult prevalence/diagnosis surveys) — kept as ranges/approximations rather
+ * than fake precision, with the framing "unmanaged/untreated".
  */
-export function ExitIntent({ target = "/offer" }: { target?: string }) {
-  const router = useRouter()
+const STATS: Array<{ figure: string; label: string }> = [
+  {
+    figure: "366M",
+    label:
+      "adults worldwide live with ADHD. Most reach middle age without ever being diagnosed.",
+  },
+  {
+    figure: "7–13 yrs",
+    label:
+      "of estimated life expectancy lost to unmanaged ADHD, according to longitudinal outcome research.",
+  },
+  {
+    figure: "~17%",
+    label:
+      "lower lifetime earnings for adults whose ADHD goes unaddressed, compounding every year it runs unexamined.",
+  },
+  {
+    figure: "2–3×",
+    label:
+      "higher rates of burnout, anxiety, job loss and relationship breakdown when the pattern stays invisible.",
+  },
+]
+
+/**
+ * Desktop exit-intent. When the cursor leaves through the TOP of the viewport
+ * (heading for the tab bar / close / address bar), show — once per browser
+ * session — a modal that makes the long-term cost of an unexamined pattern
+ * concrete, with a path into the free assessment. Replaces the old redirect
+ * to /offer: instead of a price, the leaving visitor sees the gravity of
+ * doing nothing. Mouse-based, so desktop-only by nature — mobile back/close
+ * can't be intercepted without hostile history hacks, which we avoid.
+ */
+export function ExitIntent() {
+  const [open, setOpen] = useState(false)
 
   useEffect(() => {
     if (typeof window === "undefined") return
@@ -45,12 +77,115 @@ export function ExitIntent({ target = "/offer" }: { target?: string }) {
         /* ignore */
       }
       cleanup()
-      router.push(target)
+      setOpen(true)
     }
 
     document.addEventListener("mouseout", onMouseOut)
     return cleanup
-  }, [router, target])
+  }, [])
 
-  return null
+  // While open: lock body scroll, let Esc dismiss (mirrors the modal pattern
+  // used across the funnel).
+  useEffect(() => {
+    if (!open) return
+    const prev = document.body.style.overflow
+    document.body.style.overflow = "hidden"
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false)
+    }
+    window.addEventListener("keydown", onKey)
+    return () => {
+      document.body.style.overflow = prev
+      window.removeEventListener("keydown", onKey)
+    }
+  }, [open])
+
+  if (!open) return null
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-5"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="exit-intent-title"
+    >
+      <div
+        className="absolute inset-0 bg-ink/50 backdrop-blur-sm animate-fade-in"
+        onClick={() => setOpen(false)}
+        aria-hidden
+      />
+
+      <div className="relative z-10 w-full max-w-lg rounded-lg border border-border bg-card p-5 shadow-[0_30px_80px_-30px_rgba(var(--shadow-ink),0.6)] animate-fade-in-up sm:p-9 max-h-[88vh] overflow-y-auto">
+        <button
+          type="button"
+          onClick={() => setOpen(false)}
+          aria-label="Close"
+          className="absolute right-4 top-4 inline-flex h-8 w-8 items-center justify-center rounded-full text-foreground/50 transition-colors hover:bg-secondary hover:text-ink"
+        >
+          <X className="h-4 w-4" strokeWidth={1.6} />
+        </button>
+
+        <p className="eyebrow mb-4 text-foreground/65 sm:mb-5">
+          <span className="pulse-dot mr-2.5" aria-hidden />
+          Before you go
+        </p>
+
+        <h2
+          id="exit-intent-title"
+          className="font-serif text-[22px] leading-[1.18] text-ink sm:text-[30px] sm:leading-[1.15]"
+        >
+          Unexamined, this pattern
+          <span className="block font-serif-italic text-foreground">
+            compounds for decades.
+          </span>
+        </h2>
+
+        {/* Stat rows: on phones the figure sits ABOVE its line (a right-
+            aligned 6rem column would waste a third of a 360px card); from sm
+            up they align in two columns on a shared baseline. */}
+        <div className="mt-5 space-y-4 sm:mt-6">
+          {STATS.map((s) => (
+            <div
+              key={s.figure}
+              className="flex flex-col gap-0.5 sm:flex-row sm:items-baseline sm:gap-4"
+            >
+              <span className="shrink-0 font-serif text-[20px] leading-none text-ink tabular-nums sm:w-24 sm:text-right sm:text-[24px]">
+                {s.figure}
+              </span>
+              <p className="text-[13.5px] leading-[1.6] text-foreground/85 sm:text-[14px] sm:leading-[1.65]">
+                {s.label}
+              </p>
+            </div>
+          ))}
+        </div>
+
+        <p className="mt-5 text-[12.5px] leading-[1.65] text-foreground/60 sm:mt-6 sm:text-[13px]">
+          Figures from published long-term outcome research on unmanaged adult
+          ADHD. The pattern doesn&apos;t wait. Every year it runs unnamed, it
+          gets more expensive.
+        </p>
+
+        <div className="mt-6 flex flex-col gap-3 sm:mt-7">
+          <Link
+            href="/challenge/audience"
+            onClick={() => setOpen(false)}
+            className="s-btn group w-full justify-center"
+          >
+            Find what&apos;s running underneath. Free.
+            <ArrowRight
+              className="h-3.5 w-3.5 transition-transform duration-500 group-hover:translate-x-1"
+              strokeWidth={1.6}
+            />
+          </Link>
+          <button
+            type="button"
+            onClick={() => setOpen(false)}
+            className="mx-auto inline-flex items-center text-[12px] uppercase tracking-[0.22em] text-foreground/55 transition-colors hover:text-ink"
+          >
+            I&apos;ll take my chances
+          </button>
+        </div>
+      </div>
+    </div>
+  )
 }
