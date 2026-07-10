@@ -480,7 +480,7 @@ export function ClarityReport({ preview = false }: { preview?: boolean } = {}) {
       {!loading && !error && usingSample && (
         <div className="sample-banner" role="status">
           <AlertCircle size={15} />
-          <span>Sample action plan — no assessment completed in this session.</span>
+          <span>Sample action plan - no assessment completed in this session.</span>
         </div>
       )}
 

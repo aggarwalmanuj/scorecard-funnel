@@ -7,31 +7,34 @@ import { ArrowRight, X } from "lucide-react"
 const SESSION_KEY = "exit-intent-fired"
 
 /**
- * Stats shown in the exit modal. Widely-reported figures from published ADHD
- * outcome research (Barkley life-expectancy analyses; 2025 UK cohort study;
- * adult prevalence/diagnosis surveys) — kept as ranges/approximations rather
- * than fake precision, with the framing "unmanaged/untreated".
+ * Stats shown in the exit modal. Widely-reported figures from published
+ * self-belief research, kept as approximations rather than fake precision:
+ * impostor phenomenon prevalence (Bravata et al. 2020 systematic review),
+ * self-efficacy and performance (Stajkovic & Luthans 1998 meta-analysis of
+ * 114 studies), the qualification/application gap (HP internal report,
+ * popularized by Mohr 2014), and top-quartile self-underestimation
+ * (Kruger & Dunning 1999).
  */
 const STATS: Array<{ figure: string; label: string }> = [
   {
-    figure: "366M",
+    figure: "70%",
     label:
-      "adults worldwide live with ADHD. Most reach middle age without ever being diagnosed.",
+      "of professionals report impostor feelings at some point in their careers, across four decades of peer-reviewed studies.",
   },
   {
-    figure: "7–13 yrs",
+    figure: "+28%",
     label:
-      "of estimated life expectancy lost to unmanaged ADHD, according to longitudinal outcome research.",
+      "higher performance among people with strong belief in their own capability, across a meta-analysis of 114 studies.",
   },
   {
-    figure: "~17%",
+    figure: "60%",
     label:
-      "lower lifetime earnings for adults whose ADHD goes unaddressed, compounding every year it runs unexamined.",
+      "of the qualifications is enough for some people to go for the role. Others wait for all of them. The gap is belief, not ability.",
   },
   {
-    figure: "2–3×",
+    figure: "Top 25%",
     label:
-      "higher rates of burnout, anxiety, job loss and relationship breakdown when the pattern stays invisible.",
+      "performers are among the most likely to underestimate where they stand. Capability and self-belief are different signals.",
   },
 ]
 
@@ -134,7 +137,7 @@ export function ExitIntent() {
           id="exit-intent-title"
           className="font-serif text-[22px] leading-[1.18] text-ink sm:text-[30px] sm:leading-[1.15]"
         >
-          Unexamined, this pattern
+          Doubt, unexamined,
           <span className="block font-serif-italic text-foreground">
             compounds for decades.
           </span>
@@ -160,9 +163,9 @@ export function ExitIntent() {
         </div>
 
         <p className="mt-5 text-[12.5px] leading-[1.65] text-foreground/60 sm:mt-6 sm:text-[13px]">
-          Figures from published long-term outcome research on unmanaged adult
-          ADHD. The pattern doesn&apos;t wait. Every year it runs unnamed, it
-          gets more expensive.
+          Figures from published research on self-efficacy and the impostor
+          phenomenon. The doubt doesn&apos;t wait. Every year it runs unnamed,
+          it gets more expensive.
         </p>
 
         <div className="mt-6 flex flex-col gap-3 sm:mt-7">
@@ -182,7 +185,7 @@ export function ExitIntent() {
             onClick={() => setOpen(false)}
             className="mx-auto inline-flex items-center text-[12px] uppercase tracking-[0.22em] text-foreground/55 transition-colors hover:text-ink"
           >
-            I&apos;ll take my chances
+            Not today
           </button>
         </div>
       </div>

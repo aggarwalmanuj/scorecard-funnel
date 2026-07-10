@@ -398,7 +398,7 @@ export function BeatRevealScreen({
                     <span className="flex flex-col gap-4">
                       <span className="font-serif-italic text-foreground/80">
                         This reflection is taking longer than it should. Your
-                        answers are safe — we can rebuild it, or you can keep
+                        answers are safe. We can rebuild it, or you can keep
                         going and come back to it.
                       </span>
                       <span className="flex flex-col gap-2.5 not-italic sm:flex-row">

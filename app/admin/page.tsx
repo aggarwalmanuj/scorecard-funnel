@@ -610,7 +610,7 @@ function HeadlineCard({
           <Input
             value={line2}
             onChange={(e) => setLine2(e.target.value)}
-            placeholder="Line 2 (italic) — optional"
+            placeholder="Line 2 (italic) - optional"
             maxLength={200}
             className="s-input h-10 font-serif italic"
           />
@@ -815,14 +815,14 @@ function HeadlinesPanel() {
         <Input
           value={newLine1}
           onChange={(e) => setNewLine1(e.target.value)}
-          placeholder='Line 1 — e.g. "You already know"'
+          placeholder='Line 1, e.g. "You already know"'
           maxLength={200}
           className="s-input h-10 font-serif"
         />
         <Input
           value={newLine2}
           onChange={(e) => setNewLine2(e.target.value)}
-          placeholder='Line 2 (italic) — e.g. "there is more in you." (optional)'
+          placeholder='Line 2 (italic), e.g. "there is more in you." (optional)'
           maxLength={200}
           className="s-input h-10 font-serif italic"
         />
@@ -856,15 +856,15 @@ function HeadlinesPanel() {
 
       {!loading && headlines.length === 0 && !error && (
         <div className="rounded-md border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
-          No headline variants yet — the landing page is showing the built-in default.
+          No headline variants yet - the landing page is showing the built-in default.
           Add two or more variants above to start the test.
         </div>
       )}
 
       {headlines.length > 0 && (
         <p className="text-[12px] text-foreground/55">
-          {activeCount} live variant{activeCount === 1 ? "" : "s"} — traffic splits{" "}
-          {activeCount > 0 ? `1/${activeCount}` : "—"} each.
+          {activeCount} live variant{activeCount === 1 ? "" : "s"} - traffic splits{" "}
+          {activeCount > 0 ? `1/${activeCount}` : "-"} each.
           {activeCount === 1 && " Add a second live variant to actually A/B test."}
         </p>
       )}
