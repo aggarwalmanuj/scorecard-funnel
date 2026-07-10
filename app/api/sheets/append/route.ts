@@ -107,7 +107,10 @@ export async function POST(request: Request) {
 
   try {
     if (action === "signup") {
-      // Always appends a new row, even for repeat emails. Returns the new S.No.
+      // Reuses an incomplete row for the same email (patching name/audience/
+      // phone) or creates a fresh one. The audience page relies on this:
+      // step 1 writes the lead with audience "individual", step 2 re-submits
+      // with the real choice and lands on the same row. Returns the S.No.
       const sno = await appendSignupRow(firstName, email, audience ?? "", attribution, phone)
 
       // Server-side Lead (Conversions API backstop for the browser pixel). This

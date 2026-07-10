@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input"
 import { useChallenge, type Audience } from "@/context/challenge-context"
 import { submitSignup } from "@/lib/submit-to-google-sheet"
 import { prefetchPrompts } from "@/lib/client/prompt-cache"
+import { OrientationVideo } from "@/components/challenge/orientation-video"
 import { persistTelemetry } from "@/lib/persist-outputs"
 import { trackWhenReady } from "@/lib/fbpixel"
 import { ChallengeMenuButton } from "@/components/challenge/challenge-funnel-header-actions"
@@ -107,6 +108,12 @@ export default function AudienceSelectionPage() {
   // stashed so the later signup row can dedup against the same event.
   const [leadFired, setLeadFired] = useState(false)
   const leadEventIdRef = useRef<string | null>(null)
+  // Step-1 background signup. The row is written the moment contact is
+  // captured (audience defaults to "individual"), so an abandon at the path
+  // step still leaves us the lead. Step 2's submit calls signup again with
+  // the real choice — the server reuses the incomplete row by email and
+  // patches name/audience/phone, so no duplicate row is created.
+  const signupInflightRef = useRef<Promise<number | null> | null>(null)
 
   // Audience selection survives back-navigation; name + email do not. Each
   // fresh visit starts blank so the user is never confronted with a stale
@@ -214,7 +221,15 @@ export default function AudienceSelectionPage() {
     // against the browser pixel — one conversion, surviving ad-blockers.
     const leadEventId = leadEventIdRef.current ?? undefined
 
-    // Fire-and-forget: the funnel is resilient to a missing serialNumber.
+    // Settle the step-1 background signup first so the submit below finds
+    // and patches that row — racing it could create a duplicate.
+    if (signupInflightRef.current) {
+      await signupInflightRef.current.catch(() => null)
+    }
+
+    // Authoritative submit: patches the step-1 row (same email) with the
+    // chosen audience and any contact edits made via the back button; the
+    // funnel stays resilient to a missing serialNumber.
     const sno = await submitSignup(
       trimmedName,
       trimmedEmail,
@@ -265,6 +280,32 @@ export default function AudienceSelectionPage() {
       leadEventIdRef.current = leadEventId
       trackWhenReady("Lead", { content_name: "belief-score-signup" }, leadEventId)
       setLeadFired(true)
+    }
+
+    // Persist the lead to the DB NOW, in the background — a visitor who
+    // abandons on the path step is still captured. Audience defaults to
+    // "individual"; if they do pick a path, handleContinue's signup patches
+    // the real choice onto this same row (email-based reuse server-side).
+    // Fired once: a re-entry to step 1 with edited contact syncs via the
+    // step-2 submit instead.
+    if (!signupInflightRef.current) {
+      signupInflightRef.current = submitSignup(
+        trimmedName,
+        trimmedEmail,
+        "individual",
+        trimmedPhone || undefined,
+        leadEventIdRef.current ?? undefined,
+      ).then((sno) => {
+        if (sno !== null) {
+          setSerialNumber(sno)
+          persistTelemetry({
+            serialNumber: sno,
+            firstName: trimmedName,
+            email: trimmedEmail,
+          })
+        }
+        return sno
+      })
     }
 
     setStep(2)
@@ -450,9 +491,11 @@ export default function AudienceSelectionPage() {
           </form>
           )}
 
-          {/* Step 2 - path: two editorial cards */}
+          {/* Step 2 - path: orientation video (optional, non-blocking)
+              above two editorial cards */}
           {step === 2 && (
           <div id="path-cards" className="mx-auto max-w-3xl scroll-mt-24">
+            <OrientationVideo />
             <div className="grid gap-4 sm:grid-cols-2 sm:gap-5">
               {cards.map((card, idx) => {
                 const isActive = selected === card.id

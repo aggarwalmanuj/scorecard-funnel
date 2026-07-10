@@ -15,7 +15,10 @@ type Voice = { src: string; poster: string }
 const VOICES: Voice[] = Array.from({ length: 12 }, (_, i) => {
   const n = i + 1
   return {
-    src: `https://bfyvfetxtgsgzjci.public.blob.vercel-storage.com/Clip%20${n}.mp4`,
+    // Self-hosted, compressed 720w encodes (~1.3-6.5MB each). The Vercel
+    // Blob store previously referenced here served the RAW 21-84MB exports,
+    // which stalled indefinitely on mobile connections.
+    src: `/videos/testimonials/clip-${n}.mp4`,
     poster: `/voices/posters/voice-${String(n).padStart(2, "0")}.webp`,
   }
 })
