@@ -1,19 +1,15 @@
 import posthog from "posthog-js"
 import { captureAttribution } from "@/lib/client/attribution"
-import { prefetchHeadlines } from "@/lib/client/headline"
 
 // Capture first-touch acquisition attribution (utm_* / referrer) as early as
 // possible at boot — the landing URL carries the query string that's gone by
 // the time signup happens. Idempotent and independent of PostHog being on.
 captureAttribution()
 
-// Landing page only: start the headline A/B variant fetch NOW, before React
-// hydrates, so the network round-trip overlaps hydration instead of running
-// after it (the hero awaits this same in-flight promise). No-ops when the
-// localStorage variant cache is still fresh.
-if (typeof window !== "undefined" && window.location.pathname === "/") {
-  prefetchHeadlines()
-}
+// NOTE: the headline A/B no longer needs a client-side prefetch — middleware
+// assigns the variant server-side and the HTML arrives with it baked in
+// (see lib/headline-shared.ts). <HeadlineSync> mirrors the assignment into
+// localStorage + a PostHog super property for attribution.
 
 /**
  * PostHog client-side initialization (Next.js 15.3+ pattern).

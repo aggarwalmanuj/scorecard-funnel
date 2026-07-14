@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { revalidatePath } from "next/cache"
 import { z } from "zod"
 import {
   isCosmosConfigured,
@@ -34,6 +35,22 @@ const updateSchema = z.object({
   line2: z.string().trim().max(200).optional(),
   active: z.boolean().optional(),
 })
+
+/**
+ * Nudge the router/data caches after a mutation. The variant pages render
+ * dynamically (the nonce CSP makes the whole site dynamic), so freshness
+ * is really governed by the short in-instance caches: cosmos-db's
+ * active-headlines TTL and middleware's 60s id-list cache. This purge is
+ * belt-and-braces for anything Next cached along the way.
+ */
+function revalidateVariantPages() {
+  try {
+    revalidatePath("/hl/[id]", "page")
+    revalidatePath("/")
+  } catch (e) {
+    console.warn("[admin/headlines] revalidate failed", redactError(e))
+  }
+}
 
 function guard(request: Request) {
   const headers = corsHeaders(request)
@@ -73,6 +90,7 @@ export async function POST(request: Request) {
   }
   try {
     const headline = await createHeadline(parsed.data)
+    revalidateVariantPages()
     return NextResponse.json({ ok: true, headline }, { headers })
   } catch (e) {
     console.error("[admin/headlines POST]", redactError(e))
@@ -91,6 +109,7 @@ export async function PUT(request: Request) {
   const { id, ...updates } = parsed.data
   try {
     await updateHeadline(id, updates)
+    revalidateVariantPages()
     return NextResponse.json({ ok: true }, { headers })
   } catch (e) {
     console.error("[admin/headlines PUT]", redactError(e))
@@ -108,6 +127,7 @@ export async function DELETE(request: Request) {
   }
   try {
     await deleteHeadline(id)
+    revalidateVariantPages()
     return NextResponse.json({ ok: true }, { headers })
   } catch (e) {
     console.error("[admin/headlines DELETE]", redactError(e))

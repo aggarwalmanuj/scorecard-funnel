@@ -1,13 +1,10 @@
 "use client"
 
-import { useEffect, useState } from "react"
 import Image from "next/image"
-import { Skeleton } from "@/components/ui/skeleton"
 import {
-  getStoredHeadline,
-  resolveHeadline,
+  DEFAULT_HEADLINE,
   type HeadlineVariant,
-} from "@/lib/client/headline"
+} from "@/lib/headline-shared"
 import { ReservationForm } from "./reservation-form"
 import {
   CursorHalo,
@@ -16,63 +13,16 @@ import {
   WordReveal,
 } from "./motion"
 
-// Default headline — shown on first paint and whenever the A/B experiment is
-// off (no active variants in the admin's Headlines tab).
-const DEFAULT_HEADLINE: HeadlineVariant = {
-  id: "default",
-  line1: "You already know",
-  line2: "there is more in you.",
-}
-
-// How long the headline skeleton may hold the hero before we give up on the
-// variant fetch and show the default. Keeps a slow/failed API from ever
-// leaving the fold blank. The skeleton exists so a visitor never watches one
-// headline replaced by another (A/B integrity) — latency is kept short by
-// the boot-time prefetch + localStorage list cache in lib/client/headline.
-// Only the headline slot waits: the body copy, CTA card, and image paint
-// immediately via the CSS rise-in entrances below.
-const HEADLINE_RESOLVE_TIMEOUT_MS = 2500
-
-export function MinimalHero() {
-  // null = still resolving → skeleton. The server render and first client
-  // paint both show the skeleton (no hydration mismatch), so a visitor never
-  // sees one headline replaced by another. Repeat visitors skip the skeleton:
-  // their sticky assignment renders synchronously on mount while we
-  // revalidate in the background.
-  const [headline, setHeadline] = useState<HeadlineVariant | null>(null)
-
-  useEffect(() => {
-    let cancelled = false
-
-    const stored = getStoredHeadline()
-    if (stored) setHeadline(stored)
-
-    // First visit: cap how long the skeleton can hold the fold.
-    const fallback = stored
-      ? null
-      : setTimeout(() => {
-          if (!cancelled) {
-            setHeadline((current) => current ?? DEFAULT_HEADLINE)
-          }
-        }, HEADLINE_RESOLVE_TIMEOUT_MS)
-
-    void resolveHeadline().then((variant) => {
-      if (cancelled) return
-      // Never swap copy the visitor is already reading: only apply the
-      // resolved variant if nothing is on screen yet, or it's the same
-      // assignment (text may have been reworded by the admin).
-      setHeadline((current) =>
-        !current || (variant && variant.id === current.id)
-          ? (variant ?? DEFAULT_HEADLINE)
-          : current
-      )
-    })
-
-    return () => {
-      cancelled = true
-      if (fallback) clearTimeout(fallback)
-    }
-  }, [])
+/**
+ * Hero. The headline arrives as a PROP, already resolved on the server
+ * (middleware assigns a variant and rewrites `/` to the matching
+ * `/hl/[id]` page). There is no skeleton and no client-side resolution:
+ * the first byte of HTML contains the exact copy this visitor will read,
+ * and it never changes underneath them. The word-by-word compose is pure
+ * CSS, so it runs on first paint without waiting for hydration.
+ */
+export function MinimalHero({ headline }: { headline?: HeadlineVariant }) {
+  const resolved = headline ?? DEFAULT_HEADLINE
 
   return (
     <section className="relative" id="hero">
@@ -89,32 +39,21 @@ export function MinimalHero() {
                 three-line layout doesn't exceed the fold; loosens up
                 cleanly through tablet to desktop. */}
             <h1 className="wrap-break-word font-serif text-[2.15rem] leading-[1.06] text-ink sm:text-6xl sm:leading-[1.02] lg:text-7xl xl:text-[5.6rem]">
-              {headline ? (
-                <WordReveal
-                  key={headline.id}
-                  segments={[
-                    { kind: "text", text: headline.line1 },
-                    ...(headline.line2
-                      ? ([
-                          { kind: "br" },
-                          { kind: "italic", text: headline.line2 },
-                        ] as const)
-                      : []),
-                  ]}
-                />
-              ) : (
-                // Skeleton sized in `em` so it tracks the responsive type
-                // scale — two bars matching the two headline lines, holding
-                // the same vertical space so nothing below shifts on resolve.
-                <span aria-hidden className="block space-y-[0.18em] py-[0.06em]">
-                  <Skeleton className="h-[0.82em] w-[88%] max-w-[9em] rounded-sm" />
-                  <Skeleton className="h-[0.82em] w-[72%] max-w-[7.5em] rounded-sm" />
-                </span>
-              )}
+              <WordReveal
+                segments={[
+                  { kind: "text", text: resolved.line1 },
+                  ...(resolved.line2
+                    ? ([
+                        { kind: "br" },
+                        { kind: "italic", text: resolved.line2 },
+                      ] as const)
+                    : []),
+                ]}
+              />
             </h1>
 
             {/* rise-in (pure CSS) rather than the JS Reveal: this is the
-                fold — it must compose immediately on first paint, even
+                fold - it must compose immediately on first paint, even
                 while the bundle is still downloading on a slow phone. */}
             <div
               className="rise-in mt-7 max-w-xl space-y-4 text-[15.5px] leading-[1.7] text-foreground/90 sm:mt-10 sm:space-y-5 sm:text-[1.05rem] sm:leading-[1.75]"
