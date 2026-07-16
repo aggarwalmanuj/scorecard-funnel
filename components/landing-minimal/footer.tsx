@@ -80,6 +80,14 @@ export function MinimalFooter() {
         </div>
 
         <div className="hairline mt-14" />
+        {/* Clinical-boundary disclaimer (claims-review requirement) - extends
+            the "Is this for you" section's crisis language to the whole page. */}
+        <p className="mt-6 max-w-3xl text-[12px] leading-[1.7] text-foreground/55">
+          The Belief Score and AI Merge are tools for self-reflection. They are
+          not medical, psychological, or clinical treatment and are not a
+          substitute for professional care. If you are in acute distress,
+          please seek qualified support.
+        </p>
         <div className="mt-6 flex flex-col items-start justify-between gap-3 text-[12px] tracking-wide text-foreground/55 sm:flex-row sm:items-center">
           <p>&copy; {new Date().getFullYear()} All rights reserved.</p>
           <p className="font-serif-italic text-[13px]">

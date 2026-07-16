@@ -88,9 +88,9 @@ export function SanctuarySection() {
 
               <blockquote className="my-10 border-l border-foreground/40 pl-6">
                 <p className="font-serif-italic text-2xl leading-snug text-ink sm:text-3xl">
-                  Your Belief Score
+                  Your Belief Score is designed
                   <br />
-                  finds it in ten minutes.
+                  to surface it in about ten minutes.
                 </p>
               </blockquote>
             </div>
@@ -131,26 +131,28 @@ export function SanctuarySection() {
               <h3 className="font-serif text-3xl leading-tight text-ink sm:text-4xl">
                 Managing what you feel.
                 <span className="block font-serif-italic text-foreground/80">
-                  Removing what causes it.
+                  Working on what causes it.
                 </span>
               </h3>
               <div className="mt-8 space-y-5 text-[1.05rem] leading-[1.85] text-foreground/85">
                 <p>
                   Most programs teach you to manage how you feel. Your Belief
-                  Score removes what is causing it.
+                  Score works on what may be causing it - not just the surface.
                 </p>
                 <p>
                   The difference is the difference between carrying something
-                  lighter - and putting it down permanently.
+                  lighter - and setting more of it down.
                 </p>
                 <div className="my-6 h-px w-16 bg-foreground/30" />
                 <p>
-                  What changes here doesn&apos;t need maintenance. It becomes
-                  your new baseline.
+                  Many describe the shift as steady rather than something they
+                  have to keep managing.
                 </p>
                 <p className="pt-2 font-serif text-xl text-ink sm:text-2xl">
-                  Not coping.{" "}
-                  <span className="font-serif-italic">Resolution.</span>
+                  Not just coping.{" "}
+                  <span className="font-serif-italic">
+                    A chance to resolve what&apos;s underneath.
+                  </span>
                 </p>
               </div>
             </div>

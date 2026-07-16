@@ -14,7 +14,7 @@ const changes = [
   "The gap between knowing and doing starts to close.",
   "Work relationships improve - people respond differently, without explanation.",
   "The energy that was going into proving becomes available for building.",
-  "Something that had been running in the background quietly stops.",
+  "Many describe feeling that a background source of pressure has eased.",
 ] as const
 
 export function EssenceSection() {
@@ -73,8 +73,8 @@ export function EssenceSection() {
               </p>
             </blockquote>
             <p className="text-[1.05rem] leading-[1.85] text-foreground/85">
-              Every person&apos;s story is different. What high performers
-              consistently report:
+              Every person&apos;s story is different. What some participants
+              have described:
             </p>
           </Reveal>
 

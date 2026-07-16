@@ -12,7 +12,7 @@ const voices = [
   },
   {
     quote:
-      "My stress went quiet within days. Better sleep. Less noise. More clarity in the morning.",
+      "My mind felt quieter within days - less noise, more clarity in the morning.",
     author: "Nick H.",
     place: "Creative Director",
   },
@@ -24,7 +24,7 @@ const voices = [
   },
   {
     quote:
-      "Forty percent operational cost reduction within weeks. Same team, different result.",
+      "The team started operating differently within weeks - same people, noticeably less friction.",
     author: "Michelle J.",
     place: "Business Owner",
   },
@@ -36,7 +36,7 @@ const voices = [
   },
   {
     quote:
-      "Six-times income in six months. Not because the strategy changed - because something in the way finally was not.",
+      "My income grew significantly over the following months - not from a new strategy, but because something in the way finally wasn't.",
     author: "Founder",
     place: "Anonymous",
   },
@@ -106,6 +106,18 @@ export function VoicesSection() {
             </Reveal>
           ))}
         </div>
+
+        {/* Results disclaimer (claims-review requirement): testimonials
+            describe individual experiences of the full AI Merge journey. */}
+        <Reveal
+          as="p"
+          delay={300}
+          className="mt-12 text-[12px] leading-[1.7] text-foreground/55 sm:mt-14 sm:text-[12.5px]"
+        >
+          Individual experiences shared by AI Merge participants. Results
+          describe personal experiences and are not typical or guaranteed.
+          Your experience will differ.
+        </Reveal>
       </div>
     </section>
   )

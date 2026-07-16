@@ -485,8 +485,9 @@ export default function AudienceSelectionPage() {
                 Kept to one sentence per the doc - the canonical Privacy/Terms
                 links live in <PrivacyNotice> below the CTA. */}
             <p className="text-[12px] leading-snug text-foreground/60 sm:col-span-2">
-              Your answers are private and used only to generate your
-              personalized reflection. We do not sell your data.
+              Your answers are private, reviewed only to prepare your result,
+              and never sold. You can request deletion at any time. Full
+              details in our Privacy Policy.
             </p>
           </form>
           )}

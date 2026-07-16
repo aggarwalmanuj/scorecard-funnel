@@ -36,19 +36,20 @@ Return ONLY this JSON shape, no prose, no code fences:
     { "n": 5, "title": "<3-5 word framing>", "quote": "<strongest 1-sentence line from beat5, max 200 chars>", "reflection": "<1 sentence reflection>" }
   ],
   "takeaways": [
-    { "title": "<max 6 words>", "body": "<1-2 sentences - a concrete move, specific to their situation>", "urgency": "now" | "week" | "month" },
-    { "title": "<max 6 words>", "body": "<1-2 sentences - a concrete move, specific to their situation>", "urgency": "now" | "week" | "month" },
-    { "title": "<max 6 words>", "body": "<1-2 sentences - a concrete move, specific to their situation>", "urgency": "now" | "week" | "month" },
-    { "title": "<max 6 words>", "body": "<1-2 sentences - a concrete move, specific to their situation>", "urgency": "now" | "week" | "month" }
+    { "title": "<max 6 words - their TRIGGER PROTOCOL>", "body": "<1-2 sentences: the earliest observable moment their loop begins, and the single immediate action to take inside that exact moment>", "urgency": "now" },
+    { "title": "<max 6 words - their REPLACEMENT MOVE>", "body": "<1-2 sentences: exactly what to do instead of the old response, small enough to complete, with a clear stopping point>", "urgency": "now" },
+    { "title": "<max 6 words - their ENVIRONMENT SETUP>", "body": "<1-2 sentences: one physical or structural change to make IN ADVANCE so the replacement move does not depend on memory or motivation>", "urgency": "week" },
+    { "title": "<max 6 words - their RECOVERY STEP>", "body": "<1-2 sentences: what to do after a missed day or a relapse into the old loop - the smallest re-entry action, framed so a miss never restarts the whole project>", "urgency": "month" }
   ],
-  "thirtyDay": "<1-2 sentences - what to look for / re-measure 30 days from now>"
+  "thirtyDay": "<2-3 sentences: three OBSERVABLE, countable signs the pattern is loosening over 30 days, drawn from the evidence the user themselves said would matter. Frame as things they can tally, not feelings to have.>"
 }
 
 Constraints:
 - Every quote/evidence MUST be drawn from the user's actual writing. If a beat is empty, derive it from the matching raw answer.
 - Do NOT use the user's name more than once across the entire report.
 - Each pillar narrative MUST reference at least one specific thing they said.
-- Takeaways must be concrete and tailored - never generic ("be intentional", "trust yourself" are banned).
+- The four takeaways are the OPERATIONAL CORE of the report - this document is sold as a "Personalized 30-Day Action Plan", so each one must pass this test: it tells the person what to DO (an action), not what to notice or reflect on. Exactly one takeaway may reference observing (the trigger protocol); the other three must be physical, executable actions.
+- Takeaways must be concrete and tailored - never generic ("be intentional", "trust yourself" are banned). Name the actual objects, places, moments, and words from their life.
 - Output language MUST be English only. Even if the user's raw answers or beats are written in another language, translate any quoted material into natural English and write every field in English. Never emit non-English text.
 - Output ONLY the JSON object. No preamble. No markdown.`
 

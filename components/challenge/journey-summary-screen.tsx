@@ -950,9 +950,9 @@ function ClarityScoreCard({
           >
             <div className="flex max-w-md flex-col items-center text-center">
               <p className="font-serif text-[15.5px] leading-[1.5] text-ink sm:text-[16.5px]">
-                Your score reveals something specific about
+                You can now see the loop.
                 <span className="block font-serif-italic text-foreground">
-                  what&apos;s quietly limiting your performance.
+                  You do not yet have the sequence for interrupting it.
                 </span>
               </p>
               <button
@@ -968,7 +968,7 @@ function ClarityScoreCard({
                     "0 14px 40px -16px rgba(var(--glow), 0.55)",
                 }}
               >
-                Unlock Your Full Action Plan
+                Turn My Belief Score Into a Plan
                 <span
                   aria-hidden
                   className="ml-1 inline-block transition-transform duration-500 group-hover:translate-x-1"

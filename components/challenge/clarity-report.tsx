@@ -414,7 +414,7 @@ export function ClarityReport({ preview = false }: { preview?: boolean } = {}) {
         <div className="toolbar-title">
           <span className="brand-mark brand-mark-sm" aria-hidden />
           <span style={{ fontFamily: "var(--font-serif)", fontWeight: 400, letterSpacing: "0.18em", textTransform: "uppercase", fontSize: 11, color: "var(--ink-soft)" }}>
-            Belief Score Action Plan
+            Personalized 30-Day Action Plan
           </span>
         </div>
         <button
@@ -692,11 +692,12 @@ function ReportPages({
         <section className="page">
           <ReportHeader name={name} today={today} rid={rid} compact />
 
-          <div className="eyebrow">Go deeper</div>
-          <h1 className="title small">Two ways to move what you just saw</h1>
+          <div className="eyebrow">When you are ready</div>
+          <h1 className="title small">Continue beyond the 30-day plan</h1>
           <p className="lede" style={{ marginBottom: 18 }}>
-            Your action plan names the pattern. These take it further - from
-            seeing it, to moving it, to making the shift part of how you operate.
+            Your Action Plan gives you a concrete way to interrupt this loop
+            over the next 30 days. These options add deeper narrative work,
+            practitioner support, and longer-term integration.
           </p>
 
           <div style={{ display: "grid", gap: 16 }}>
@@ -847,7 +848,7 @@ function ReportHeader({
           legible; html2canvas-pro renders CSS mask correctly into the PDF. */}
       <div className="logo">
         <span className="brand-mark brand-mark-sm" aria-hidden />
-        <span className="report-name">Belief Score Action Plan</span>
+        <span className="report-name">Personalized 30-Day Action Plan</span>
       </div>
       {compact ? (
         <div className="meta">
@@ -878,7 +879,7 @@ function ReportFooter({
   return (
     <div className="foot">
       <span>
-        Belief Score Action Plan · Page {page} of {of}
+        Personalized 30-Day Action Plan · Page {page} of {of}
       </span>
       <span>Confidential · prepared for {name || "you"}</span>
     </div>
