@@ -3,9 +3,9 @@
 import { useEffect, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { ArrowLeft, ArrowRight, User, Users, Check } from "lucide-react"
+import { ArrowLeft, ArrowRight } from "lucide-react"
 import { Input } from "@/components/ui/input"
-import { useChallenge, type Audience } from "@/context/challenge-context"
+import { useChallenge } from "@/context/challenge-context"
 import { submitSignup } from "@/lib/submit-to-google-sheet"
 import { prefetchPrompts } from "@/lib/client/prompt-cache"
 import { OrientationVideo } from "@/components/challenge/orientation-video"
@@ -16,42 +16,6 @@ import { ChallengeNavHome } from "@/components/challenge/challenge-nav-home"
 import { PrivacyNotice } from "@/components/privacy-notice"
 import { PhoneField } from "@/components/phone-field"
 import { dialFor } from "@/lib/country-codes"
-
-const cards: Array<{
-  id: Audience
-  badge: string
-  title: string
-  description: string
-  bullets: string[]
-  Icon: typeof User
-}> = [
-  {
-    id: "individual",
-    badge: "I · For you",
-    title: "Individual",
-    description:
-      "Unlock your personal performance. Find the specific pattern quietly limiting your results.",
-    bullets: [
-      "Personal Belief Score",
-      "Tuned to your private context",
-      "Ten quiet minutes",
-    ],
-    Icon: User,
-  },
-  {
-    id: "team",
-    badge: "II · For your org",
-    title: "Team & Organization",
-    description:
-      "Optimize your leadership team. Identify the structural constraint quietly limiting collective performance.",
-    bullets: [
-      "Team-level Belief Score",
-      "Cross-functional pattern lens",
-      "Built for senior leadership",
-    ],
-    Icon: Users,
-  },
-]
 
 // Proper format check (the old `.includes("@")` accepted "a@"). Mirrors the
 // offer-screen validator: something@something.tld with a 2+ char TLD.
@@ -77,7 +41,7 @@ function joinWithAnd(parts: string[]): string {
 
 export default function AudienceSelectionPage() {
   const router = useRouter()
-  const { state, setEmail, setFirstName, setAudience, setSerialNumber, reset, isHydrated } =
+  const { setEmail, setFirstName, setAudience, setSerialNumber, reset } =
     useChallenge()
 
   const [firstNameValue, setFirstNameValue] = useState("")
@@ -86,7 +50,6 @@ export default function AudienceSelectionPage() {
   // survive the step-1/step-2 toggle remounting the field. Combined below.
   const [phoneCode, setPhoneCode] = useState("US")
   const [phoneNum, setPhoneNum] = useState("")
-  const [selected, setSelected] = useState<Audience | null>(null)
   // Per-field "has the user interacted with this yet" - so validation hints
   // only appear after a field is touched (or on a submit attempt), never as
   // accusatory red text on a pristine form.
@@ -96,39 +59,21 @@ export default function AudienceSelectionPage() {
     phone: false,
   })
   const [isNavigating, setIsNavigating] = useState(false)
-  // Two-phase layout: 1 = contact (name/email/phone), 2 = path
-  // (individual/team). Contact comes FIRST so the Lead event fires for
-  // everyone who submits email/phone. The readiness-gate MCQ that used to sit
-  // between the two steps was removed — it was qualifying friction that cost
-  // signups more than it filtered.
-  const [step, setStep] = useState<1 | 2>(1)
-
-  // Lead fires once, when leaving the contact step. `leadFired` guards against
-  // a re-fire if the user navigates back to step 1 and forward again; the id is
-  // stashed so the later signup row can dedup against the same event.
+  // Single step: contact only. The individual/team path selection that used
+  // to follow was removed (2026-07-21, per the conversion-strategy docs):
+  // every artifact assumes a pure B2C path, and the extra decision was
+  // friction at the funnel's worst drop-off point. Everyone flows into the
+  // "individual" track; the /challenge/team/* routes remain valid for
+  // anyone already mid-funnel.
   const [leadFired, setLeadFired] = useState(false)
   const leadEventIdRef = useRef<string | null>(null)
-  // Step-1 background signup. The row is written the moment contact is
-  // captured (audience defaults to "individual"), so an abandon at the path
-  // step still leaves us the lead. Step 2's submit calls signup again with
-  // the real choice — the server reuses the incomplete row by email and
-  // patches name/audience/phone, so no duplicate row is created.
-  const signupInflightRef = useRef<Promise<number | null> | null>(null)
 
-  // Audience selection survives back-navigation; name + email do not. Each
-  // fresh visit starts blank so the user is never confronted with a stale
-  // value, and browser autofill is suppressed on the inputs below.
+  // Warm the question/beat copy cache immediately - the fetch overlaps
+  // typing + the signup round-trip, so question-1 renders with its copy
+  // already in hand instead of a skeleton.
   useEffect(() => {
-    if (!isHydrated) return
-    if (state.audience) setSelected(state.audience)
-  }, [isHydrated, state.audience])
-
-  // Warm the question/beat copy cache the moment a path is chosen (covers
-  // restored selections too) — the fetch overlaps the signup round-trip, so
-  // question-1 renders with its copy already in hand instead of a skeleton.
-  useEffect(() => {
-    if (selected) prefetchPrompts(selected)
-  }, [selected])
+    prefetchPrompts("individual")
+  }, [])
 
   // Pre-fill from query params if the landing form passed them in. The
   // landing reservation form posts `?first=…&email=…` here; reading those
@@ -166,91 +111,21 @@ export default function AudienceSelectionPage() {
       ? "Add your number with country code, e.g. +1 555 123 4567."
       : ""
 
-  const formInvalid = !trimmedName || !emailValid || !phoneValid || !selected
-
-  // What's still missing, for the gentle hint beside the disabled button so the
-  // greyed state is never a mystery.
+  // Contact-only gate: phone is optional, so it blocks only when
+  // present-but-invalid.
+  const formInvalid = !trimmedName || !emailValid || !phoneValid
   const missing: string[] = []
   if (!trimmedName) missing.push("your first name")
   if (!emailValid) missing.push("a valid email")
-  if (!selected) missing.push("a path below")
 
-  // Step 1 gates on contact details only (phone is optional, so it blocks only
-  // when present-but-invalid). Step 2 gates on a selected path.
-  const step1Invalid = !trimmedName || !emailValid || !phoneValid
-  const step1Missing: string[] = []
-  if (!trimmedName) step1Missing.push("your first name")
-  if (!emailValid) step1Missing.push("a valid email")
-
-  const handleContinue = async () => {
+  // The one conversion on this page: validate, fire the Lead once, write the
+  // signup row, and go straight to question 1 on the individual track.
+  const handleStart = async () => {
     if (isNavigating) return
     if (formInvalid) {
       // Surface the inline hints so the user can see exactly why nothing
-      // happened, instead of a dead grey button.
+      // happened, then bring the first unmet field into view and focus it.
       setTouched({ firstName: true, email: true, phone: true })
-      // The user may have scrolled down to the path cards, far from the
-      // inputs - so just revealing an off-screen inline error isn't enough.
-      // Bring the first unmet requirement into view and focus it.
-      if (typeof document !== "undefined") {
-        const targetId = !trimmedName
-          ? "firstName"
-          : !emailValid
-            ? "email"
-            : !phoneValid
-              ? "phone"
-              : !selected
-                ? "path-cards"
-                : null
-        const el = targetId ? document.getElementById(targetId) : null
-        el?.scrollIntoView({ behavior: "smooth", block: "center" })
-        if (el instanceof HTMLInputElement) el.focus({ preventScroll: true })
-      }
-      return
-    }
-
-    setIsNavigating(true)
-
-    reset()
-    setFirstName(trimmedName)
-    setEmail(trimmedEmail)
-    setAudience(selected)
-
-    // The Meta "Lead" already fired at contact capture (handleNext), for
-    // everyone who entered email/phone. Reuse that same event id here so the
-    // server-side Lead (Conversions API, fired from the signup route) dedups
-    // against the browser pixel — one conversion, surviving ad-blockers.
-    const leadEventId = leadEventIdRef.current ?? undefined
-
-    // Settle the step-1 background signup first so the submit below finds
-    // and patches that row — racing it could create a duplicate.
-    if (signupInflightRef.current) {
-      await signupInflightRef.current.catch(() => null)
-    }
-
-    // Authoritative submit: patches the step-1 row (same email) with the
-    // chosen audience and any contact edits made via the back button; the
-    // funnel stays resilient to a missing serialNumber.
-    const sno = await submitSignup(
-      trimmedName,
-      trimmedEmail,
-      selected!,
-      trimmedPhone || undefined,
-      leadEventId,
-    )
-    if (sno !== null) {
-      setSerialNumber(sno)
-      // Tie this tester to their PostHog session for /techadmin.
-      persistTelemetry({ serialNumber: sno, firstName: trimmedName, email: trimmedEmail })
-    }
-
-    router.push(`/challenge/${selected}/question-1`)
-  }
-
-  // Step 1 → Step 2. Validates contact details; reveals hints + focuses the
-  // first offender if incomplete (mirrors handleContinue's behaviour).
-  const handleNext = () => {
-    if (step1Invalid) {
-      setTouched((t) => ({ ...t, firstName: true, email: true, phone: true }))
       if (typeof document !== "undefined") {
         const targetId = !trimmedName
           ? "firstName"
@@ -264,14 +139,17 @@ export default function AudienceSelectionPage() {
       return
     }
 
-    // Persist contact into context now so it survives the gate/path steps.
+    setIsNavigating(true)
+
+    reset()
     setFirstName(trimmedName)
     setEmail(trimmedEmail)
+    setAudience("individual")
 
-    // Fire the Meta standard "Lead" once, right after contact capture — for
-    // EVERYONE who enters email/phone. The generated id is stashed so the
-    // later signup row can dedup its server-side Lead against this browser
-    // pixel.
+    // Fire the Meta standard "Lead" once. The generated id rides along on
+    // the signup row so the server-side Lead (Conversions API, fired from
+    // the signup route) dedups against this browser pixel - one conversion,
+    // surviving ad-blockers.
     if (!leadFired) {
       const leadEventId =
         typeof crypto !== "undefined" && "randomUUID" in crypto
@@ -282,33 +160,22 @@ export default function AudienceSelectionPage() {
       setLeadFired(true)
     }
 
-    // Persist the lead to the DB NOW, in the background — a visitor who
-    // abandons on the path step is still captured. Audience defaults to
-    // "individual"; if they do pick a path, handleContinue's signup patches
-    // the real choice onto this same row (email-based reuse server-side).
-    // Fired once: a re-entry to step 1 with edited contact syncs via the
-    // step-2 submit instead.
-    if (!signupInflightRef.current) {
-      signupInflightRef.current = submitSignup(
-        trimmedName,
-        trimmedEmail,
-        "individual",
-        trimmedPhone || undefined,
-        leadEventIdRef.current ?? undefined,
-      ).then((sno) => {
-        if (sno !== null) {
-          setSerialNumber(sno)
-          persistTelemetry({
-            serialNumber: sno,
-            firstName: trimmedName,
-            email: trimmedEmail,
-          })
-        }
-        return sno
-      })
+    // Awaited: the funnel stays resilient to a missing serialNumber, but a
+    // completed write means answers start attaching to the row immediately.
+    const sno = await submitSignup(
+      trimmedName,
+      trimmedEmail,
+      "individual",
+      trimmedPhone || undefined,
+      leadEventIdRef.current ?? undefined,
+    )
+    if (sno !== null) {
+      setSerialNumber(sno)
+      // Tie this tester to their PostHog session for /techadmin.
+      persistTelemetry({ serialNumber: sno, firstName: trimmedName, email: trimmedEmail })
     }
 
-    setStep(2)
+    router.push("/challenge/individual/question-1")
   }
 
   return (
@@ -326,9 +193,7 @@ export default function AudienceSelectionPage() {
 
       <main className="flex flex-1 items-start justify-center px-5 py-16 sm:py-20">
         <div className="w-full max-w-4xl">
-          {/* Adaptive header for both phases: 1 = contact, 2 = path. Contact
-              comes first so the Lead event fires the moment email/phone are
-              captured.
+          {/* Single step: contact only, then straight into question 1.
               The entrance animation runs straight from the SSR classes —
               the old isVisible-gate held the whole page at opacity-0 until
               hydration, which on a mid-range phone meant seconds of blank
@@ -336,53 +201,25 @@ export default function AudienceSelectionPage() {
           <div className="mb-10 text-center animate-fade-in-up">
             <p className="eyebrow mb-6 text-foreground/70">
               <span className="pulse-dot mr-3" aria-hidden />
-              {step === 1 ? "I · Your details" : "II · Your path"}
+              I · Your details
             </p>
             <h1 className="font-serif text-[2.4rem] leading-[1.04] text-ink sm:text-[3rem] md:text-[3.5rem]">
-              {step === 1 ? (
-                <>
-                  Tell us who is
-                  <span className="block font-serif-italic text-foreground">
-                    taking the assessment.
-                  </span>
-                </>
-              ) : (
-                <>
-                  Choose the lens
-                  <span className="block font-serif-italic text-foreground">
-                    for your score.
-                  </span>
-                </>
-              )}
+              A few details,
+              <span className="block font-serif-italic text-foreground">
+                then your five questions.
+              </span>
             </h1>
             <p className="mx-auto mt-6 max-w-xl text-[15px] leading-[1.8] text-foreground/85 sm:text-base">
-              {step === 1
-                ? "Your score and action plan are sent to the email you provide. A phone number is optional - only if you'd like a personal follow-up on WhatsApp."
-                : "The diagnostic adapts to the level of the system you are trying to unlock."}
+              Your score and action plan are sent to the email you provide. A
+              phone number is optional - only if you&apos;d like a personal
+              follow-up on WhatsApp.
             </p>
-
-            {/* Two-phase progress indicator */}
-            <div
-              className="mt-7 flex items-center justify-center gap-2"
-              aria-hidden
-            >
-              {([1, 2] as const).map((s) => (
-                <span
-                  key={String(s)}
-                  className={`h-1.5 rounded-full transition-all duration-500 ${
-                    step === s ? "w-8 bg-signal" : "w-4 bg-foreground/25"
-                  }`}
-                />
-              ))}
-            </div>
           </div>
 
-          {/* Step 1 - contact: name + email + phone */}
-          {step === 1 && (
           <form
             onSubmit={(e) => {
               e.preventDefault()
-              handleNext()
+              void handleStart()
             }}
             className="mx-auto mb-10 grid max-w-2xl grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 animate-fade-in-up delay-100"
           >
@@ -490,160 +327,58 @@ export default function AudienceSelectionPage() {
               details in our Privacy Policy.
             </p>
           </form>
-          )}
 
-          {/* Step 2 - path: orientation video (optional, non-blocking)
-              above two editorial cards */}
-          {step === 2 && (
-          <div id="path-cards" className="mx-auto max-w-3xl scroll-mt-24">
-            <OrientationVideo />
-            <div className="grid gap-4 sm:grid-cols-2 sm:gap-5">
-              {cards.map((card, idx) => {
-                const isActive = selected === card.id
-                const Icon = card.Icon
-                return (
-                  <button
-                    key={card.id}
-                    type="button"
-                    onClick={() => setSelected(card.id)}
-                    aria-pressed={isActive}
-                    className={`group relative rounded-md p-7 text-left transition-all duration-500 sm:p-8 ${
-                      isActive
-                        ? "border border-ink bg-card -translate-y-0.5 shadow-[0_18px_40px_-28px_rgba(var(--shadow-ink),0.45)]"
-                        : "s-card hover:-translate-y-0.5"
-                    } animate-fade-in-up`}
-                    style={{ animationDelay: `${200 + idx * 80}ms` }}
-                  >
-                    {isActive && (
-                      <span className="absolute right-5 top-5 inline-flex h-7 w-7 items-center justify-center rounded-full bg-ink text-background">
-                        <Check className="h-3.5 w-3.5" strokeWidth={2} />
-                      </span>
-                    )}
-
-                    <span
-                      className={`mb-6 inline-flex h-12 w-12 items-center justify-center rounded-full transition-all duration-500 ${
-                        isActive
-                          ? "bg-ink text-background"
-                          : "bg-secondary text-ink group-hover:bg-ink group-hover:text-background"
-                      }`}
-                    >
-                      <Icon className="h-5 w-5" strokeWidth={1.5} />
-                    </span>
-
-                    <p className="eyebrow mb-3 text-foreground/70">
-                      {card.badge}
-                    </p>
-                    <h2 className="font-serif text-[24px] leading-tight text-ink sm:text-[28px]">
-                      {card.title}
-                    </h2>
-                    <p className="mt-3 text-[15px] leading-[1.75] text-foreground/85">
-                      {card.description}
-                    </p>
-
-                    <ul className="mt-5 space-y-2.5">
-                      {card.bullets.map((b) => (
-                        <li
-                          key={b}
-                          className="flex items-baseline gap-3 text-[14px] text-foreground/80"
-                        >
-                          <span
-                            className={`h-px w-4 shrink-0 transition-colors duration-300 ${
-                              isActive ? "bg-ink" : "bg-foreground/40 group-hover:bg-ink"
-                            }`}
-                            aria-hidden
-                          />
-                          {b}
-                        </li>
-                      ))}
-                    </ul>
-                  </button>
-                )
-              })}
-            </div>
-          </div>
-          )}
+          {/* Orientation video - optional and non-blocking, kept from the
+              old path step so the founder's one-minute framing stays in the
+              funnel. Below the form: it never pushes the inputs or the CTA
+              out of the first screens. */}
+          <OrientationVideo />
 
           {/* Gentle, neutral hint that explains the greyed button - updates live
               so "why is the button dim?" is never a mystery. Per-field red
               messages handle format errors. */}
-          {step === 1 && step1Invalid && (
+          {formInvalid && (
             <p
               aria-live="polite"
               className="mt-7 text-center text-[13px] leading-[1.7] text-foreground/55"
             >
-              To continue, add {joinWithAnd(step1Missing)}.
-            </p>
-          )}
-          {step === 2 && !selected && (
-            <p
-              aria-live="polite"
-              className="mt-7 text-center text-[13px] leading-[1.7] text-foreground/55"
-            >
-              Pick a path to get your score.
+              To continue, add {joinWithAnd(missing)}.
             </p>
           )}
 
           <div className="mt-10 flex flex-col items-center justify-between gap-5 animate-fade-in-up delay-400 sm:flex-row">
-            {step === 1 ? (
-              <Link
-                href="/"
-                className="inline-flex items-center gap-1.5 text-[12px] uppercase tracking-[0.22em] text-foreground/65 transition-colors hover:text-ink"
-              >
-                <ArrowLeft className="h-3.5 w-3.5" strokeWidth={1.5} />
-                Back to home
-              </Link>
-            ) : (
-              <button
-                type="button"
-                onClick={() => setStep(1)}
-                className="inline-flex items-center gap-1.5 text-[12px] uppercase tracking-[0.22em] text-foreground/65 transition-colors hover:text-ink"
-              >
-                <ArrowLeft className="h-3.5 w-3.5" strokeWidth={1.5} />
-                Back
-              </button>
-            )}
+            <Link
+              href="/"
+              className="inline-flex items-center gap-1.5 text-[12px] uppercase tracking-[0.22em] text-foreground/65 transition-colors hover:text-ink"
+            >
+              <ArrowLeft className="h-3.5 w-3.5" strokeWidth={1.5} />
+              Back to home
+            </Link>
 
             {/* Not disabled on an incomplete form: clicking while invalid
-                reveals the per-field hints (handleNext / handleContinue) so the
-                user always learns what's missing. Only disabled mid-submit. */}
-            {step === 1 ? (
-              <button
-                type="button"
-                onClick={handleNext}
-                aria-disabled={step1Invalid}
-                className={`s-btn group min-w-44 justify-center ${
-                  step1Invalid ? "opacity-60" : ""
-                }`}
-              >
-                Next
-                <ArrowRight
-                  className="h-3.5 w-3.5 transition-transform duration-500 group-hover:translate-x-1"
-                  strokeWidth={1.6}
-                />
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={handleContinue}
-                disabled={isNavigating}
-                aria-disabled={!selected || isNavigating}
-                className={`s-btn group min-w-44 justify-center ${
-                  !selected ? "opacity-60" : ""
-                }`}
-              >
-                {isNavigating ? (
-                  <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border border-current border-t-transparent" />
-                ) : (
-                  <>
-                    Get your free score
-                    <ArrowRight
-                      className="h-3.5 w-3.5 transition-transform duration-500 group-hover:translate-x-1"
-                      strokeWidth={1.6}
-                    />
-                  </>
-                )}
-              </button>
-            )}
+                reveals the per-field hints (handleStart) so the user always
+                learns what's missing. Only disabled mid-submit. */}
+            <button
+              type="button"
+              onClick={() => void handleStart()}
+              disabled={isNavigating}
+              aria-disabled={formInvalid || isNavigating}
+              className={`s-btn group min-w-44 justify-center ${
+                formInvalid ? "opacity-60" : ""
+              }`}
+            >
+              {isNavigating ? (
+                <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border border-current border-t-transparent" />
+              ) : (
+                <>
+                  Get your free score
+                  <ArrowRight
+                    className="h-3.5 w-3.5 transition-transform duration-500 group-hover:translate-x-1"
+                    strokeWidth={1.6}
+                  />
+                </>
+              )}
+            </button>
           </div>
 
           <PrivacyNotice className="mx-auto mt-8 max-w-2xl justify-center text-center" />

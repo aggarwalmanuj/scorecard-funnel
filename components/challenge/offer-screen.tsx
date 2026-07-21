@@ -7,6 +7,7 @@ import { useChallenge, type Audience } from "@/context/challenge-context"
 import { ChallengeNavHome } from "@/components/challenge/challenge-nav-home"
 import { ChallengeMenuButton } from "@/components/challenge/challenge-funnel-header-actions"
 import { VideoTestimonialsWall } from "@/components/video-testimonials-wall"
+import posthog from "posthog-js"
 import { track } from "@/lib/fbpixel"
 import { STRIPE_PAYMENT_LINKS } from "@/lib/offers"
 
@@ -30,30 +31,32 @@ import { STRIPE_PAYMENT_LINKS } from "@/lib/offers"
 
 const PRICE = 47
 
-// What the plan contains - matched 1:1 to the report artifact's sections.
+// What the plan contains - matched 1:1 to the artifact's sections AND to the
+// summary's spoken deliverables (consistency contract: if wording changes
+// here, the summary prompt's Movement 3 must change in the same release).
 const DELIVERABLES = [
   {
-    title: "Your pattern loop, named",
+    title: "Your pattern map",
     body: "The repeated moment in plain language, with the earliest point to catch it before it takes over.",
   },
   {
-    title: "Four concrete moves",
-    body: "What to do when the trigger appears, what to change around you in advance, and how to return when a day slips.",
+    title: "First moves, anchored to your life",
+    body: "What to do when the trigger appears, built around a person, place, or object already in your week - when, the action, and what done looks like.",
   },
   {
-    title: "Your 30-day evidence check",
-    body: "The observable signs the pattern is loosening, drawn from what you said would matter - so you can tell whether it is working.",
+    title: "Your Evidence Log",
+    body: "Not affirmations - evidence. A log for each time you catch the moment, with the first entry already filled in from your own answers.",
   },
   {
-    title: "Your words throughout",
-    body: "Built from the answers you just gave. Not a template, not generic time-management advice.",
+    title: "A 30-day rhythm, with a day-30 check-in",
+    body: "Week by week, including what to do when a day slips. No streaks, no scores to retake - your own evidence, checked at day 30.",
   },
 ] as const
 
 const OBJECTIONS = [
   {
     q: "What if the result misunderstood me?",
-    a: "The plan is built from your answers and should be treated as a personalized hypothesis. If it clearly fails to reflect the pattern you described, contact us within seven days and we will regenerate it or refund the purchase.",
+    a: "The plan is built from your answers and should be treated as a personalized hypothesis. If it does not feel genuinely yours, one email within 30 days gets it rebuilt or refunded - no questions, no exit interview.",
   },
   {
     q: "Is this therapy or a diagnosis?",
@@ -69,9 +72,23 @@ const OBJECTIONS = [
   },
 ] as const
 
+/** First sentence of the user's Q1 answer, tightened for display as their
+ *  "quoted moment". Empty string when the answer is too short to quote. */
+function extractQuotedMoment(q1: string): string {
+  const text = q1.trim().replace(/\s+/g, " ")
+  if (text.length < 20) return ""
+  const firstSentence = text.split(/(?<=[.!?])\s/)[0] ?? text
+  const clipped =
+    firstSentence.length > 140
+      ? `${firstSentence.slice(0, 137).replace(/[,;\s]+\S*$/, "")}…`
+      : firstSentence
+  return clipped.replace(/[.]+$/, "")
+}
+
 export function OfferScreen({ audience }: { audience: Audience }) {
   const { state } = useChallenge()
   const [isProcessing, setIsProcessing] = useState(false)
+  const quotedMoment = extractQuotedMoment(state.responses.question1 ?? "")
 
   // Payment handoff to the Stripe Payment Link (single source of truth in
   // lib/offers.ts). Stripe collects payment + email, then redirects to the
@@ -83,6 +100,11 @@ export function OfferScreen({ audience }: { audience: Audience }) {
       currency: "USD",
       content_name: "unfair-advantage-diagnostic",
     })
+    try {
+      posthog.capture("checkout_start", { price: PRICE })
+    } catch {
+      /* posthog not initialized (dev without token) */
+    }
     const link = STRIPE_PAYMENT_LINKS.diagnostic
     if (!link) {
       console.error('[stripe] no payment link configured for tier "diagnostic"')
@@ -114,7 +136,7 @@ export function OfferScreen({ audience }: { audience: Audience }) {
         boxShadow: "0 14px 40px -16px rgba(var(--glow), 0.55)",
       }}
     >
-      {isProcessing ? "Opening secure checkout…" : `Build My Personalized 30-Day Action Plan - $${PRICE}`}
+      {isProcessing ? "Opening secure checkout…" : "Get My Personalized Action Plan"}
       {!isProcessing && (
         <ArrowRight
           className="h-3.5 w-3.5 transition-transform duration-500 group-hover:translate-x-1"
@@ -161,6 +183,17 @@ export function OfferScreen({ audience }: { audience: Audience }) {
               Now turn it into a plan for the moment it returns.
             </span>
           </h1>
+
+          {/* Their own words, reflected - the moment they named in Q1.
+              Grounds the page in their session instead of generic promise. */}
+          {quotedMoment && (
+            <blockquote className="mb-5 max-w-xl border-l border-foreground/40 pl-5 font-serif-italic text-[16px] leading-[1.6] text-foreground/80 sm:text-[17px]">
+              &ldquo;{quotedMoment}&rdquo;
+              <span className="mt-1 block text-[11px] font-sans not-italic uppercase tracking-[0.2em] text-foreground/50">
+                What you told us
+              </span>
+            </blockquote>
+          )}
 
           {/* 2. The gap */}
           <p className="max-w-xl text-[15.5px] leading-[1.8] text-foreground/80 sm:text-[16.5px]">
@@ -227,15 +260,18 @@ export function OfferScreen({ audience }: { audience: Audience }) {
 
           {/* Personalization proof - honestly labeled locked fields */}
           <div className="mt-9 rounded-md border border-border bg-background/60 p-5 sm:p-6">
-            <p className="eyebrow mb-4 text-foreground/60">
-              Generated after purchase, from your completed Belief Score
+            <p className="eyebrow mb-1 text-foreground/60">
+              Six pages, yours to keep
+            </p>
+            <p className="mb-4 text-[13px] leading-[1.6] text-foreground/60">
+              Generated after purchase, from your completed Belief Score.
             </p>
             <ul className="space-y-2.5">
               {[
-                "Your earliest intervention point",
-                "Your replacement moves, in order",
-                "Your environment setup",
-                "Your 30-day evidence tracker",
+                "Your pattern loop and earliest intervention point",
+                "Your first moves, in order",
+                "Your Evidence Log, first entry filled in",
+                "Your 30-day rhythm and day-30 check-in",
               ].map((row) => (
                 <li
                   key={row}
@@ -256,15 +292,23 @@ export function OfferScreen({ audience }: { audience: Audience }) {
             inside it, and the evidence you said would matter.
           </p>
 
+          {/* One credibility sentence (credential role only - no ladder,
+              no logos on this page) */}
+          <p className="mt-6 text-[13.5px] leading-[1.7] text-foreground/65">
+            This comes from AI Merge, a peer-reviewed methodology published
+            in the Mensa Research Journal.
+          </p>
+
           {/* Price + CTA */}
-          <div className="mt-9">
+          <div className="mt-7">
             {ctaButton}
             <p className="mt-4 text-[13px] leading-relaxed text-foreground/60">
-              One-time payment. Built from the answers you just gave.
+              ${PRICE}, one time. Not a subscription. Built from the answers
+              you just gave.
             </p>
             <p className="mt-4 flex items-center gap-2 text-[11px] uppercase tracking-[0.22em] text-foreground/60">
               <Shield className="h-3 w-3" strokeWidth={1.5} />
-              Secure checkout · Seven-day regenerate-or-refund policy
+              Secure checkout · 30-day rebuild-or-refund, one email
             </p>
           </div>
         </div>
@@ -368,6 +412,11 @@ export function OfferScreen({ audience }: { audience: Audience }) {
       <footer className="border-t border-border bg-background px-5 py-10 sm:px-8">
         <div className="mx-auto max-w-2xl text-center">
           <p className="text-[12px] leading-[1.7] text-foreground/55">
+            Your answers are used to build your plan and nothing else. They
+            are not sold, and they are not used to build anyone else&apos;s
+            plan.
+          </p>
+          <p className="mt-3 text-[12px] leading-[1.7] text-foreground/55">
             The Belief Score and AI Merge are tools for self-reflection. They
             are not medical, psychological, or clinical treatment and are not
             a substitute for professional care.

@@ -172,6 +172,35 @@ const reportSchema = z.object({
     .min(2)
     .max(6),
   thirtyDay: z.string().max(600),
+  // Six-page Action Plan extension. Optional: prompts predating the
+  // expansion (and admin overrides not yet updated) must keep validating.
+  evidenceLog: z
+    .object({
+      seeded: z.object({
+        situation: z.string().max(400),
+        oldStory: z.string().max(400),
+        whatIDid: z.string().max(400),
+        whatHappened: z.string().max(400),
+      }),
+    })
+    .optional(),
+  rhythm: z.array(z.string().max(400)).min(1).max(4).optional(),
+  openingPassage: z.string().max(2000).optional(),
+  companions: z
+    .object({
+      allyNote: z.string().max(1500),
+      pocketLine: z.string().max(300),
+      patternVocabulary: z
+        .array(
+          z.object({
+            phrase: z.string().max(300),
+            meaning: z.string().max(400),
+          })
+        )
+        .min(1)
+        .max(5),
+    })
+    .optional(),
 })
 
 function applyReportUserTemplate(

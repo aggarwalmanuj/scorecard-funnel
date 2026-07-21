@@ -147,7 +147,42 @@ export const SAMPLE_REPORT: ApiResponse = {
       },
     ],
     thirtyDay:
-      "In 30 days, re-measure three things: whether the product line decision has been made, whether new initiatives have dropped, and whether your mornings feel less tight. If revenue is still flat but your priorities are cleaner and your chest is quieter, you are finally removing the real drag.",
+      "In 30 days, check three countable things: whether the product line decision has been made, how many new initiatives you started (target: zero unless tied to it), and how many mornings began with the decision work instead of email. If priorities are cleaner and your chest is quieter, you are removing the real drag.",
+    evidenceLog: {
+      seeded: {
+        situation: "Sunday night, opening the laptop to plan the week",
+        oldStory: "If revenue is flat, I have to do more of everything",
+        whatIDid: "Wrote the product line question at the top, closed the plan",
+        whatHappened: "Monday started on the decision, not the backlog",
+      },
+    },
+    rhythm: [
+      "Run the trigger protocol: each time the urge to start something new appears, note it and return to the product line question. Count the catches.",
+      "Expect the dip. Midweek the flat-revenue pressure will argue for motion again. Use the recovery step: one bounded work block, nothing new.",
+      "Read your Evidence Log back. Look for one pattern: what was true on the days the decision work actually happened?",
+      "Check in with yourself against the three signs above. No score to retake, just your own evidence, read honestly.",
+    ],
+    openingPassage:
+      "I built this company through recessions and pivots that would have ended most businesses. I know how to survive. What I am looking at now is different. The revenue is flat, and my first instinct is to move faster, to add one more initiative, to be everywhere at once. But the drag is not effort. It has never been effort. The question I keep stepping around is the product line. I already know enough to decide. This month I am not adding anything new. I am sitting with the one decision that changes the shape of everything else, and I am letting the noise be noise. Survival taught me to keep moving. This is me learning the other skill, the one where I stop, choose, and let the choice do the work that motion could not.",
+    companions: {
+      allyNote:
+        "I want to tell you what I am working on this month, because you will see it before I do. When revenue gets tight, I start adding projects instead of deciding between them. It looks like energy. It is actually avoidance. For the next thirty days I am holding one question: the product line. If you see me spinning up something new, you can just ask me one thing: does this serve the decision? That is the whole favor. Nothing else changes.",
+      pocketLine: "Motion is not the same as a decision.",
+      patternVocabulary: [
+        {
+          phrase: "revenue is flat",
+          meaning: "The trigger. What usually follows is a new initiative instead of the pending decision.",
+        },
+        {
+          phrase: "I just need to push harder",
+          meaning: "The old story arriving. Effort was never the missing piece; the decision is.",
+        },
+        {
+          phrase: "once things settle down",
+          meaning: "The deferral signal. Things settle after the decision, not before it.",
+        },
+      ],
+    },
   },
   scoreSource: "llm",
 }

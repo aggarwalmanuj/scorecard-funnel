@@ -968,7 +968,7 @@ function ClarityScoreCard({
                     "0 14px 40px -16px rgba(var(--glow), 0.55)",
                 }}
               >
-                Turn My Belief Score Into a Plan
+                Get My Personalized Action Plan
                 <span
                   aria-hidden
                   className="ml-1 inline-block transition-transform duration-500 group-hover:translate-x-1"

@@ -31,6 +31,35 @@ export type ReportData = {
     urgency: "now" | "week" | "month"
   }[]
   thirtyDay: string
+  // ── Six-page Action Plan extension (all optional so reports generated
+  //    before the expansion still validate and render at 4/5 pages) ──
+  /** One seeded Evidence Log example row drawn from their answers. */
+  evidenceLog?: {
+    seeded: {
+      situation: string
+      oldStory: string
+      whatIDid: string
+      whatHappened: string
+    }
+  }
+  /** WK1-4 rhythm lines: what each week of the 30 days is for. */
+  rhythm?: string[]
+  /** ~150-word first-person passage from their transcript, meant to be
+   *  read aloud once, slowly. The voice-modality preview. */
+  openingPassage?: string
+  /** Unannounced companions - the over-deliver layer. */
+  companions?: {
+    allyNote: string
+    pocketLine: string
+    patternVocabulary: { phrase: string; meaning: string }[]
+  }
+}
+
+/** LLMs often wrap quote fields in their own quotation marks even though the
+ *  renderer adds typographic quotes - producing ""doubled" quotes" in print.
+ *  Strip one layer of wrapping quotes (straight or curly) before display. */
+function stripWrappingQuotes(s: string): string {
+  return s.trim().replace(/^["“‘']+/, "").replace(/["”’']+$/, "")
 }
 
 export type ApiResponse = {
@@ -537,7 +566,17 @@ function ReportPages({
     return map
   }, [clarity])
 
-  const totalPages = showOffers ? 5 : 4
+  // Page numbering is dynamic: the Action Plan extension pages render only
+  // when their data exists, so legacy reports keep their original count.
+  const hasLogPage = !!(report.evidenceLog || (report.rhythm?.length ?? 0) > 0)
+  const hasPassagePage = !!report.openingPassage?.trim()
+  const hasCompanionsPage = !!report.companions
+  let nextPage = 4
+  const logPageNum = hasLogPage ? ++nextPage : 0
+  const passagePageNum = hasPassagePage ? ++nextPage : 0
+  const companionsPageNum = hasCompanionsPage ? ++nextPage : 0
+  const offersPageNum = showOffers ? ++nextPage : 0
+  const totalPages = nextPage
 
   return (
     <>
@@ -643,7 +682,7 @@ function ReportPages({
                 <div className="n">{b.n}</div>
                 <div>
                   <h4>{b.title}</h4>
-                  <blockquote>{b.quote}</blockquote>
+                  <blockquote>{stripWrappingQuotes(b.quote)}</blockquote>
                   <p>{b.reflection}</p>
                 </div>
               </div>
@@ -683,6 +722,249 @@ function ReportPages({
 
         <ReportFooter page={4} of={totalPages} name={name} />
       </section>
+
+      {/* Evidence Log + the 30-day rhythm. Not affirmations - evidence:
+          a table they fill in when the pattern fires, plus what each week
+          of the 30 days is for. No unlocks, no streaks - returns count. */}
+      {hasLogPage && (
+        <section className="page">
+          <ReportHeader name={name} today={today} rid={rid} compact />
+
+          <div className="eyebrow">Your Evidence Log</div>
+          <h1 className="title small">Not affirmations. Evidence.</h1>
+          <p className="lede" style={{ marginBottom: 14 }}>
+            Each time you catch the moment and run a move, log it here. The
+            first row is filled in from your own answers, as an example of
+            the level of detail that works.
+          </p>
+
+          {report.evidenceLog && (
+            <table
+              style={{
+                width: "100%",
+                borderCollapse: "collapse",
+                fontSize: 12.5,
+                marginBottom: 18,
+              }}
+            >
+              <thead>
+                <tr>
+                  {["The situation", "The old story", "What I did", "What happened"].map(
+                    (h) => (
+                      <th
+                        key={h}
+                        style={{
+                          textAlign: "left",
+                          padding: "8px 10px",
+                          borderBottom: "2px solid var(--brand-dark)",
+                          fontFamily: "var(--font-serif)",
+                          fontWeight: 600,
+                          color: "var(--brand-dark)",
+                        }}
+                      >
+                        {h}
+                      </th>
+                    ),
+                  )}
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  {[
+                    report.evidenceLog.seeded.situation,
+                    report.evidenceLog.seeded.oldStory,
+                    report.evidenceLog.seeded.whatIDid,
+                    report.evidenceLog.seeded.whatHappened,
+                  ].map((cell, i) => (
+                    <td
+                      key={i}
+                      style={{
+                        padding: "8px 10px",
+                        borderBottom: "1px solid rgba(15,44,59,0.18)",
+                        color: "var(--ink-soft)",
+                        fontStyle: "italic",
+                        verticalAlign: "top",
+                      }}
+                    >
+                      {cell}
+                    </td>
+                  ))}
+                </tr>
+                {[0, 1, 2].map((r) => (
+                  <tr key={r}>
+                    {[0, 1, 2, 3].map((c) => (
+                      <td
+                        key={c}
+                        style={{
+                          padding: "16px 10px",
+                          borderBottom: "1px solid rgba(15,44,59,0.18)",
+                        }}
+                      >
+                        &nbsp;
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+
+          {(report.rhythm?.length ?? 0) > 0 && (
+            <>
+              <h2 style={{ marginTop: 8 }}>The 30 days, week by week</h2>
+              <div className="theme-stack">
+                {report.rhythm!.slice(0, 4).map((line, i) => (
+                  <div key={i} className="theme">
+                    <div className="theme-num">WK{i + 1}</div>
+                    <div>
+                      <p>{line}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+
+          <p
+            style={{
+              marginTop: 16,
+              fontSize: 12.5,
+              color: "var(--ink-soft)",
+              fontStyle: "italic",
+            }}
+          >
+            A rough day does not restart anything. Returns count. Streaks do
+            not exist here. At day 30, check in with yourself against the
+            evidence above.
+          </p>
+
+          <ReportFooter page={logPageNum} of={totalPages} name={name} />
+        </section>
+      )}
+
+      {/* Opening Passage - a first-person page assembled from their own
+          transcript, meant to be read aloud once, slowly. The quiet preview
+          of the voice modality the deeper work uses. */}
+      {hasPassagePage && (
+        <section className="page">
+          <ReportHeader name={name} today={today} rid={rid} compact />
+
+          <div className="eyebrow">Your Opening Passage</div>
+          <h1 className="title small">In your own words</h1>
+          <p className="lede" style={{ marginBottom: 20 }}>
+            This page is different. It is not advice. It was assembled from
+            the language you used in your answers. Read it out loud, once,
+            slowly. Notice what it is like to hear it in your own voice.
+          </p>
+
+          <blockquote
+            style={{
+              fontFamily: "var(--font-serif)",
+              fontSize: 17,
+              lineHeight: 1.9,
+              color: "var(--brand-dark)",
+              borderLeft: "2px solid var(--brand-dark)",
+              margin: "0 0 20px",
+              padding: "6px 0 6px 22px",
+              whiteSpace: "pre-wrap",
+            }}
+          >
+            {report.openingPassage}
+          </blockquote>
+
+          <ReportFooter page={passagePageNum} of={totalPages} name={name} />
+        </section>
+      )}
+
+      {/* Companions - the unannounced over-deliver layer: a note for their
+          anchor person, a pocket line for the exact moment, and their own
+          pattern vocabulary decoded. */}
+      {hasCompanionsPage && report.companions && (
+        <section className="page">
+          <ReportHeader name={name} today={today} rid={rid} compact />
+
+          <div className="eyebrow">Three small extras</div>
+          <h1 className="title small">Not listed on the box</h1>
+
+          <h2 style={{ marginTop: 14 }}>A note you can share</h2>
+          <p className="lede" style={{ marginBottom: 8 }}>
+            If someone close to you plays a part in this pattern, this note
+            is written for them. Share it as it is, or not at all.
+          </p>
+          <p
+            style={{
+              fontStyle: "italic",
+              color: "var(--ink-soft)",
+              border: "1px solid rgba(15,44,59,0.18)",
+              borderRadius: 6,
+              padding: "12px 16px",
+              whiteSpace: "pre-wrap",
+            }}
+          >
+            {report.companions.allyNote}
+          </p>
+
+          <h2 style={{ marginTop: 20 }}>Your pocket line</h2>
+          <p className="lede" style={{ marginBottom: 8 }}>
+            Ten seconds, for the exact moment. Save it where you will see it.
+          </p>
+          <p
+            style={{
+              fontFamily: "var(--font-serif)",
+              fontSize: 18,
+              color: "var(--brand-dark)",
+              padding: "10px 0",
+            }}
+          >
+            &ldquo;{stripWrappingQuotes(report.companions.pocketLine)}&rdquo;
+          </p>
+
+          {report.companions.patternVocabulary.length > 0 && (
+            <>
+              <h2 style={{ marginTop: 20 }}>Your pattern vocabulary</h2>
+              <p className="lede" style={{ marginBottom: 8 }}>
+                Phrases from your own answers, and what each one usually
+                signals when it shows up.
+              </p>
+              <table
+                style={{ width: "100%", borderCollapse: "collapse", fontSize: 12.5 }}
+              >
+                <tbody>
+                  {report.companions.patternVocabulary.map((row, i) => (
+                    <tr key={i}>
+                      <td
+                        style={{
+                          padding: "8px 10px 8px 0",
+                          borderBottom: "1px solid rgba(15,44,59,0.18)",
+                          fontFamily: "var(--font-serif)",
+                          fontStyle: "italic",
+                          color: "var(--brand-dark)",
+                          width: "42%",
+                          verticalAlign: "top",
+                        }}
+                      >
+                        &ldquo;{stripWrappingQuotes(row.phrase)}&rdquo;
+                      </td>
+                      <td
+                        style={{
+                          padding: "8px 0 8px 10px",
+                          borderBottom: "1px solid rgba(15,44,59,0.18)",
+                          color: "var(--ink-soft)",
+                          verticalAlign: "top",
+                        }}
+                      >
+                        {row.meaning}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </>
+          )}
+
+          <ReportFooter page={companionsPageNum} of={totalPages} name={name} />
+        </section>
+      )}
 
       {/* Page 5 (Diagnostic buyers only) - the two "go deeper" offers. Each
           card is an <a> tagged data-pdf-link so downloadReportPdf overlays a
@@ -821,7 +1103,7 @@ function ReportPages({
             })}
           </div>
 
-          <ReportFooter page={5} of={totalPages} name={name} />
+          <ReportFooter page={offersPageNum} of={totalPages} name={name} />
         </section>
       )}
     </>
@@ -983,7 +1265,7 @@ function PillarBlock({
       {evidence ? (
         <div className="pillar-evidence">
           <span className="ev-tag">In your words</span>
-          <span className="ev-quote">&ldquo;{evidence}&rdquo;</span>
+          <span className="ev-quote">&ldquo;{stripWrappingQuotes(evidence)}&rdquo;</span>
         </div>
       ) : null}
       <div className="pillar-focus">
