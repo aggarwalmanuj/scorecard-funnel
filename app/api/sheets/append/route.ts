@@ -3,6 +3,7 @@ import { z } from "zod"
 import { isCosmosConfigured, appendSignupRow, updateQuestionCell, updateFeedbackCell, updateBeatOutputCell, updateUserOutputs, updateUserTelemetry, recordPurchase } from "@/lib/server/cosmos-db"
 import { redactError } from "@/lib/security"
 import { sendLeadEvent } from "@/lib/server/meta-capi"
+import { normalizeVertical } from "@/lib/verticals"
 
 /** Read a single cookie value out of the raw Cookie header. */
 function readCookie(header: string | null, name: string): string | undefined {
@@ -29,7 +30,13 @@ const bodySchema = z.object({
   // Client-minted id (signup action) so the server Lead CAPI event dedups
   // against the browser Lead pixel that carries the same id.
   leadEventId: z.string().max(100).optional(),
-  audience: z.enum(["individual", "team"]).optional(),
+  // Stored as-is on the signup row after normalization; legacy ids map to
+  // "main" so reporting stays on one canonical vocabulary.
+  audience: z
+    .string()
+    .max(40)
+    .optional()
+    .transform((v) => (v ? (normalizeVertical(v) ?? undefined) : undefined)),
   serialNumber: z.number().int().positive().optional(),
   questionNumber: z.number().int().min(1).max(5).optional(),
   answer: z.string().max(50000).optional(),

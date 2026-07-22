@@ -1,0 +1,14 @@
+{
+  "exportedAt": "2026-07-22T00:00:00.000Z",
+  "version": 3,
+  "audience": "retargeting",
+  "_note": "Deliberately entry-page-only. Per the B2C Non-Conversion Recovery System doc: retargeted visitors re-enter the SAME product - never a retake, never a variant funnel, no urgency, no discount. Questions, beats, and all AI prompts inherit from main at runtime (empty keys = inherit). Recovery emails deep-link mid-funnel users to their saved step; this entry pack covers ad-driven re-entry landing on the funnel doorway. Import via scripts/seed-vertical-content.mjs (admin JSON import requires full configs; this file is intentionally partial).",
+  "entryContent": {
+    "eyebrow": "I · Welcome back",
+    "headline": "Pick up where you left off,",
+    "headlineAccent": "your five questions are waiting.",
+    "subcopy": "No deadline and no pressure - your Belief Score and action plan are free, take about 10 minutes, and are sent to the email you provide. If you started before, use the same email and your progress is honored. Coming back is the part that counts.",
+    "ctaLabel": "",
+    "showVideo": false
+  }
+}

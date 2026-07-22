@@ -96,7 +96,7 @@ export function isCosmosConfigured(): boolean {
    Users — paginated read (admin)
    ═══════════════════════════════════════════════ */
 
-export type Audience = "individual" | "team"
+export type Audience = import("@/lib/verticals").Vertical
 
 export type UserDocument = {
   id: string

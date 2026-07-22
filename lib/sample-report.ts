@@ -23,12 +23,11 @@ export const SAMPLE_REPORT: ApiResponse = {
       energyAlignment: 68,
     },
     band: "good",
-    bandLabel: "Good readiness",
-    bandMessage:
-      "Clear about the situation, with some gaps in direction or alignment still to close.",
+    bandLabel: "Strong foundation",
+    bandMessage: "Solid ground. Sharpen what compounds.",
     benchmarkMean: 48,
     comparisonLabel:
-      "Above average clarity readiness - one specific move unlocks significant movement.",
+      "Most people start near 48. You are at 62 today, which is your baseline to move from.",
     subscoreDetails: [
       { key: "directionClarity", label: "Direction Clarity", pillar: "Purpose", weight: 0.35, value: 61 },
       { key: "identityAlignment", label: "Identity Alignment", pillar: "Identity", weight: 0.25, value: 58 },
@@ -148,7 +147,23 @@ export const SAMPLE_REPORT: ApiResponse = {
     ],
     thirtyDay:
       "In 30 days, check three countable things: whether the product line decision has been made, how many new initiatives you started (target: zero unless tied to it), and how many mornings began with the decision work instead of email. If priorities are cleaner and your chest is quieter, you are removing the real drag.",
+    scoreFraming:
+      "Solid ground with one clear lever: the decision you already know how to make.",
+    startHere:
+      "Identity Alignment is your biggest lever: the decision feels heavy because it says who you are now, and everything else moves once it is made.",
+    firstMove: {
+      line: "Write the product line question at the top of Monday's page.",
+      instruction:
+        "Monday, before email: write the question at the top of the page, then work only on it for one bounded block. Done looks like one concrete step toward the decision, written down.",
+    },
+    dailyLine: "Motion is not the same as a decision.",
+    shareableLine:
+      "If you see me start something new this month, ask me if it serves the decision.",
+    lockScreenLine: "Does this serve the decision?",
     evidenceLog: {
+      instruction:
+        "Add a row each time the urge to start something new appears instead of the decision work.",
+      columns: ["Trigger moment", "Old sentence", "What I did", "Visible result"],
       seeded: {
         situation: "Sunday night, opening the laptop to plan the week",
         oldStory: "If revenue is flat, I have to do more of everything",

@@ -4,12 +4,19 @@ import { createContext, useContext, useState, useEffect, useCallback, useRef, ty
 import { clearSummaryAudio } from "@/lib/client/summary-audio-cache"
 import { clearBeatAudio } from "@/lib/client/beat-audio-cache"
 
+import { normalizeVertical, type Vertical } from "@/lib/verticals"
+
 const STORAGE_KEY = "ufa-challenge"
 
-export type Audience = "individual" | "team"
+/**
+ * The funnel track this session runs on. Historically "individual" | "team";
+ * now a vertical id from lib/verticals.ts. The name `Audience` is kept as the
+ * established term throughout the funnel code — it IS the vertical.
+ */
+export type Audience = Vertical
 
 export function isAudience(v: unknown): v is Audience {
-  return v === "individual" || v === "team"
+  return typeof v === "string" && normalizeVertical(v) === v
 }
 
 export interface ClarityScoreSnapshot {
@@ -127,7 +134,13 @@ function mergeSavedState(raw: unknown): ChallengeState {
     email: typeof p.email === "string" ? p.email : defaultState.email,
     firstName: typeof p.firstName === "string" ? p.firstName : defaultState.firstName,
     serialNumber: typeof p.serialNumber === "number" ? p.serialNumber : defaultState.serialNumber,
-    audience: isAudience(p.audience) ? p.audience : defaultState.audience,
+    // Normalize instead of validate: legacy saved states hold "individual"
+    // or "team", which map to "main" — a mid-funnel user at deploy time
+    // keeps their progress instead of being reset to the entry page.
+    audience:
+      typeof p.audience === "string"
+        ? normalizeVertical(p.audience)
+        : defaultState.audience,
     currentStep: typeof p.currentStep === "number" ? p.currentStep : defaultState.currentStep,
     isComplete: typeof p.isComplete === "boolean" ? p.isComplete : defaultState.isComplete,
     responses: {

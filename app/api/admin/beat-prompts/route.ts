@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server"
 import { isCosmosConfigured, readPrompts } from "@/lib/server/cosmos-db"
 import { corsHeaders } from "@/lib/server/admin-auth"
+import { resolvePromptValue } from "@/lib/server/challenge-prompts"
+import { normalizeVertical } from "@/lib/verticals"
 
 /** CORS preflight */
 export async function OPTIONS(request: Request) {
@@ -14,9 +16,9 @@ export const dynamic = "force-dynamic"
 export const revalidate = 0
 
 /**
- * GET /api/admin/beat-prompts?audience=individual|team
+ * GET /api/admin/beat-prompts?audience=<vertical>
  * Returns beat display data (label, title, subtitle, feedbackQuestion) for the
- * requested audience.
+ * requested vertical, inheriting from main per key when not overridden.
  */
 export async function GET(request: Request) {
   const headers: Record<string, string> = {
@@ -25,8 +27,7 @@ export async function GET(request: Request) {
   }
 
   const url = new URL(request.url)
-  const audienceParam = url.searchParams.get("audience")
-  const audience = audienceParam === "team" || audienceParam === "individual" ? audienceParam : null
+  const audience = normalizeVertical(url.searchParams.get("audience"))
 
   if (!audience) {
     return NextResponse.json(
@@ -42,10 +43,10 @@ export async function GET(request: Request) {
   try {
     const data = await readPrompts()
     const beats = Array.from({ length: 5 }, (_, i) => ({
-      label: data[`beat${i + 1}_label_${audience}`] || "",
-      title: data[`beat${i + 1}_title_${audience}`] || "",
-      subtitle: data[`beat${i + 1}_subtitle_${audience}`] || "",
-      feedbackQuestion: data[`beat${i + 1}_feedbackQuestion_${audience}`] || "",
+      label: resolvePromptValue(data, `beat${i + 1}_label`, audience) || "",
+      title: resolvePromptValue(data, `beat${i + 1}_title`, audience) || "",
+      subtitle: resolvePromptValue(data, `beat${i + 1}_subtitle`, audience) || "",
+      feedbackQuestion: resolvePromptValue(data, `beat${i + 1}_feedbackQuestion`, audience) || "",
     }))
     return NextResponse.json({ ok: true, beats }, { headers })
   } catch {

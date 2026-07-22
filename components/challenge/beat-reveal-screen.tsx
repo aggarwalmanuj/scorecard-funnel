@@ -210,19 +210,23 @@ export function BeatRevealScreen({
     }
   }, [router, nextRoute])
 
-  // Opportunistic autoplay once the typewriter finishes and the audio
-  // element is primed. Chrome typically allows it after page interaction;
+  // Opportunistic autoplay as soon as the reveal starts AND the audio
+  // buffer is primed - the voice reads along with the typewriter instead
+  // of after it. The old gate waited for isComplete, which meant several
+  // silent seconds on every first visit (the top audio complaint). On
+  // cached visits isRevealed is true from mount, so timing is unchanged
+  // there. Chrome typically allows the play() after page interaction;
   // Safari rejects with NotAllowedError, which the hook handles silently -
   // the Listen button remains visible as a manual fallback. Fires at most
   // once per beat (hasAutoplayedRef resets when beatContent changes).
   useEffect(() => {
-    if (!isComplete) return
+    if (!isRevealed) return
     if (!isAudioBufferReady) return
     if (hasAutoplayedRef.current) return
     if (isAudioPlaying) return
     hasAutoplayedRef.current = true
     audio.toggle()
-  }, [isComplete, isAudioBufferReady, isAudioPlaying, audio])
+  }, [isRevealed, isAudioBufferReady, isAudioPlaying, audio])
 
   // `async` is required - the body below awaits the save before
   // navigating so feedback rows don't get dropped on slow connections.

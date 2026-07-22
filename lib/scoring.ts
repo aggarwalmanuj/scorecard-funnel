@@ -255,58 +255,44 @@ function computeEnergyAlignment(q: Responses): number {
 
 // ---------- bands / display ----------
 
+// Leverage framing, not deficit framing (Funnel v2 build doc): the buyer
+// should read their number as room to move, never as a grade. Band ids are
+// kept stable (they drive accent colors); only thresholds + copy changed.
+// "deep-stuck" is intentionally no longer emitted.
 function bandFor(overall: number): {
   band: ClarityBand
   bandLabel: string
   bandMessage: string
 } {
-  if (overall >= 70)
+  if (overall >= 76)
     return {
       band: "high",
-      bandLabel: "High clarity readiness",
-      bandMessage:
-        "Direction and alignment are there - one specific move unlocks significant movement.",
+      bandLabel: "Dialed in",
+      bandMessage: "Operating well. Fine-tune and protect it.",
     }
-  if (overall >= 55)
+  if (overall >= 56)
     return {
       band: "good",
-      bandLabel: "Good readiness",
-      bandMessage:
-        "Clear about the situation, with some gaps in direction or alignment still to close.",
+      bandLabel: "Strong foundation",
+      bandMessage: "Solid ground. Sharpen what compounds.",
     }
-  if (overall >= 40)
+  if (overall >= 36)
     return {
       band: "moderate",
-      bandLabel: "Moderate readiness",
-      bandMessage:
-        "The weight is real, the direction is forming - this is the most common place to be.",
-    }
-  if (overall >= 25)
-    return {
-      band: "significant-gaps",
-      bandLabel: "Significant gaps",
-      bandMessage:
-        "Multiple questions are unresolved - clarity work is the highest leverage next step.",
+      bandLabel: "Clear openings",
+      bandMessage: "Real openings to work with.",
     }
   return {
-    band: "deep-stuck",
-    bandLabel: "Deep stuck",
-    bandMessage:
-      "Significant gaps across multiple dimensions. This is the right moment to look closely.",
+    band: "significant-gaps",
+    bandLabel: "High leverage",
+    bandMessage: "A lot of room to move. Start with your biggest lever below.",
   }
 }
 
+// Neutral, forward-facing comparison (Funnel v2 build doc): the number is a
+// baseline to move from, never a rank. No "below average", no deficit talk.
 function comparisonLabelFor(overall: number): string {
-  if (overall >= 70)
-    return "High clarity readiness - the question is extremely close to being named precisely enough to act on."
-  if (overall < 25)
-    return "Significant gaps across multiple dimensions. This is the right moment to look closely."
-  const delta = overall - BENCHMARK_MEAN
-  if (delta > 10)
-    return "Above average clarity readiness - one specific move unlocks significant movement."
-  if (Math.abs(delta) <= 10)
-    return "You are near the average for leaders carrying this kind of situation."
-  return "You are below average for leaders in your peer group. This is where the most leverage lives."
+  return `Most people start near ${BENCHMARK_MEAN}. You are at ${overall} today, which is your baseline to move from.`
 }
 
 // ---------- LLM output normalization ----------

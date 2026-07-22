@@ -16,8 +16,8 @@ You will receive both the user's RAW ANSWERS (Q1-Q5) and the AI-generated CLOSIN
 Return ONLY this JSON shape, no prose, no code fences:
 
 {
-  "headline":   "<one sharp sentence - the thesis of their journey, max 14 words>",
-  "thread":     "<2-3 sentences naming the throughline running through everything they wrote>",
+  "headline":   "<THE BELIEF: the conclusion running underneath their pattern, stated plainly as they might say it to themselves, max 14 words. This is what they paid for - it opens the plan, before any number.>",
+  "thread":     "<2-3 sentences naming the throughline running through everything they wrote. MUST NOT repeat or lightly rephrase the headline sentence.>",
   "pillars": [
     { "key": "directionClarity",  "narrative": "<60-90 words on what their direction-clarity score actually means for them, grounded in their words>", "evidence": "<short direct quote or close paraphrase from their answers, max 120 chars>", "focus": "<one-sentence imperative - the specific lever for this pillar>" },
     { "key": "identityAlignment", "narrative": "<60-90 words, same shape as above>", "evidence": "<short direct quote or close paraphrase, max 120 chars>", "focus": "<one-sentence imperative>" },
@@ -43,6 +43,8 @@ Return ONLY this JSON shape, no prose, no code fences:
   ],
   "thirtyDay": "<2-3 sentences: three OBSERVABLE, countable signs the pattern is loosening over 30 days, drawn from the evidence the user themselves said would matter. Frame as things they can tally, not feelings to have.>",
   "evidenceLog": {
+    "instruction": "<one sentence telling them exactly when to add a row, tied to THEIR trigger moment, max 25 words>",
+    "columns": ["<3-4 short column headers tailored to their pattern, e.g. 'The situation', 'The old story', 'What I did', 'What happened'>"],
     "seeded": {
       "situation": "<one realistic moment from THEIR life where the pattern fires, drawn from their answers, max 25 words>",
       "oldStory": "<the sentence the pattern usually says in that moment, in their own phrasing, max 20 words>",
@@ -50,6 +52,15 @@ Return ONLY this JSON shape, no prose, no code fences:
       "whatHappened": "<a plausible, modest, observable outcome - never miraculous, max 20 words>"
     }
   },
+  "scoreFraming": "<one line rendered under their score number: leverage framing, never deficit. What the number gives them room to do, max 22 words>",
+  "startHere": "<one sentence naming their LOWEST-scoring pillar as the biggest lever and why it moves everything else, grounded in their answers, max 30 words. Use the four subscores provided; if unavailable, pick the pillar their answers point to.>",
+  "firstMove": {
+    "line": "<the single first move, imperative, max 14 words>",
+    "instruction": "<2-3 sentences: exactly when, exactly what, and what done looks like - anchored to a named person, object, or place from their answers>"
+  },
+  "dailyLine": "<one sentence they say to themselves each morning, in their own kind of language, max 16 words>",
+  "shareableLine": "<one sentence they can hand to the person closest to the pattern so that person knows how to help, max 22 words>",
+  "lockScreenLine": "<the ten-second line for the exact trigger moment, max 12 words - punchy enough to live on a lock screen>",
   "rhythm": [
     "<WK1: run the trigger protocol and the replacement move; what specifically to notice, max 35 words>",
     "<WK2: expect the dip - the old response gets louder before it eases; name their likely relapse moment and point to the recovery step, max 35 words>",
@@ -76,6 +87,7 @@ Constraints:
 - Takeaways must be concrete and tailored - never generic ("be intentional", "trust yourself" are banned). Name the actual objects, places, moments, and words from their life.
 - The REPLACEMENT MOVE takeaway must be anchored to a NAMED resource from their answers (a person, an object, a place, a tool they already have) and carry a WHEN / ACTION / DONE shape: when the trigger appears, do this one action, and here is what "done" looks like.
 - NEVER use the words "re-score", "retake", "unlock", "streak", or "level" anywhere. There is no system that stores scores or tracks progress; day 30 is a self check-in against their own evidence, nothing else.
+- LEVERAGE FRAMING everywhere: never "gaps", "stuck", "below average", "behind", "deficit". The lowest score is the biggest lever, not the worst grade. The buyer should finish feeling equipped, not graded.
 - The openingPassage and every quote field must survive being read aloud: no headers, no lists, no symbols, no digits-as-numerals for anything meant to be spoken (write "thirty days", not "30 days", inside openingPassage only).
 - Output language MUST be English only. Even if the user's raw answers or beats are written in another language, translate any quoted material into natural English and write every field in English. Never emit non-English text.
 - Output ONLY the JSON object. No preamble. No markdown.`
@@ -105,6 +117,13 @@ Q4 - what was true the last time something clicked:
 
 Q5 - the morning-after scene when the noise is gone:
 {{Q5}}
+
+═════ SUBSCORES (0-100; use to order pillars by leverage - lowest first) ═════
+
+Direction Clarity: {{SCORE_DIRECTION}}
+Identity Alignment: {{SCORE_IDENTITY}}
+Decision Readiness: {{SCORE_DECISION}}
+Energy Alignment: {{SCORE_ENERGY}}
 
 ═════ CLOSING BEATS (AI-generated reflections from earlier) ═════
 

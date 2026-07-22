@@ -1,4 +1,5 @@
 import { redactError, sanitizeForPrompt } from "@/lib/security"
+import { DEFAULT_VERTICAL, normalizeVertical } from "@/lib/verticals"
 import { z } from "zod"
 import {
   getScoreSystemPrompt,
@@ -26,7 +27,12 @@ import { normalizeLlmScoreOutput } from "@/lib/scoring"
 
 const bodySchema = z.object({
   firstName: z.string().max(200).optional().default(""),
-  audience: z.enum(["individual", "team"]).optional().default("individual"),
+  // Any known vertical id or alias ("individual"/"team" from legacy
+  // clients normalize to "main"); unknown values fall back to main.
+  audience: z
+    .string()
+    .optional()
+    .transform((v) => normalizeVertical(v) ?? DEFAULT_VERTICAL),
   responses: z.object({
     question1: z.string().max(50000).optional().default(""),
     question2: z.string().max(50000).optional().default(""),

@@ -103,8 +103,20 @@ async function getActiveHeadlineIds(origin: string): Promise<string[]> {
   }
 }
 
+// Legacy audience segments → canonical vertical. Mid-funnel users and old
+// deep links from before the verticals migration (2026-07-22) land on the
+// same step under /challenge/main/*. Query strings are preserved.
+const LEGACY_AUDIENCE_RE = /^\/challenge\/(?:individual|team)(\/.*)?$/
+
 export async function middleware(request: NextRequest, event: NextFetchEvent) {
   const { pathname } = request.nextUrl
+
+  const legacyMatch = pathname.match(LEGACY_AUDIENCE_RE)
+  if (legacyMatch) {
+    const url = request.nextUrl.clone()
+    url.pathname = `/challenge/main${legacyMatch[1] ?? ""}`
+    return NextResponse.redirect(url, 308)
+  }
 
   if (pathname.startsWith("/api/")) {
     const ip =

@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server"
 import { isCosmosConfigured, readPrompts } from "@/lib/server/cosmos-db"
 import { corsHeaders } from "@/lib/server/admin-auth"
+import { resolvePromptValue } from "@/lib/server/challenge-prompts"
+import { normalizeVertical } from "@/lib/verticals"
 
 /** CORS preflight */
 export async function OPTIONS(request: Request) {
@@ -15,12 +17,11 @@ export const dynamic = "force-dynamic"
 export const revalidate = 0
 
 /**
- * GET /api/admin/question-prompts?audience=individual|team
+ * GET /api/admin/question-prompts?audience=<vertical>
  *
- * Returns the question + beat-display data for the requested audience.
- * No fallback to the other audience - when keys are missing the response
- * is `{ ok: true, questions: null, beats: null }` so the UI can show an
- * empty state.
+ * Returns the question + beat-display data for the requested vertical.
+ * Each key inherits from main when the vertical hasn't overridden it
+ * (resolvePromptValue), so an unseeded vertical serves main's copy.
  */
 export async function GET(request: Request) {
   const headers: Record<string, string> = {
@@ -29,12 +30,11 @@ export async function GET(request: Request) {
   }
 
   const url = new URL(request.url)
-  const audienceParam = url.searchParams.get("audience")
-  const audience = audienceParam === "team" || audienceParam === "individual" ? audienceParam : null
+  const audience = normalizeVertical(url.searchParams.get("audience"))
 
   if (!audience) {
     return NextResponse.json(
-      { ok: false, error: "Missing or invalid audience query param (must be 'individual' or 'team')" },
+      { ok: false, error: "Missing or invalid audience query param (must be a known vertical id)" },
       { status: 400, headers }
     )
   }
@@ -45,20 +45,20 @@ export async function GET(request: Request) {
 
   try {
     const data = await readPrompts()
-    const questionsKey = `questions_${audience}`
     let questions: unknown = null
-    if (data[questionsKey]) {
+    const questionsRaw = resolvePromptValue(data, "questions", audience)
+    if (questionsRaw) {
       try {
-        questions = JSON.parse(data[questionsKey])
+        questions = JSON.parse(questionsRaw)
       } catch {
         questions = null
       }
     }
     const beats = Array.from({ length: 5 }, (_, i) => {
-      const label = data[`beat${i + 1}_label_${audience}`] || ""
-      const title = data[`beat${i + 1}_title_${audience}`] || ""
-      const subtitle = data[`beat${i + 1}_subtitle_${audience}`] || ""
-      const feedbackQuestion = data[`beat${i + 1}_feedbackQuestion_${audience}`] || ""
+      const label = resolvePromptValue(data, `beat${i + 1}_label`, audience) || ""
+      const title = resolvePromptValue(data, `beat${i + 1}_title`, audience) || ""
+      const subtitle = resolvePromptValue(data, `beat${i + 1}_subtitle`, audience) || ""
+      const feedbackQuestion = resolvePromptValue(data, `beat${i + 1}_feedbackQuestion`, audience) || ""
       return { label, title, subtitle, feedbackQuestion }
     })
     return NextResponse.json({ ok: true, questions, beats }, { headers })

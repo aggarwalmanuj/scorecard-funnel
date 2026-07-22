@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useMemo, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { ArrowRight, Volume2, Square, Loader2, Download } from "lucide-react"
 import { useChallenge, type Audience } from "@/context/challenge-context"
+import { displayFor } from "@/lib/vertical-display"
 import { isAbortErrorLike } from "@/lib/stream-beat-client"
 import {
   getCachedSummaryAudio,
@@ -324,7 +325,7 @@ export function JourneySummaryScreen({ audience }: { audience: Audience }) {
     void streamSummary(
       {
         firstName: state.firstName,
-        audience: state.audience ?? "individual",
+        audience: state.audience ?? "main",
         beats: {
           beat1: state.beats.beat1,
           beat2: state.beats.beat2,
@@ -441,7 +442,7 @@ export function JourneySummaryScreen({ audience }: { audience: Audience }) {
     void fetchClarityScoreFresh(
       {
         firstName: state.firstName,
-        audience: state.audience ?? "individual",
+        audience: state.audience ?? "main",
         responses: {
           question1: state.responses.question1,
           question2: state.responses.question2,
@@ -617,6 +618,7 @@ export function JourneySummaryScreen({ audience }: { audience: Audience }) {
                 source={scoreSource}
                 reasons={scoreReasons}
                 nsState={nsState}
+                audience={audience}
                 unlocked={unlocked}
                 onUnlock={() => {
                   // Navigate without flipping local `unlocked` state - flipping
@@ -627,7 +629,7 @@ export function JourneySummaryScreen({ audience }: { audience: Audience }) {
                 }}
               />
             ) : (
-              <ClarityScorePending />
+              <ClarityScorePending audience={audience} />
             )}
           </div>
 
@@ -810,16 +812,17 @@ export function JourneySummaryScreen({ audience }: { audience: Audience }) {
 
 // ---------- Belief Score card ----------
 
-function ClarityScorePending() {
+function ClarityScorePending({ audience }: { audience: Audience }) {
+  const productName = displayFor(audience).productName
   return (
     <section
-      aria-label="Belief Score - scoring"
+      aria-label={`${productName} - scoring`}
       className="s-card-static overflow-hidden"
     >
       <div className="flex items-center gap-3 px-6 py-9 sm:px-8">
         <Loader2 className="h-3.5 w-3.5 animate-spin text-ink" strokeWidth={1.6} />
         <span className="eyebrow text-foreground/70">
-          Scoring your Belief Score…
+          Calculating your {productName}…
         </span>
       </div>
     </section>
@@ -831,6 +834,7 @@ function ClarityScoreCard({
   source,
   reasons,
   nsState,
+  audience,
   unlocked,
   onUnlock,
 }: {
@@ -838,6 +842,7 @@ function ClarityScoreCard({
   source: ScoreSource
   reasons: ScoreReasons
   nsState?: string
+  audience: Audience
   unlocked: boolean
   onUnlock: () => void
 }) {
@@ -845,7 +850,7 @@ function ClarityScoreCard({
 
   return (
     <section
-      aria-label="Belief Score"
+      aria-label={displayFor(audience).productName}
       className="overflow-hidden rounded-md border border-border bg-card"
     >
       <div className="border-b border-border px-6 pb-5 pt-6 sm:px-8">
@@ -855,7 +860,7 @@ function ClarityScoreCard({
               className="h-1.5 w-1.5 rounded-full"
               style={{ background: bandColor }}
             />
-            Belief Score
+            {displayFor(audience).productName}
           </p>
           {nsState && nsState !== "UNKNOWN" ? (
             <span
@@ -906,15 +911,20 @@ function ClarityScoreCard({
           }}
         >
           <div className="space-y-5 px-6 py-6 sm:px-8">
-            {clarity.subscoreDetails.map((s) => (
-              <SubscoreRow
-                key={s.key}
-                label={s.label}
-                pillar={s.pillar}
-                value={s.value}
-                reason={reasons[s.key]}
-              />
-            ))}
+            {/* Labels resolve per vertical at render time (stored
+                subscoreDetails keep the canonical main labels). */}
+            {clarity.subscoreDetails.map((s) => {
+              const meta = displayFor(audience).pillarLabels[s.key]
+              return (
+                <SubscoreRow
+                  key={s.key}
+                  label={meta?.label ?? s.label}
+                  pillar={meta?.pillar ?? s.pillar}
+                  value={s.value}
+                  reason={reasons[s.key]}
+                />
+              )
+            })}
           </div>
 
           <div className="border-t border-border bg-secondary/40 px-6 py-5 sm:px-8">

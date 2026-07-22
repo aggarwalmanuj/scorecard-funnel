@@ -10,6 +10,7 @@ import { VideoTestimonialsWall } from "@/components/video-testimonials-wall"
 import posthog from "posthog-js"
 import { track } from "@/lib/fbpixel"
 import { STRIPE_PAYMENT_LINKS } from "@/lib/offers"
+import { displayFor } from "@/lib/vertical-display"
 
 /**
  * The $47 offer page - a SINGLE product decision, per the product-strategy
@@ -73,8 +74,9 @@ const OBJECTIONS = [
 ] as const
 
 /** First sentence of the user's Q1 answer, tightened for display as their
- *  "quoted moment". Empty string when the answer is too short to quote. */
-function extractQuotedMoment(q1: string): string {
+ *  "quoted moment". Empty string when the answer is too short to quote.
+ *  Exported for the B2B offer screen, which opens on the same device. */
+export function extractQuotedMoment(q1: string): string {
   const text = q1.trim().replace(/\s+/g, " ")
   if (text.length < 20) return ""
   const firstSentence = text.split(/(?<=[.!?])\s/)[0] ?? text
@@ -89,6 +91,9 @@ export function OfferScreen({ audience }: { audience: Audience }) {
   const { state } = useChallenge()
   const [isProcessing, setIsProcessing] = useState(false)
   const quotedMoment = extractQuotedMoment(state.responses.question1 ?? "")
+  // Vertical vocabulary (One-Name Law): "ADHD Belief Score" for the ADHD
+  // track, plus the vertical's optional reassurance line.
+  const display = displayFor(audience)
 
   // Payment handoff to the Stripe Payment Link (single source of truth in
   // lib/offers.ts). Stripe collects payment + email, then redirects to the
@@ -233,8 +238,8 @@ export function OfferScreen({ audience }: { audience: Audience }) {
 
           {/* Free vs paid distinction, stated plainly */}
           <p className="mt-5 max-w-xl text-[15px] leading-[1.75] text-foreground/75">
-            The free Belief Score helps you see the pattern. The Action Plan
-            helps you act when it appears.
+            The free {display.productName} helps you see the pattern. The
+            Action Plan helps you act when it appears.
           </p>
 
           <ul className="mt-8 space-y-5">
@@ -264,7 +269,7 @@ export function OfferScreen({ audience }: { audience: Audience }) {
               Six pages, yours to keep
             </p>
             <p className="mb-4 text-[13px] leading-[1.6] text-foreground/60">
-              Generated after purchase, from your completed Belief Score.
+              Generated after purchase, from your completed {display.productName}.
             </p>
             <ul className="space-y-2.5">
               {[
@@ -291,6 +296,13 @@ export function OfferScreen({ audience }: { audience: Audience }) {
             exact moment you identified, the conclusion that may be active
             inside it, and the evidence you said would matter.
           </p>
+
+          {/* Vertical-specific reassurance (e.g. the ADHD anti-system line) */}
+          {display.offerAccent && (
+            <p className="mt-4 max-w-xl font-serif-italic text-[15.5px] leading-[1.7] text-ink">
+              {display.offerAccent}
+            </p>
+          )}
 
           {/* One credibility sentence (credential role only - no ladder,
               no logos on this page) */}
@@ -381,7 +393,7 @@ export function OfferScreen({ audience }: { audience: Audience }) {
             IX · If now is not the right time
           </p>
           <h3 className="mb-7 font-serif text-[1.6rem] leading-[1.18] text-ink sm:text-[1.95rem] sm:leading-snug">
-            Your Belief Score is yours
+            Your {display.productName} is yours
             <span className="block font-serif-italic text-foreground">
               regardless.
             </span>
@@ -417,9 +429,9 @@ export function OfferScreen({ audience }: { audience: Audience }) {
             plan.
           </p>
           <p className="mt-3 text-[12px] leading-[1.7] text-foreground/55">
-            The Belief Score and AI Merge are tools for self-reflection. They
-            are not medical, psychological, or clinical treatment and are not
-            a substitute for professional care.
+            The {display.productName} and AI Merge are tools for
+            self-reflection. They are not medical, psychological, or clinical
+            treatment and are not a substitute for professional care.
           </p>
           <p className="mt-4 font-serif-italic text-[13px] text-foreground/55">
             Composed quietly. Read at your own pace.

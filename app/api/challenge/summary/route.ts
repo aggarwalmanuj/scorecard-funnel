@@ -1,4 +1,5 @@
 import { redactError, sanitizeForPrompt } from "@/lib/security"
+import { DEFAULT_VERTICAL, normalizeVertical } from "@/lib/verticals"
 import { z } from "zod"
 import {
   getSummarySystemPrompt,
@@ -11,7 +12,10 @@ import {
 
 const bodySchema = z.object({
   firstName: z.string().max(200).optional().default(""),
-  audience: z.enum(["individual", "team"]).optional().default("individual"),
+  audience: z
+    .string()
+    .optional()
+    .transform((v) => normalizeVertical(v) ?? DEFAULT_VERTICAL),
   beats: z.object({
     beat1: z.string().max(50000).optional().default(""),
     beat2: z.string().max(50000).optional().default(""),

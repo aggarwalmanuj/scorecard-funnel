@@ -1,12 +1,13 @@
 "use client"
 
-import { useEffect, useMemo, useRef, useState } from "react"
+import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react"
 import { Loader2, Download, AlertCircle, ArrowLeft } from "lucide-react"
 import Link from "next/link"
-import { useChallenge } from "@/context/challenge-context"
+import { useChallenge, type Audience } from "@/context/challenge-context"
 import type { ClarityScore } from "@/lib/scoring"
 import { UPSELL_OFFERS, offerBookingUrl } from "@/lib/offers"
 import { SAMPLE_REPORT, SAMPLE_REPORT_NAME } from "@/lib/sample-report"
+import { displayFor, type VerticalDisplay } from "@/lib/vertical-display"
 
 type Pillar = {
   key:
@@ -31,17 +32,33 @@ export type ReportData = {
     urgency: "now" | "week" | "month"
   }[]
   thirtyDay: string
-  // ── Six-page Action Plan extension (all optional so reports generated
-  //    before the expansion still validate and render at 4/5 pages) ──
-  /** One seeded Evidence Log example row drawn from their answers. */
+  // ── Action Plan extension (all optional so reports generated before the
+  //    expansion still validate and render at 4/5 pages) ──
+  /** Evidence Log: model-defined instruction + column headers (Funnel v2),
+   *  plus an optional seeded example row drawn from their answers. */
   evidenceLog?: {
-    seeded: {
+    instruction?: string
+    columns?: string[]
+    seeded?: {
       situation: string
       oldStory: string
       whatIDid: string
       whatHappened: string
     }
   }
+  // ── Funnel v2 tool fields (BUILD-Sahil-Funnel-v2) ──
+  /** One leverage-framed line rendered under the score number. */
+  scoreFraming?: string
+  /** Callout naming the biggest-lever (lowest) pillar. */
+  startHere?: string
+  /** "Your first move" card. */
+  firstMove?: { line: string; instruction: string }
+  /** "Your daily line" card. */
+  dailyLine?: string
+  /** "The line to hand someone" card. */
+  shareableLine?: string
+  /** "Your lock-screen card" line. */
+  lockScreenLine?: string
   /** WK1-4 rhythm lines: what each week of the 30 days is for. */
   rhythm?: string[]
   /** ~150-word first-person passage from their transcript, meant to be
@@ -70,18 +87,12 @@ export type ApiResponse = {
   scoreSource: "llm" | "fallback"
 }
 
-const PILLAR_LABELS: Record<Pillar["key"], { label: string; pillar: string }> = {
-  directionClarity: { label: "Direction Clarity", pillar: "Pillar I · Purpose" },
-  identityAlignment: { label: "Identity Alignment", pillar: "Pillar II · Identity" },
-  decisionReadiness: {
-    label: "Decision Readiness",
-    pillar: "Pillar III · Peace of Mind",
-  },
-  energyAlignment: {
-    label: "Energy Alignment",
-    pillar: "Pillar IV · Embodiment",
-  },
-}
+/** Per-vertical display config (pillar labels, report name, offer variant),
+ *  provided by ReportView / ClarityReport so every nested page piece -
+ *  headers, footers, pillar rows, the offers page - renders the right
+ *  vertical's vocabulary without threading a prop through 16 call sites.
+ *  Defaults to main so legacy render paths are unchanged. */
+const ReportDisplayContext = createContext<VerticalDisplay>(displayFor("main"))
 
 function pillarColorTone(value: number): "purple" | "green" | "amber" | "coral" {
   if (value >= 70) return "green"
@@ -223,6 +234,7 @@ export function ReportView({
   name,
   dateISO,
   showOffers = true,
+  vertical = "main",
 }: {
   data: ApiResponse
   name: string
@@ -230,23 +242,28 @@ export function ReportView({
   /** Include the "Go deeper" offers page (default true - admin previews the
    *  full Diagnostic-buyer report). */
   showOffers?: boolean
+  /** Vertical whose labels/naming/offers the report renders (admin passes
+   *  the response row's audience). */
+  vertical?: Audience
 }) {
   const today = dateISO ? new Date(dateISO) : new Date()
   const rid = useMemo(() => reportId(name || "report"), [name])
   return (
-    <div className="report-root" data-palette="marine">
-      <ReportStyles />
-      <ReportPages
-        name={name}
-        today={today}
-        rid={rid}
-        clarity={data.clarity}
-        reasons={data.reasons}
-        nsState={data.nsState}
-        report={data.report}
-        showOffers={showOffers}
-      />
-    </div>
+    <ReportDisplayContext.Provider value={displayFor(vertical)}>
+      <div className="report-root" data-palette="marine">
+        <ReportStyles />
+        <ReportPages
+          name={name}
+          today={today}
+          rid={rid}
+          clarity={data.clarity}
+          reasons={data.reasons}
+          nsState={data.nsState}
+          report={data.report}
+          showOffers={showOffers}
+        />
+      </div>
+    </ReportDisplayContext.Provider>
   )
 }
 
@@ -312,7 +329,7 @@ export function ClarityReport({ preview = false }: { preview?: boolean } = {}) {
       body: JSON.stringify({
         firstName: state.firstName,
         email: state.email,
-        audience: state.audience ?? "individual",
+        audience: state.audience ?? "main",
         responses: state.responses,
         beats: state.beats,
         // Use the cached score so numbers match the summary page exactly.
@@ -421,8 +438,10 @@ export function ClarityReport({ preview = false }: { preview?: boolean } = {}) {
   const hasContent = hasSessionContent || usingSample
   const effectiveData = usingSample ? SAMPLE_REPORT : data
   const effectiveName = usingSample ? SAMPLE_REPORT_NAME : state.firstName
+  const display = displayFor(state.audience)
 
   return (
+    <ReportDisplayContext.Provider value={display}>
     <div className="report-root" data-palette="marine" ref={reportRootRef}>
       <ReportStyles />
 
@@ -431,7 +450,7 @@ export function ClarityReport({ preview = false }: { preview?: boolean } = {}) {
       <div className="toolbar">
         <Link
           href={
-            state.audience === "individual" || state.audience === "team"
+            state.audience
               ? `/challenge/${state.audience}/offer`
               : "/challenge/audience"
           }
@@ -443,7 +462,7 @@ export function ClarityReport({ preview = false }: { preview?: boolean } = {}) {
         <div className="toolbar-title">
           <span className="brand-mark brand-mark-sm" aria-hidden />
           <span style={{ fontFamily: "var(--font-serif)", fontWeight: 400, letterSpacing: "0.18em", textTransform: "uppercase", fontSize: 11, color: "var(--ink-soft)" }}>
-            Personalized 30-Day Action Plan
+            {display.reportName}
           </span>
         </div>
         <button
@@ -529,6 +548,7 @@ export function ClarityReport({ preview = false }: { preview?: boolean } = {}) {
         />
       )}
     </div>
+    </ReportDisplayContext.Provider>
   )
 }
 
@@ -566,16 +586,29 @@ function ReportPages({
     return map
   }, [clarity])
 
+  const display = useContext(ReportDisplayContext)
+  // B2B verticals have no approved upsell ladder yet (the Sprint's price is
+  // a pending decision) - their reports simply omit the offers page.
+  const offers = display.offerVariant === "b2b" ? [] : UPSELL_OFFERS
+  const includeOffers = showOffers && offers.length > 0
+
   // Page numbering is dynamic: the Action Plan extension pages render only
   // when their data exists, so legacy reports keep their original count.
-  const hasLogPage = !!(report.evidenceLog || (report.rhythm?.length ?? 0) > 0)
+  const hasTools = !!(
+    report.firstMove ||
+    report.dailyLine ||
+    report.shareableLine ||
+    report.lockScreenLine
+  )
+  const hasLogPage =
+    !!report.evidenceLog || (report.rhythm?.length ?? 0) > 0 || hasTools
   const hasPassagePage = !!report.openingPassage?.trim()
   const hasCompanionsPage = !!report.companions
   let nextPage = 4
   const logPageNum = hasLogPage ? ++nextPage : 0
   const passagePageNum = hasPassagePage ? ++nextPage : 0
   const companionsPageNum = hasCompanionsPage ? ++nextPage : 0
-  const offersPageNum = showOffers ? ++nextPage : 0
+  const offersPageNum = includeOffers ? ++nextPage : 0
   const totalPages = nextPage
 
   return (
@@ -602,21 +635,49 @@ function ReportPages({
               {nsState && nsState !== "UNKNOWN" ? ` · ${nsState}` : ""}
             </span>
             <div className="hero-title">{clarity.bandMessage}</div>
-            <p className="hero-sub">{clarity.comparisonLabel}</p>
+            {/* scoreFraming (model, leverage-toned) preferred; fall back to
+                the neutral comparison. Never repeat the band message - the
+                old copy could produce the same sentence twice here. */}
+            {(() => {
+              const sub = report.scoreFraming?.trim() || clarity.comparisonLabel
+              return sub && sub !== clarity.bandMessage ? (
+                <p className="hero-sub">{sub}</p>
+              ) : null
+            })()}
           </div>
         </div>
 
         <h2>The four pillars</h2>
+        {report.startHere?.trim() && (
+          <p
+            style={{
+              margin: "0 0 10px",
+              padding: "10px 14px",
+              border: "1px solid var(--brand-dark)",
+              borderRadius: 6,
+              fontSize: 13,
+              color: "var(--brand-dark)",
+              fontFamily: "var(--font-serif)",
+            }}
+          >
+            Start here: {report.startHere}
+          </p>
+        )}
+        {/* Lowest score first: framed as the biggest lever, not the worst
+            grade (Funnel v2). */}
         <div className="sub-grid">
-          {clarity.subscoreDetails.map((s) => (
-            <SubscoreCard
-              key={s.key}
-              label={s.label}
-              pillar={s.pillar}
-              value={s.value}
-              reason={reasons[s.key]}
-            />
-          ))}
+          {clarity.subscoreDetails
+            .slice()
+            .sort((a, b) => a.value - b.value)
+            .map((s) => (
+              <SubscoreCard
+                key={s.key}
+                label={s.label}
+                pillar={s.pillar}
+                value={s.value}
+                reason={reasons[s.key]}
+              />
+            ))}
         </div>
 
         <ReportFooter page={1} of={totalPages} name={name} />
@@ -630,9 +691,12 @@ function ReportPages({
         <h1 className="title small">What each score actually means for you</h1>
 
         <div className="pillar-stack">
-          {report.pillars.map((p) => {
+          {report.pillars
+            .slice()
+            .sort((a, b) => (subBy.get(a.key) ?? 0) - (subBy.get(b.key) ?? 0))
+            .map((p) => {
             const value = subBy.get(p.key) ?? 0
-            const meta = PILLAR_LABELS[p.key]
+            const meta = display.pillarLabels[p.key]
             return (
               <PillarBlock
                 key={p.key}
@@ -723,19 +787,48 @@ function ReportPages({
         <ReportFooter page={4} of={totalPages} name={name} />
       </section>
 
-      {/* Evidence Log + the 30-day rhythm. Not affirmations - evidence:
-          a table they fill in when the pattern fires, plus what each week
-          of the 30 days is for. No unlocks, no streaks - returns count. */}
+      {/* Tools page (Funnel v2): first move, Evidence Log table, daily /
+          shareable / lock-screen lines, plus the 30-day rhythm. This is
+          the part that makes $47 feel worth it. */}
       {hasLogPage && (
         <section className="page">
           <ReportHeader name={name} today={today} rid={rid} compact />
 
-          <div className="eyebrow">Your Evidence Log</div>
+          <div className="eyebrow">Your tools</div>
           <h1 className="title small">Not affirmations. Evidence.</h1>
+
+          {report.firstMove && (
+            <div
+              style={{
+                border: "1px solid var(--brand-dark)",
+                borderRadius: 6,
+                padding: "12px 16px",
+                marginBottom: 16,
+              }}
+            >
+              <div className="eyebrow">Your first move</div>
+              <p
+                style={{
+                  fontFamily: "var(--font-serif)",
+                  fontSize: 16,
+                  color: "var(--brand-dark)",
+                  margin: "4px 0 6px",
+                }}
+              >
+                {report.firstMove.line}
+              </p>
+              <p style={{ fontSize: 12.5, color: "var(--ink-soft)", margin: 0 }}>
+                {report.firstMove.instruction}
+              </p>
+            </div>
+          )}
+
           <p className="lede" style={{ marginBottom: 14 }}>
-            Each time you catch the moment and run a move, log it here. The
-            first row is filled in from your own answers, as an example of
-            the level of detail that works.
+            {report.evidenceLog?.instruction ||
+              "Each time you catch the moment and run a move, log it here."}
+            {report.evidenceLog?.seeded
+              ? " The first row is filled in from your own answers, as an example of the level of detail that works."
+              : ""}
           </p>
 
           {report.evidenceLog && (
@@ -747,66 +840,105 @@ function ReportPages({
                 marginBottom: 18,
               }}
             >
-              <thead>
-                <tr>
-                  {["The situation", "The old story", "What I did", "What happened"].map(
-                    (h) => (
-                      <th
-                        key={h}
-                        style={{
-                          textAlign: "left",
-                          padding: "8px 10px",
-                          borderBottom: "2px solid var(--brand-dark)",
-                          fontFamily: "var(--font-serif)",
-                          fontWeight: 600,
-                          color: "var(--brand-dark)",
-                        }}
-                      >
-                        {h}
-                      </th>
-                    ),
-                  )}
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  {[
-                    report.evidenceLog.seeded.situation,
-                    report.evidenceLog.seeded.oldStory,
-                    report.evidenceLog.seeded.whatIDid,
-                    report.evidenceLog.seeded.whatHappened,
-                  ].map((cell, i) => (
-                    <td
-                      key={i}
-                      style={{
-                        padding: "8px 10px",
-                        borderBottom: "1px solid rgba(15,44,59,0.18)",
-                        color: "var(--ink-soft)",
-                        fontStyle: "italic",
-                        verticalAlign: "top",
-                      }}
-                    >
-                      {cell}
-                    </td>
-                  ))}
-                </tr>
-                {[0, 1, 2].map((r) => (
-                  <tr key={r}>
-                    {[0, 1, 2, 3].map((c) => (
-                      <td
-                        key={c}
-                        style={{
-                          padding: "16px 10px",
-                          borderBottom: "1px solid rgba(15,44,59,0.18)",
-                        }}
-                      >
-                        &nbsp;
-                      </td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
+              {(() => {
+                const cols =
+                  report.evidenceLog.columns?.length
+                    ? report.evidenceLog.columns
+                    : ["The situation", "The old story", "What I did", "What happened"]
+                const seeded = report.evidenceLog.seeded
+                const seededCells = seeded
+                  ? [seeded.situation, seeded.oldStory, seeded.whatIDid, seeded.whatHappened].slice(0, cols.length)
+                  : null
+                return (
+                  <>
+                    <thead>
+                      <tr>
+                        {cols.map((h) => (
+                          <th
+                            key={h}
+                            style={{
+                              textAlign: "left",
+                              padding: "8px 10px",
+                              borderBottom: "2px solid var(--brand-dark)",
+                              fontFamily: "var(--font-serif)",
+                              fontWeight: 600,
+                              color: "var(--brand-dark)",
+                            }}
+                          >
+                            {h}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {seededCells && (
+                        <tr>
+                          {seededCells.map((cell, i) => (
+                            <td
+                              key={i}
+                              style={{
+                                padding: "8px 10px",
+                                borderBottom: "1px solid rgba(15,44,59,0.18)",
+                                color: "var(--ink-soft)",
+                                fontStyle: "italic",
+                                verticalAlign: "top",
+                              }}
+                            >
+                              {cell}
+                            </td>
+                          ))}
+                        </tr>
+                      )}
+                      {[0, 1, 2].map((r) => (
+                        <tr key={r}>
+                          {cols.map((_, c) => (
+                            <td
+                              key={c}
+                              style={{
+                                padding: "16px 10px",
+                                borderBottom: "1px solid rgba(15,44,59,0.18)",
+                              }}
+                            >
+                              &nbsp;
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </>
+                )
+              })()}
             </table>
+          )}
+
+          {/* The three carry-lines, each its own labelled card */}
+          {hasTools && (
+            <div style={{ display: "grid", gap: 10, marginBottom: 16 }}>
+              {report.dailyLine?.trim() && (
+                <div style={{ border: "1px solid rgba(15,44,59,0.25)", borderRadius: 6, padding: "10px 14px" }}>
+                  <div className="eyebrow">Your daily line</div>
+                  <p style={{ fontFamily: "var(--font-serif)", fontSize: 15, color: "var(--brand-dark)", margin: "2px 0 0" }}>
+                    &ldquo;{stripWrappingQuotes(report.dailyLine)}&rdquo;
+                  </p>
+                </div>
+              )}
+              {report.shareableLine?.trim() && (
+                <div style={{ border: "1px solid rgba(15,44,59,0.25)", borderRadius: 6, padding: "10px 14px" }}>
+                  <div className="eyebrow">The line to hand someone</div>
+                  <p style={{ fontFamily: "var(--font-serif)", fontSize: 15, color: "var(--brand-dark)", margin: "2px 0 0" }}>
+                    &ldquo;{stripWrappingQuotes(report.shareableLine)}&rdquo;
+                  </p>
+                </div>
+              )}
+              {report.lockScreenLine?.trim() && (
+                <div style={{ border: "1px solid rgba(15,44,59,0.25)", borderRadius: 6, padding: "10px 14px" }}>
+                  <div className="eyebrow">Your lock-screen card</div>
+                  <p style={{ fontFamily: "var(--font-serif)", fontSize: 15, color: "var(--brand-dark)", margin: "2px 0 0" }}>
+                    &ldquo;{stripWrappingQuotes(report.lockScreenLine)}&rdquo;
+                  </p>
+                </div>
+              )}
+            </div>
           )}
 
           {(report.rhythm?.length ?? 0) > 0 && (
@@ -836,6 +968,21 @@ function ReportPages({
             A rough day does not restart anything. Returns count. Streaks do
             not exist here. At day 30, check in with yourself against the
             evidence above.
+          </p>
+
+          {/* Guarantee at the plan's working end (Funnel v2, exact wording) */}
+          <p
+            style={{
+              marginTop: 12,
+              padding: "10px 14px",
+              border: "1px solid rgba(15,44,59,0.25)",
+              borderRadius: 6,
+              fontSize: 12.5,
+              color: "var(--ink-soft)",
+            }}
+          >
+            $47. If it does not show you something you can act on this week,
+            tell us within 30 days for a full refund.
           </p>
 
           <ReportFooter page={logPageNum} of={totalPages} name={name} />
@@ -904,20 +1051,26 @@ function ReportPages({
             {report.companions.allyNote}
           </p>
 
-          <h2 style={{ marginTop: 20 }}>Your pocket line</h2>
-          <p className="lede" style={{ marginBottom: 8 }}>
-            Ten seconds, for the exact moment. Save it where you will see it.
-          </p>
-          <p
-            style={{
-              fontFamily: "var(--font-serif)",
-              fontSize: 18,
-              color: "var(--brand-dark)",
-              padding: "10px 0",
-            }}
-          >
-            &ldquo;{stripWrappingQuotes(report.companions.pocketLine)}&rdquo;
-          </p>
+          {/* Skip when the Tools page already renders a lock-screen line -
+              same job, avoid printing near-identical cards twice. */}
+          {!report.lockScreenLine?.trim() && (
+            <>
+              <h2 style={{ marginTop: 20 }}>Your pocket line</h2>
+              <p className="lede" style={{ marginBottom: 8 }}>
+                Ten seconds, for the exact moment. Save it where you will see it.
+              </p>
+              <p
+                style={{
+                  fontFamily: "var(--font-serif)",
+                  fontSize: 18,
+                  color: "var(--brand-dark)",
+                  padding: "10px 0",
+                }}
+              >
+                &ldquo;{stripWrappingQuotes(report.companions.pocketLine)}&rdquo;
+              </p>
+            </>
+          )}
 
           {report.companions.patternVocabulary.length > 0 && (
             <>
@@ -970,20 +1123,34 @@ function ReportPages({
           card is an <a> tagged data-pdf-link so downloadReportPdf overlays a
           real clickable annotation over the rasterized page; the visible URL
           beneath is the fallback for viewers that ignore annotations. */}
-      {showOffers && (
+      {includeOffers && (
         <section className="page">
           <ReportHeader name={name} today={today} rid={rid} compact />
 
           <div className="eyebrow">When you are ready</div>
           <h1 className="title small">Continue beyond the 30-day plan</h1>
-          <p className="lede" style={{ marginBottom: 18 }}>
+          <p className="lede" style={{ marginBottom: 10 }}>
             Your Action Plan gives you a concrete way to interrupt this loop
-            over the next 30 days. These options add deeper narrative work,
-            practitioner support, and longer-term integration.
+            over the next 30 days. These options are optional. They add
+            deeper narrative work, practitioner support, and longer-term
+            integration.
+          </p>
+          <p
+            style={{
+              margin: "0 0 18px",
+              padding: "10px 14px",
+              border: "1px solid rgba(15,44,59,0.25)",
+              borderRadius: 6,
+              fontSize: 12.5,
+              color: "var(--ink-soft)",
+            }}
+          >
+            Your plan: $47. If it does not show you something you can act on
+            this week, tell us within 30 days for a full refund.
           </p>
 
           <div style={{ display: "grid", gap: 16 }}>
-            {UPSELL_OFFERS.map((offer) => {
+            {offers.map((offer) => {
               const url = offerBookingUrl(offer.id, { serialNumber, email })
               return (
                 <a
@@ -1071,6 +1238,9 @@ function ReportPages({
                       </li>
                     ))}
                   </ul>
+                  {/* Button-styled CTA. Never print the raw checkout URL as
+                      visible text (Funnel v2) - the PDF stays clickable via
+                      the data-pdf-link annotation on the card. */}
                   <span
                     style={{
                       display: "inline-flex",
@@ -1079,25 +1249,15 @@ function ReportPages({
                       fontSize: 11,
                       letterSpacing: "0.18em",
                       textTransform: "uppercase",
-                      color: "var(--brand-dark)",
+                      color: "#fff",
+                      background: "var(--brand-dark)",
+                      borderRadius: 999,
+                      padding: "8px 16px",
                       fontWeight: 600,
                     }}
                   >
-                    {offer.id === "session"
-                      ? "Start your story"
-                      : "Build from that belief"}{" "}
-                    →
+                    {offer.id === "session" ? "Book the Story Session" : "Start the Deep Work"} →
                   </span>
-                  <div
-                    style={{
-                      marginTop: 6,
-                      fontSize: 10,
-                      color: "var(--muted)",
-                      wordBreak: "break-all",
-                    }}
-                  >
-                    {url}
-                  </div>
                 </a>
               )
             })}
@@ -1123,6 +1283,7 @@ function ReportHeader({
   rid: string
   compact?: boolean
 }) {
+  const display = useContext(ReportDisplayContext)
   return (
     <header className="head">
       {/* AIMerge wordmark + report eyebrow. The .brand-mark mask inherits
@@ -1130,7 +1291,7 @@ function ReportHeader({
           legible; html2canvas-pro renders CSS mask correctly into the PDF. */}
       <div className="logo">
         <span className="brand-mark brand-mark-sm" aria-hidden />
-        <span className="report-name">Personalized 30-Day Action Plan</span>
+        <span className="report-name">{display.reportName}</span>
       </div>
       {compact ? (
         <div className="meta">
@@ -1158,10 +1319,11 @@ function ReportFooter({
   of: number
   name: string
 }) {
+  const display = useContext(ReportDisplayContext)
   return (
     <div className="foot">
       <span>
-        Personalized 30-Day Action Plan · Page {page} of {of}
+        {display.reportName} · Page {page} of {of}
       </span>
       <span>Confidential · prepared for {name || "you"}</span>
     </div>
@@ -1279,19 +1441,15 @@ function PillarBlock({
 function BenchmarkBlock({ overall, mean }: { overall: number; mean: number }) {
   const youPos = Math.max(2, Math.min(98, overall))
   const meanPos = Math.max(2, Math.min(98, mean))
-  const delta = overall - mean
-  const deltaText =
-    delta > 0
-      ? `+${delta} above the peer mean`
-      : delta < 0
-      ? `${delta} below the peer mean`
-      : "exactly at the peer mean"
+  // Neutral forward framing (Funnel v2): the number is a baseline to move
+  // from, never a deficit against a peer group.
+  const deltaText = `Most people start near ${mean}. You are at ${overall} today, which is your baseline to move from.`
   return (
     <div className="bench">
       <div className="bench-head">
         <div>
           <h3>Overall Belief Score</h3>
-          <small>Peer set · leaders carrying unresolved clarity gaps</small>
+          <small>Peer set · everyone who completes this assessment</small>
         </div>
         <div className="bench-num">
           <span className="c-purple">{overall}</span>
@@ -1312,8 +1470,8 @@ function BenchmarkBlock({ overall, mean }: { overall: number; mean: number }) {
         </div>
       </div>
       <p className="bench-note">
-        You score <b>{deltaText}</b>. The pillar with the most leverage to lift
-        your overall score is the one with the lowest score on page 1.
+        {deltaText} The pillar with the most leverage to lift your overall
+        score is the first one on page 1.
       </p>
     </div>
   )

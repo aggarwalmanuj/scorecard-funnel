@@ -1,7 +1,8 @@
 import { getAttribution } from "@/lib/client/attribution"
 import { getHeadlineAttribution } from "@/lib/client/headline"
+import type { Vertical } from "@/lib/verticals"
 
-export type Audience = "individual" | "team"
+export type Audience = Vertical
 
 type SignupPayload = {
   action: "signup"

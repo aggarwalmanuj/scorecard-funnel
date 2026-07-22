@@ -56,7 +56,7 @@ export function resolveFunnelRedirect(args: {
   }
 
   const questionMatch = pathname.match(
-    /^\/challenge\/(?:individual|team)\/question-([1-5])$/,
+    /^\/challenge\/[^/]+\/question-([1-5])$/,
   )
   if (questionMatch) {
     if (!hasIdentity(state)) return "/challenge/audience"
@@ -70,7 +70,7 @@ export function resolveFunnelRedirect(args: {
     return null
   }
 
-  if (/^\/challenge\/(?:individual|team)\/processing$/.test(pathname)) {
+  if (/^\/challenge\/[^/]+\/processing$/.test(pathname)) {
     if (!hasIdentity(state)) return "/challenge/audience"
     const missing = firstUnansweredQuestion(state)
     if (missing !== null) return `/challenge/${audience}/question-${missing}`
@@ -78,7 +78,7 @@ export function resolveFunnelRedirect(args: {
   }
 
   const beatMatch = pathname.match(
-    /^\/challenge\/(?:individual|team)\/beat-([1-5])$/,
+    /^\/challenge\/[^/]+\/beat-([1-5])$/,
   )
   if (beatMatch) {
     if (!hasIdentity(state)) return "/challenge/audience"
@@ -103,7 +103,7 @@ export function resolveFunnelRedirect(args: {
   }
 
   if (
-    /^\/challenge\/(?:individual|team)\/(?:summary|offer)$/.test(pathname)
+    /^\/challenge\/[^/]+\/(?:summary|offer)$/.test(pathname)
   ) {
     if (!hasIdentity(state)) return "/challenge/audience"
     const missingQ = firstUnansweredQuestion(state)

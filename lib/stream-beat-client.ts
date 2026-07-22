@@ -1,4 +1,5 @@
 import type { ChallengeState } from "@/context/challenge-context"
+import type { Vertical } from "@/lib/verticals"
 
 /** True when fetch/read was cancelled (navigation, Strict Mode remount, effect cleanup). */
 export function isAbortErrorLike(e: unknown): boolean {
@@ -11,7 +12,7 @@ export function isAbortErrorLike(e: unknown): boolean {
 
 export type StreamBeatBody = {
   beatNumber: 1 | 2 | 3 | 4 | 5
-  audience: "individual" | "team"
+  audience: Vertical
   firstName: string
   responses: ChallengeState["responses"]
   gate2Resonance?: "HIGH" | "MID" | "LOW"

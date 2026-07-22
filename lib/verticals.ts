@@ -1,0 +1,60 @@
+/**
+ * Vertical registry — the single source of truth for every funnel vertical.
+ *
+ * A "vertical" is a self-contained flavour of the scorecard funnel: its own
+ * entry-page copy, question/beat copy, and AI prompts, all keyed in Cosmos as
+ * `<base>_<vertical>`. External landing pages route visitors into a vertical
+ * by appending `?vertical=<id>` to the funnel entry URL, e.g.
+ *   https://<site>/challenge/audience?vertical=adhd&utm_source=meta&ref=…
+ *
+ * Adding a vertical = add an entry to VERTICALS below, deploy, then seed its
+ * content from the admin page. Until seeded, every key inherits from `main`
+ * (see resolvePromptKey in lib/server/challenge-prompts.ts), so a brand-new
+ * vertical runs the full funnel identically to main from day one.
+ *
+ * "main" replaced the old "individual" audience; "team" was retired entirely
+ * (2026-07-22). Legacy ids are mapped via VERTICAL_ALIASES so mid-funnel
+ * users, stored localStorage state, and old deep links keep working.
+ */
+
+export const VERTICALS = ["main", "retargeting", "adhd", "healthcare"] as const
+
+export type Vertical = (typeof VERTICALS)[number]
+
+export const DEFAULT_VERTICAL: Vertical = "main"
+
+/** Human-readable labels for admin tabs, badges, and exports. */
+export const VERTICAL_LABELS: Record<Vertical, string> = {
+  main: "Main",
+  retargeting: "Retargeting",
+  adhd: "ADHD",
+  healthcare: "Healthcare",
+}
+
+export function isVertical(v: unknown): v is Vertical {
+  return typeof v === "string" && (VERTICALS as readonly string[]).includes(v)
+}
+
+/**
+ * Alternate spellings accepted from URLs and legacy stored state, mapped to
+ * their canonical id. Legacy audiences both collapse into "main".
+ */
+const VERTICAL_ALIASES: Record<string, Vertical> = {
+  individual: "main",
+  team: "main",
+  "healthcare-automations": "healthcare",
+  "healthcare-automation": "healthcare",
+  retarget: "retargeting",
+}
+
+/**
+ * Resolve an arbitrary string (URL param, stored state, API payload) to a
+ * canonical vertical id, or null when it matches nothing. Callers decide the
+ * fallback — usually DEFAULT_VERTICAL.
+ */
+export function normalizeVertical(v: string | null | undefined): Vertical | null {
+  if (!v) return null
+  const lowered = v.trim().toLowerCase()
+  if (isVertical(lowered)) return lowered
+  return VERTICAL_ALIASES[lowered] ?? null
+}

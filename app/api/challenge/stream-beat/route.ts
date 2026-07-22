@@ -7,11 +7,14 @@ import {
   type Gate4Tone,
 } from "@/lib/server/challenge-prompts"
 import { redactError } from "@/lib/security"
+import { DEFAULT_VERTICAL, normalizeVertical } from "@/lib/verticals"
 import { z } from "zod"
 
 const bodySchema = z.object({
   beatNumber: z.number().int().min(1).max(5),
-  audience: z.enum(["individual", "team"]),
+  audience: z
+    .string()
+    .transform((v) => normalizeVertical(v) ?? DEFAULT_VERTICAL),
   firstName: z.string().max(200).optional().default(""),
   responses: z.object({
     question1: z.string().max(50000).optional().default(""),

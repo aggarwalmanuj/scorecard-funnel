@@ -76,15 +76,16 @@ export const ROUTE_EVENT_MAP: Record<string, string> = {
  * Resolve the custom funnel-event name for a pathname.
  *
  * The funnel steps live under the dynamic `[audience]` segment, so real
- * paths look like `/challenge/individual/offer` or `/challenge/team/question-1`.
- * ROUTE_EVENT_MAP is keyed without that segment, so we strip the audience
- * prefix before the lookup. (Previously the raw pathname was used as the key
- * directly, which never matched — so none of these custom events ever fired.)
+ * paths look like `/challenge/main/offer` or `/challenge/adhd/question-1`.
+ * ROUTE_EVENT_MAP is keyed without that segment, so we strip the vertical
+ * prefix before the lookup — any segment except the static /challenge/*
+ * pages (audience, report, thank-you), so new verticals never need a code
+ * change here.
  */
 export function routeEventName(pathname: string | null): string | undefined {
   if (!pathname) return undefined
   const normalized = pathname.replace(
-    /^\/challenge\/(?:individual|team)(?=\/|$)/,
+    /^\/challenge\/(?!audience|report|thank-you)[^/]+(?=\/|$)/,
     "/challenge",
   )
   return ROUTE_EVENT_MAP[normalized]

@@ -2,16 +2,19 @@
  * Reads prompt templates from Cosmos DB and interpolates runtime values.
  * Placeholders: {{NAME}}, {{Q1}}–{{Q5}}, {{GATE2}}, {{GATE4}}
  *
- * All keys are now audience-scoped: `<base>_<audience>` where audience is
- * "individual" or "team". The team variant has NO fallback - when admins
- * haven't seeded team copy, callers receive a "not configured" error and
- * must surface a clear empty state to the user.
+ * All keys are vertical-scoped: `<base>_<vertical>` (see lib/verticals.ts).
+ * Resolution INHERITS from main: `<base>_<vertical>` → `<base>_main` →
+ * `<base>_individual` (legacy alias, pre-migration safety net). A vertical
+ * only needs to override the keys where its copy differs — an unseeded
+ * vertical runs the whole funnel on main's content, never a hard error.
  */
 
+import { DEFAULT_ENTRY_CONTENT, mergeEntryContent, type EntryContent } from "@/lib/entry-content"
 import { sanitizeForPrompt } from "@/lib/security"
 import { readPrompts } from "@/lib/server/cosmos-db"
+import type { Vertical } from "@/lib/verticals"
 
-export type Audience = "individual" | "team"
+export type Audience = Vertical
 
 export type ChallengeResponses = {
   question1: string
@@ -52,21 +55,31 @@ async function getCachedPrompts(): Promise<Record<string, string>> {
   return {}
 }
 
-function audienceKey(base: string, audience: Audience): string {
-  return `${base}_${audience}`
+/**
+ * Vertical-aware key resolution with main-inheritance:
+ *   `<base>_<vertical>` → `<base>_main` → `<base>_individual` (legacy).
+ * Empty strings count as "not set" so an admin can blank a field to revert
+ * a vertical back to inheriting main's value.
+ */
+export function resolvePromptValue(
+  prompts: Record<string, string>,
+  base: string,
+  vertical: Vertical
+): string | undefined {
+  return (
+    prompts[`${base}_${vertical}`] ||
+    prompts[`${base}_main`] ||
+    prompts[`${base}_individual`] ||
+    undefined
+  )
 }
 
 async function getPrompt(base: string, audience: Audience): Promise<string> {
   const prompts = await getCachedPrompts()
-  const key = audienceKey(base, audience)
-  const value = prompts[key]
+  const value = resolvePromptValue(prompts, base, audience)
   if (!value) {
     throw new Error(
-      `Prompt "${key}" not found in database. ${
-        audience === "team"
-          ? "Team content has not been configured yet - upload team prompts via the admin page."
-          : "Save prompts from the admin page first."
-      }`
+      `Prompt "${base}_${audience}" not found in database (no main fallback either). Save prompts from the admin page first.`
     )
   }
   return value.replace(/\\n/g, "\n")
@@ -122,7 +135,7 @@ export async function getReportSystemPrompt(
   fallback: string
 ): Promise<string> {
   const prompts = await getCachedPrompts()
-  const value = prompts[audienceKey("report_system_prompt", audience)]
+  const value = resolvePromptValue(prompts, "report_system_prompt", audience)
   if (!value) return fallback
   return value.replace(/\\n/g, "\n")
 }
@@ -137,7 +150,7 @@ export async function getScoreSystemPrompt(
   fallback: string
 ): Promise<string> {
   const prompts = await getCachedPrompts()
-  const value = prompts[audienceKey("score_system_prompt", audience)]
+  const value = resolvePromptValue(prompts, "score_system_prompt", audience)
   if (!value) return fallback
   return value.replace(/\\n/g, "\n")
 }
@@ -152,7 +165,7 @@ export async function getSummarySystemPrompt(
   fallback: string
 ): Promise<string> {
   const prompts = await getCachedPrompts()
-  const value = prompts[audienceKey("summary_system_prompt", audience)]
+  const value = resolvePromptValue(prompts, "summary_system_prompt", audience)
   if (!value) return fallback
   return value.replace(/\\n/g, "\n")
 }
@@ -169,7 +182,7 @@ async function getRawTemplate(
   fallback: string
 ): Promise<string> {
   const prompts = await getCachedPrompts()
-  const value = prompts[audienceKey(baseKey, audience)]
+  const value = resolvePromptValue(prompts, baseKey, audience)
   if (!value) return fallback
   return value.replace(/\\n/g, "\n")
 }
@@ -193,4 +206,29 @@ export function getSummaryUserPromptTemplate(
   fallback: string
 ): Promise<string> {
   return getRawTemplate("summary_user_prompt", audience, fallback)
+}
+
+/**
+ * Entry-page content pack for a vertical: `entry_content_<vertical>` →
+ * `entry_content_main` → hardcoded defaults. Rides the same 5-min server
+ * cache as prompts and is invalidated by the same admin POST.
+ */
+export async function getEntryContent(vertical: Vertical): Promise<EntryContent> {
+  const prompts = await getCachedPrompts()
+  const parse = (raw: string | undefined): unknown => {
+    if (!raw) return null
+    try {
+      return JSON.parse(raw)
+    } catch {
+      return null
+    }
+  }
+  // Main's pack over the hardcoded defaults, then the vertical's overrides
+  // over that — per-field, so a vertical only diverges where it was edited.
+  const mainPack = mergeEntryContent(
+    parse(prompts["entry_content_main"]),
+    DEFAULT_ENTRY_CONTENT
+  )
+  if (vertical === "main") return mainPack
+  return mergeEntryContent(parse(prompts[`entry_content_${vertical}`]), mainPack)
 }

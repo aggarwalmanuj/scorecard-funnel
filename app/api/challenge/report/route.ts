@@ -1,4 +1,5 @@
 import { redactError, sanitizeForPrompt } from "@/lib/security"
+import { DEFAULT_VERTICAL, normalizeVertical } from "@/lib/verticals"
 import { z } from "zod"
 import {
   buildClarityScoreFromSubscores,
@@ -55,7 +56,10 @@ import {
 const bodySchema = z.object({
   firstName: z.string().max(200).optional().default(""),
   email: z.string().max(320).optional().default(""),
-  audience: z.enum(["individual", "team"]).optional().default("individual"),
+  audience: z
+    .string()
+    .optional()
+    .transform((v) => normalizeVertical(v) ?? DEFAULT_VERTICAL),
   responses: z.object({
     question1: z.string().max(50000).optional().default(""),
     question2: z.string().max(50000).optional().default(""),
@@ -176,14 +180,30 @@ const reportSchema = z.object({
   // expansion (and admin overrides not yet updated) must keep validating.
   evidenceLog: z
     .object({
-      seeded: z.object({
-        situation: z.string().max(400),
-        oldStory: z.string().max(400),
-        whatIDid: z.string().max(400),
-        whatHappened: z.string().max(400),
-      }),
+      instruction: z.string().max(600).optional(),
+      columns: z.array(z.string().max(120)).min(2).max(6).optional(),
+      seeded: z
+        .object({
+          situation: z.string().max(400),
+          oldStory: z.string().max(400),
+          whatIDid: z.string().max(400),
+          whatHappened: z.string().max(400),
+        })
+        .optional(),
     })
     .optional(),
+  // Funnel v2 tool fields (BUILD-Sahil-Funnel-v2) - all optional.
+  scoreFraming: z.string().max(400).optional(),
+  startHere: z.string().max(400).optional(),
+  firstMove: z
+    .object({
+      line: z.string().max(300),
+      instruction: z.string().max(800),
+    })
+    .optional(),
+  dailyLine: z.string().max(300).optional(),
+  shareableLine: z.string().max(400).optional(),
+  lockScreenLine: z.string().max(300).optional(),
   rhythm: z.array(z.string().max(400)).min(1).max(4).optional(),
   openingPassage: z.string().max(2000).optional(),
   companions: z
@@ -207,11 +227,27 @@ function applyReportUserTemplate(
   template: string,
   firstName: string,
   r: z.infer<typeof bodySchema>["responses"],
-  b: z.infer<typeof bodySchema>["beats"]
+  b: z.infer<typeof bodySchema>["beats"],
+  subscores?: {
+    directionClarity: number
+    identityAlignment: number
+    decisionReadiness: number
+    energyAlignment: number
+  }
 ): string {
   const name = sanitizeForPrompt((firstName || "").trim()) || "the user"
   const blank = "(left blank)"
+  // Funnel v2: the prompt orders pillars by leverage using the four
+  // subscores. Available whenever the funnel passes its precomputed score
+  // (the normal path); otherwise the model is told they're unavailable and
+  // the plan still renders - only "start here" accuracy depends on them.
+  const s = (v: number | undefined) =>
+    typeof v === "number" ? String(v) : "(not available)"
   return template
+    .replace(/\{\{SCORE_DIRECTION\}\}/g, s(subscores?.directionClarity))
+    .replace(/\{\{SCORE_IDENTITY\}\}/g, s(subscores?.identityAlignment))
+    .replace(/\{\{SCORE_DECISION\}\}/g, s(subscores?.decisionReadiness))
+    .replace(/\{\{SCORE_ENERGY\}\}/g, s(subscores?.energyAlignment))
     .replace(/\{\{NAME\}\}/g, name)
     .replace(/\{\{Q1\}\}/g, sanitizeForPrompt(r.question1?.trim() || blank))
     .replace(/\{\{Q2\}\}/g, sanitizeForPrompt(r.question2?.trim() || blank))
@@ -354,7 +390,13 @@ export async function POST(request: Request) {
     referer,
     title: "Belief Score - Report Narrative",
     system: reportSystem,
-    user: applyReportUserTemplate(reportUserTemplate, firstName, responses, beats),
+    user: applyReportUserTemplate(
+      reportUserTemplate,
+      firstName,
+      responses,
+      beats,
+      precomputedScore?.subscores,
+    ),
     temperature: 0.55,
     maxTokens: 2400,
   })

@@ -32,8 +32,6 @@ import {
   Upload,
   X,
   Filter,
-  User,
-  Users,
   FileText,
   Volume2,
   Loader2,
@@ -47,8 +45,13 @@ import {
 } from "@/components/challenge/clarity-report"
 import type { ClarityScore } from "@/lib/scoring"
 import type { FunnelStats } from "@/lib/server/cosmos-db"
+import { DEFAULT_ENTRY_CONTENT, type EntryContent } from "@/lib/entry-content"
+import { VERTICALS, VERTICAL_LABELS, normalizeVertical, type Vertical } from "@/lib/verticals"
 
-type Audience = "individual" | "team"
+// The editor's "audience" IS the vertical (main / retargeting / adhd /
+// healthcare). Non-main verticals inherit any empty field from Main at
+// runtime, so seeding a vertical means overriding only what differs.
+type Audience = Vertical
 
 /** Shape of the persisted score_json blob written by the summary screen. */
 type PersistedScore = {
@@ -280,6 +283,9 @@ type AudienceData = {
   summaryUserPrompt: string
   questions: Question[]
   beats: Beat[]
+  /** Static entry-page copy (the "your details" signup step). Empty string
+   *  fields on non-main verticals inherit Main's value at runtime. */
+  entryContent: EntryContent
 }
 
 const EMPTY_QUESTIONS: Question[] = Array.from({ length: 5 }, () => ({
@@ -300,17 +306,37 @@ const EMPTY_BEATS: Beat[] = Array.from({ length: 5 }, () => ({
   userPrompt: "",
 }))
 
-const emptyAudienceData = (): AudienceData => ({
+const EMPTY_ENTRY_DRAFT: EntryContent = {
+  eyebrow: "",
+  headline: "",
+  headlineAccent: "",
+  subcopy: "",
+  ctaLabel: "",
+  showVideo: true,
+}
+
+/**
+ * Main starts from the shipped defaults (it's the base every vertical
+ * inherits from); non-main verticals start EMPTY so an untouched field
+ * keeps inheriting Main instead of freezing a copy of today's defaults.
+ */
+const emptyAudienceData = (isMain: boolean): AudienceData => ({
   systemPrompt: "",
-  reportSystemPrompt: DEFAULT_REPORT_SYSTEM_PROMPT,
-  reportUserPrompt: DEFAULT_REPORT_USER_PROMPT,
-  scoreSystemPrompt: DEFAULT_SCORE_SYSTEM_PROMPT,
-  scoreUserPrompt: DEFAULT_SCORE_USER_PROMPT,
-  summarySystemPrompt: DEFAULT_SUMMARY_SYSTEM_PROMPT,
-  summaryUserPrompt: DEFAULT_SUMMARY_USER_PROMPT,
+  reportSystemPrompt: isMain ? DEFAULT_REPORT_SYSTEM_PROMPT : "",
+  reportUserPrompt: isMain ? DEFAULT_REPORT_USER_PROMPT : "",
+  scoreSystemPrompt: isMain ? DEFAULT_SCORE_SYSTEM_PROMPT : "",
+  scoreUserPrompt: isMain ? DEFAULT_SCORE_USER_PROMPT : "",
+  summarySystemPrompt: isMain ? DEFAULT_SUMMARY_SYSTEM_PROMPT : "",
+  summaryUserPrompt: isMain ? DEFAULT_SUMMARY_USER_PROMPT : "",
   questions: structuredClone(EMPTY_QUESTIONS),
   beats: structuredClone(EMPTY_BEATS),
+  entryContent: isMain ? { ...DEFAULT_ENTRY_CONTENT } : { ...EMPTY_ENTRY_DRAFT },
 })
+
+const emptyAllVerticals = (): Record<Audience, AudienceData> =>
+  Object.fromEntries(
+    VERTICALS.map((v) => [v, emptyAudienceData(v === "main")])
+  ) as Record<Audience, AudienceData>
 
 const TAGS = ["{{NAME}}", "{{Q1}}", "{{Q2}}", "{{Q3}}", "{{Q4}}", "{{Q5}}", "{{GATE2}}", "{{GATE4}}"] as const
 
@@ -1129,8 +1155,8 @@ export default function AdminPage() {
   const [copiedTag, setCopiedTag] = useState<string | null>(null)
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null)
 
-  const [audience, setAudience] = useState<Audience>("individual")
-  const [tab, setTab] = useState<"system" | "questions" | "beats" | "score" | "report" | "summary" | "responses" | "headlines" | "analytics">("system")
+  const [audience, setAudience] = useState<Audience>("main")
+  const [tab, setTab] = useState<"system" | "entry" | "questions" | "beats" | "score" | "report" | "summary" | "responses" | "headlines" | "analytics">("system")
   // The same console powers /admin and /techadmin. On /techadmin we unlock the
   // Analytics tab + per-user telemetry (PostHog session, purchase, journey).
   const pathname = usePathname()
@@ -1163,12 +1189,9 @@ export default function AdminPage() {
     }
   }, [pathname])
 
-  // Per-audience editor state. Both audiences persist in memory so switching
-  // between them doesn't lose unsaved work.
-  const [data, setData] = useState<Record<Audience, AudienceData>>({
-    individual: emptyAudienceData(),
-    team: emptyAudienceData(),
-  })
+  // Per-vertical editor state. Every vertical persists in memory so
+  // switching between tabs doesn't lose unsaved work.
+  const [data, setData] = useState<Record<Audience, AudienceData>>(emptyAllVerticals)
 
   const [openCards, setOpenCards] = useState<Record<string, boolean>>({})
 
@@ -1178,7 +1201,8 @@ export default function AdminPage() {
     firstName: string
     email: string
     phone?: string
-    audience?: Audience | ""
+    /** Vertical id at signup; older rows hold legacy "individual"/"team". */
+    audience?: string
     createdAt: string
     question1: string; question2: string; question3: string; question4: string; question5: string
     question1_text?: string; question2_text?: string; question3_text?: string; question4_text?: string; question5_text?: string
@@ -1223,7 +1247,7 @@ export default function AdminPage() {
   // Report preview modal (renders a persisted report_json via the shared
   // ReportView and exports the same PDF the user got).
   const [reportModal, setReportModal] = useState<
-    { id: string; name: string; dateISO: string; data: ReportApiResponse } | null
+    { id: string; name: string; dateISO: string; data: ReportApiResponse; vertical: Vertical } | null
   >(null)
   const [reportPdfBusy, setReportPdfBusy] = useState(false)
   const reportModalRef = useRef<HTMLDivElement>(null)
@@ -1232,29 +1256,36 @@ export default function AdminPage() {
   const current = data[audience]
 
   /**
-   * Read raw Cosmos prompt map and unpack BOTH audiences into our editor state.
-   * The keys we care about are suffixed `_individual` and `_team`.
+   * Read raw Cosmos prompt map and unpack EVERY vertical into editor state.
+   * Keys are suffixed `_<vertical>`. Main additionally falls back to the
+   * legacy `_individual` keys so the console shows real content before the
+   * one-time verticals migration script has run. Non-main verticals load
+   * exactly what's stored — empty fields stay empty (= inherit Main at
+   * runtime), never pre-filled with defaults that would freeze inheritance.
    */
   const unpackPrompts = useCallback((raw: Record<string, string>) => {
-    const next: Record<Audience, AudienceData> = {
-      individual: emptyAudienceData(),
-      team: emptyAudienceData(),
-    }
-    for (const aud of ["individual", "team"] as Audience[]) {
-      next[aud].systemPrompt = raw[`system_prompt_${aud}`] || ""
+    const next = emptyAllVerticals()
+    // Value for `base` under vertical `aud`; main reads legacy keys too.
+    const rv = (base: string, aud: Audience): string =>
+      aud === "main"
+        ? raw[`${base}_main`] || raw[`${base}_individual`] || ""
+        : raw[`${base}_${aud}`] || ""
+    for (const aud of VERTICALS) {
+      const isMain = aud === "main"
+      next[aud].systemPrompt = rv("system_prompt", aud)
       next[aud].reportSystemPrompt =
-        raw[`report_system_prompt_${aud}`] || DEFAULT_REPORT_SYSTEM_PROMPT
+        rv("report_system_prompt", aud) || (isMain ? DEFAULT_REPORT_SYSTEM_PROMPT : "")
       next[aud].reportUserPrompt =
-        raw[`report_user_prompt_${aud}`] || DEFAULT_REPORT_USER_PROMPT
+        rv("report_user_prompt", aud) || (isMain ? DEFAULT_REPORT_USER_PROMPT : "")
       next[aud].scoreSystemPrompt =
-        raw[`score_system_prompt_${aud}`] || DEFAULT_SCORE_SYSTEM_PROMPT
+        rv("score_system_prompt", aud) || (isMain ? DEFAULT_SCORE_SYSTEM_PROMPT : "")
       next[aud].scoreUserPrompt =
-        raw[`score_user_prompt_${aud}`] || DEFAULT_SCORE_USER_PROMPT
+        rv("score_user_prompt", aud) || (isMain ? DEFAULT_SCORE_USER_PROMPT : "")
       next[aud].summarySystemPrompt =
-        raw[`summary_system_prompt_${aud}`] || DEFAULT_SUMMARY_SYSTEM_PROMPT
+        rv("summary_system_prompt", aud) || (isMain ? DEFAULT_SUMMARY_SYSTEM_PROMPT : "")
       next[aud].summaryUserPrompt =
-        raw[`summary_user_prompt_${aud}`] || DEFAULT_SUMMARY_USER_PROMPT
-      const qRaw = raw[`questions_${aud}`]
+        rv("summary_user_prompt", aud) || (isMain ? DEFAULT_SUMMARY_USER_PROMPT : "")
+      const qRaw = rv("questions", aud)
       if (qRaw) {
         try {
           const parsed = JSON.parse(qRaw)
@@ -1264,13 +1295,31 @@ export default function AdminPage() {
         }
       }
       next[aud].beats = EMPTY_BEATS.map((_, i) => ({
-        label: raw[`beat${i + 1}_label_${aud}`] || "",
-        title: raw[`beat${i + 1}_title_${aud}`] || "",
-        subtitle: raw[`beat${i + 1}_subtitle_${aud}`] || "",
-        feedbackQuestion: raw[`beat${i + 1}_feedbackQuestion_${aud}`] || "",
-        systemContext: raw[`beat${i + 1}_systemContext_${aud}`] || "",
-        userPrompt: raw[`beat${i + 1}_prompt_${aud}`] || "",
+        label: rv(`beat${i + 1}_label`, aud),
+        title: rv(`beat${i + 1}_title`, aud),
+        subtitle: rv(`beat${i + 1}_subtitle`, aud),
+        feedbackQuestion: rv(`beat${i + 1}_feedbackQuestion`, aud),
+        systemContext: rv(`beat${i + 1}_systemContext`, aud),
+        userPrompt: rv(`beat${i + 1}_prompt`, aud),
       }))
+      const eRaw = rv("entry_content", aud)
+      if (eRaw) {
+        try {
+          const p = JSON.parse(eRaw) as Partial<EntryContent>
+          const draft = isMain ? { ...DEFAULT_ENTRY_CONTENT } : { ...EMPTY_ENTRY_DRAFT }
+          next[aud].entryContent = {
+            eyebrow: typeof p.eyebrow === "string" ? p.eyebrow : draft.eyebrow,
+            headline: typeof p.headline === "string" ? p.headline : draft.headline,
+            headlineAccent:
+              typeof p.headlineAccent === "string" ? p.headlineAccent : draft.headlineAccent,
+            subcopy: typeof p.subcopy === "string" ? p.subcopy : draft.subcopy,
+            ctaLabel: typeof p.ctaLabel === "string" ? p.ctaLabel : draft.ctaLabel,
+            showVideo: typeof p.showVideo === "boolean" ? p.showVideo : draft.showVideo,
+          }
+        } catch {
+          /* keep the empty/default draft */
+        }
+      }
     }
     setData(next)
   }, [])
@@ -1498,14 +1547,16 @@ export default function AdminPage() {
   }
 
   /**
-   * Save BOTH audiences in a single round-trip - keeps the API simple and the
-   * editor consistent. Each key is suffixed with the audience.
+   * Save EVERY vertical in a single round-trip - keeps the API simple and
+   * the editor consistent. Each key is suffixed with the vertical id.
+   * Empty values are written as-is: an empty key on a non-main vertical
+   * means "inherit Main" to the runtime resolver.
    */
   const handleSave = async () => {
     setSaveDisabled(true)
     setSaveLabel("Saving...")
     const payload: Record<string, string> = {}
-    for (const aud of ["individual", "team"] as Audience[]) {
+    for (const aud of VERTICALS) {
       const ad = data[aud]
       payload[`system_prompt_${aud}`] = ad.systemPrompt
       payload[`report_system_prompt_${aud}`] = ad.reportSystemPrompt
@@ -1515,6 +1566,7 @@ export default function AdminPage() {
       payload[`summary_system_prompt_${aud}`] = ad.summarySystemPrompt
       payload[`summary_user_prompt_${aud}`] = ad.summaryUserPrompt
       payload[`questions_${aud}`] = JSON.stringify(ad.questions)
+      payload[`entry_content_${aud}`] = JSON.stringify(ad.entryContent)
       ad.beats.forEach((b, i) => {
         payload[`beat${i + 1}_prompt_${aud}`] = b.userPrompt
         payload[`beat${i + 1}_label_${aud}`] = b.label
@@ -1679,6 +1731,10 @@ export default function AdminPage() {
           summaryUserPrompt: keep(obj.summaryUserPrompt, prev[audience].summaryUserPrompt),
           questions: newQuestions,
           beats: newBeats,
+          entryContent:
+            obj.entryContent && typeof obj.entryContent === "object"
+              ? { ...prev[audience].entryContent, ...(obj.entryContent as Partial<EntryContent>) }
+              : prev[audience].entryContent,
         },
       }))
       alert(`Config imported into the ${audience} editor. Click Save Changes to persist.`)
@@ -1706,6 +1762,7 @@ export default function AdminPage() {
       summaryUserPrompt: current.summaryUserPrompt,
       questions: current.questions,
       beats: current.beats,
+      entryContent: current.entryContent,
     }
     const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" })
     const url = URL.createObjectURL(blob)
@@ -1745,6 +1802,33 @@ export default function AdminPage() {
 
   const updateSummaryUserPrompt = (value: string) =>
     setData((prev) => ({ ...prev, [audience]: { ...prev[audience], summaryUserPrompt: value } }))
+
+  const updateEntryContent = <K extends keyof EntryContent>(key: K, value: EntryContent[K]) =>
+    setData((prev) => ({
+      ...prev,
+      [audience]: {
+        ...prev[audience],
+        entryContent: { ...prev[audience].entryContent, [key]: value },
+      },
+    }))
+
+  /**
+   * Copy Main's full editor state into the current vertical tab as a
+   * starting point. Nothing is persisted until Save Changes - and note the
+   * trade-off: seeded fields become overrides, so later Main edits no
+   * longer flow through to them. Prefer editing only what differs.
+   */
+  const handleSeedFromMain = () => {
+    if (audience === "main") return
+    const confirmed = window.confirm(
+      `Copy the MAIN editor state into the ${VERTICAL_LABELS[audience].toUpperCase()} tab?\n\n` +
+      `This replaces everything currently in this tab (unsaved edits included). ` +
+      `Seeded fields become overrides - future Main edits will NOT flow through to them.\n\n` +
+      `Nothing is saved to the database until you click Save Changes.`
+    )
+    if (!confirmed) return
+    setData((prev) => ({ ...prev, [audience]: structuredClone(prev.main) }))
+  }
 
   const updateQuestion = <K extends keyof Question>(idx: number, key: K, value: Question[K]) => {
     setData((prev) => ({
@@ -1792,6 +1876,7 @@ export default function AdminPage() {
   // so the admin chrome reads as one calm family, not four neon tags.
   const tabConfig = [
     { value: "system" as const, label: "AI persona", activeClass: "bg-ink text-background" },
+    { value: "entry" as const, label: "Entry page", activeClass: "bg-ink text-background" },
     { value: "questions" as const, label: "The 5 questions", activeClass: "bg-ink text-background" },
     { value: "beats" as const, label: "Reflections (beats 1–5)", activeClass: "bg-ink text-background" },
     { value: "score" as const, label: "Score (0–100)", activeClass: "bg-ink text-background" },
@@ -1936,16 +2021,19 @@ export default function AdminPage() {
             Your Belief Score · Prompt configuration
           </p>
           <h2 className="mb-3 font-serif text-[24px] leading-snug text-ink sm:text-[28px]">
-            Edit prompts for both
-            <span className="font-serif-italic text-foreground"> audiences.</span>
+            Edit content per
+            <span className="font-serif-italic text-foreground"> vertical.</span>
           </h2>
           <p className="max-w-2xl text-[15px] leading-[1.8] text-foreground/85">
-            Toggle between the{" "}
-            <span className="font-serif text-ink">Individual</span> and{" "}
-            <span className="font-serif text-ink">Team</span> audiences - each has its
-            own content.{" "}
-            <span className="font-serif text-ink">Save changes</span> writes both audiences in
-            a single round-trip.
+            <span className="font-serif text-ink">Main</span> is the base every
+            other vertical inherits from - on the{" "}
+            {VERTICALS.filter((v) => v !== "main")
+              .map((v) => VERTICAL_LABELS[v])
+              .join(", ")}{" "}
+            tabs, any field left <em>empty</em> serves Main&apos;s content at
+            runtime, so only override what differs.{" "}
+            <span className="font-serif text-ink">Save changes</span> writes every
+            vertical in a single round-trip.
           </p>
           {loadError && (
             <p
@@ -1973,39 +2061,40 @@ export default function AdminPage() {
 
         <div className="hairline mb-7" />
 
-        {/* Audience toggle - only for content tabs */}
+        {/* Vertical toggle - only for content tabs */}
         {tab !== "responses" && (
           <div className="mb-7 flex flex-wrap items-center gap-3">
-            <span className="eyebrow text-foreground/65">Audience</span>
-            <div className="inline-flex rounded-full border border-border bg-card p-1">
-              <button
-                type="button"
-                onClick={() => setAudience("individual")}
-                className={`inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-[11px] uppercase tracking-[0.2em] transition-all duration-300 ${
-                  audience === "individual"
-                    ? "bg-ink text-background"
-                    : "text-foreground/65 hover:text-ink"
-                }`}
-              >
-                <User className="h-3 w-3" strokeWidth={1.6} />
-                Individual
-              </button>
-              <button
-                type="button"
-                onClick={() => setAudience("team")}
-                className={`inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-[11px] uppercase tracking-[0.2em] transition-all duration-300 ${
-                  audience === "team"
-                    ? "bg-ink text-background"
-                    : "text-foreground/65 hover:text-ink"
-                }`}
-              >
-                <Users className="h-3 w-3" strokeWidth={1.6} />
-                Team
-              </button>
+            <span className="eyebrow text-foreground/65">Vertical</span>
+            <div className="inline-flex flex-wrap rounded-full border border-border bg-card p-1">
+              {VERTICALS.map((v) => (
+                <button
+                  key={v}
+                  type="button"
+                  onClick={() => setAudience(v)}
+                  className={`inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-[11px] uppercase tracking-[0.2em] transition-all duration-300 ${
+                    audience === v
+                      ? "bg-ink text-background"
+                      : "text-foreground/65 hover:text-ink"
+                  }`}
+                >
+                  {VERTICAL_LABELS[v]}
+                </button>
+              ))}
             </div>
             <span className={`rounded-full px-3 py-1 text-[10px] uppercase tracking-[0.22em] ${audienceClass}`}>
-              Editing · {audience}
+              Editing · {VERTICAL_LABELS[audience]}
             </span>
+            {audience !== "main" && (
+              <button
+                type="button"
+                onClick={handleSeedFromMain}
+                disabled={loading}
+                title="Copy Main's editor state into this vertical as a starting point"
+                className="inline-flex h-8 items-center gap-1.5 rounded-full border border-foreground/35 px-3.5 text-[10px] uppercase tracking-[0.22em] text-foreground transition-colors duration-300 hover:border-ink hover:text-ink disabled:opacity-50"
+              >
+                Seed from Main
+              </button>
+            )}
           </div>
         )}
 
@@ -2043,6 +2132,84 @@ export default function AdminPage() {
                 </button>
               ))}
             </div>
+
+            {/* ── Entry Page Tab ── */}
+            {tab === "entry" && (
+              <div className="space-y-4">
+                <div className="rounded-md border border-border bg-secondary/40 p-4 text-[14px] leading-[1.7] text-foreground/85">
+                  The static copy on the{" "}
+                  <strong className="text-foreground">&quot;your details&quot; entry page</strong>{" "}
+                  (/challenge/audience) shown to visitors arriving from the{" "}
+                  <strong className="text-foreground">{VERTICAL_LABELS[audience]}</strong>{" "}
+                  landing page{audience !== "main" ? ` (links with ?vertical=${audience})` : ""}.
+                  Nothing here is AI-generated - this is deterministic, reviewed copy.
+                  {audience !== "main" && (
+                    <>
+                      {" "}Fields left <em>empty</em> inherit Main&apos;s copy at runtime;
+                      the greyed text shows what would currently be served.
+                    </>
+                  )}
+                </div>
+
+                <div className="bg-card rounded-md s-card-static overflow-hidden">
+                  <div className="p-6 space-y-5">
+                    {(
+                      [
+                        { key: "eyebrow" as const, label: "Eyebrow (kicker above the headline)", rows: 0 },
+                        { key: "headline" as const, label: "Headline - first line", rows: 0 },
+                        { key: "headlineAccent" as const, label: "Headline - italic second line", rows: 0 },
+                        { key: "subcopy" as const, label: "Subcopy paragraph", rows: 3 },
+                        { key: "ctaLabel" as const, label: "CTA button label", rows: 0 },
+                      ]
+                    ).map((f) => {
+                      // What runtime serves if this field stays empty on a
+                      // non-main tab: Main's value, else the shipped default.
+                      const inherited =
+                        data.main.entryContent[f.key] || DEFAULT_ENTRY_CONTENT[f.key]
+                      const placeholder =
+                        audience === "main"
+                          ? String(DEFAULT_ENTRY_CONTENT[f.key])
+                          : `Inherits Main: ${inherited}`
+                      return (
+                        <label key={f.key} className="block">
+                          <span className="eyebrow mb-2 block text-foreground/65">
+                            {f.label}
+                          </span>
+                          {f.rows > 0 ? (
+                            <Textarea
+                              rows={f.rows}
+                              value={current.entryContent[f.key]}
+                              placeholder={placeholder}
+                              onChange={(e) => updateEntryContent(f.key, e.target.value)}
+                              className="s-input resize-y text-sm"
+                            />
+                          ) : (
+                            <Input
+                              type="text"
+                              value={current.entryContent[f.key]}
+                              placeholder={placeholder}
+                              onChange={(e) => updateEntryContent(f.key, e.target.value)}
+                              className="s-input h-11 text-sm"
+                            />
+                          )}
+                        </label>
+                      )
+                    })}
+                    <label className="flex items-center gap-2.5 pt-1">
+                      <input
+                        type="checkbox"
+                        checked={current.entryContent.showVideo}
+                        onChange={(e) => updateEntryContent("showVideo", e.target.checked)}
+                        className="rounded border-foreground/30 accent-ink"
+                      />
+                      <span className="text-[14px] text-foreground/85">
+                        Show the founder orientation video below the form
+                      </span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* ── System Prompt Tab ── */}
             {tab === "system" && (
@@ -2727,14 +2894,17 @@ export default function AdminPage() {
                       {displayed.map((r) => {
                         const open = !!expandedResponses[r.id]
                         // Calmed Marine palette: foreground = body, ink = heading.
-                        // Tonal differentiation alone signals the audience -
-                        // no separate accent colour required.
-                        const audienceBadge =
-                          r.audience === "individual"
-                            ? "bg-secondary text-ink border-border"
-                            : r.audience === "team"
-                              ? "bg-ink/10 text-ink border-ink/20"
-                              : "bg-muted text-foreground/65 border-border"
+                        // Main (incl. legacy "individual"/"team" rows) reads
+                        // quiet; any other vertical gets the ink-tinted chip so
+                        // non-main traffic stands out at a glance.
+                        const isMainVertical =
+                          !r.audience ||
+                          r.audience === "main" ||
+                          r.audience === "individual" ||
+                          r.audience === "team"
+                        const audienceBadge = isMainVertical
+                          ? "bg-secondary text-ink border-border"
+                          : "bg-ink/10 text-ink border-ink/20"
                         return (
                           <div key={r.id} className={`bg-card rounded-md overflow-hidden transition-all duration-300 ${open ? "s-card" : "s-card-static"}`}>
                             <div className="flex items-center">
@@ -2903,7 +3073,15 @@ export default function AdminPage() {
                                 <ResponseOutputs
                                   r={r}
                                   onViewReport={(data, name, id, dateISO) =>
-                                    setReportModal({ data, name, id, dateISO })
+                                    setReportModal({
+                                      data,
+                                      name,
+                                      id,
+                                      dateISO,
+                                      // Render the report with the vocabulary of the
+                                      // vertical this respondent actually ran.
+                                      vertical: normalizeVertical(r.audience) ?? "main",
+                                    })
                                   }
                                 />
                                 <ResponseSourceDetails r={r} />
@@ -3015,6 +3193,7 @@ export default function AdminPage() {
                 data={reportModal.data}
                 name={reportModal.name}
                 dateISO={reportModal.dateISO}
+                vertical={reportModal.vertical}
               />
             </div>
           </div>

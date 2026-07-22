@@ -395,7 +395,7 @@ export function QuestionScreen({
             <Lightbulb className="h-5 w-5" strokeWidth={1.5} />
           </span>
           <h2 className="mb-3 font-serif text-[24px] leading-snug text-ink">
-            {audience === "team" ? "Team content" : "Content"} not yet
+            Content not yet
             <span className="block font-serif-italic">configured.</span>
           </h2>
           <p className="mb-7 text-[15px] leading-[1.75] text-foreground/80">

@@ -10,16 +10,20 @@ import { preloadSummaryAudio } from "@/lib/client/summary-audio-cache"
 import { preloadBeatAudio } from "@/lib/client/beat-audio-cache"
 import { ChallengeNavHome } from "@/components/challenge/challenge-nav-home"
 import { ChallengeMenuButton } from "@/components/challenge/challenge-funnel-header-actions"
+import { displayFor } from "@/lib/vertical-display"
 
-const processingSteps = [
+// Step labels carry the vertical's product vocabulary (One-Name Law): an
+// ADHD visitor watches their "ADHD Belief Score" being built, a healthcare
+// leader their "Belief Profile" - not a generic score.
+const processingStepsFor = (productName: string): string[] => [
   "Reading what you shared",
   "Finding where the noise is coming from",
-  "Scoring your clarity",
+  `Calculating your ${productName}`,
   "Building your mirror",
   "Drafting your detailed action plan",
   "Writing your closing reflection",
   "Finding the one thing that moves everything else",
-  "Setting your score aside for you",
+  `Setting your ${productName} aside for you`,
 ]
 
 const BEAT_READY_MIN_CHARS = 40
@@ -158,6 +162,7 @@ async function fetchReportInBackground(args: {
 export function ProcessingScreen({ audience }: { audience: Audience }) {
   const router = useRouter()
   const { state, setBeat, isHydrated, setClarityScore, setReportData, setSummaryText } = useChallenge()
+  const processingSteps = processingStepsFor(displayFor(audience).productName)
   const [activeStep, setActiveStep] = useState(0)
   const [minElapsed, setMinElapsed] = useState(false)
   const [showClosingLine, setShowClosingLine] = useState(false)
@@ -207,6 +212,32 @@ export function ProcessingScreen({ audience }: { audience: Audience }) {
     const t = setTimeout(() => setMinElapsed(true), 7000)
     return () => clearTimeout(t)
   }, [])
+
+  // ── "Your words, being read" echo ──
+  // Short fragments of the user's own answers cycle under the headline
+  // while the pipeline runs. This is the funnel's core trust mechanism
+  // (nothing here could be generated without their words) made visible at
+  // the exact moment they're waiting on the machine. Fragments only - never
+  // a full answer - so a shoulder-surfer reads nothing sensitive.
+  const wordEchoes = (() => {
+    const out: string[] = []
+    for (const key of ["question1", "question2", "question3", "question4", "question5"] as const) {
+      const t = (state.responses[key] ?? "").trim().replace(/\s+/g, " ")
+      if (t.length < 20) continue
+      const words = t.split(" ")
+      out.push(words.slice(0, 9).join(" ") + (words.length > 9 ? "…" : ""))
+    }
+    return out
+  })()
+  const [echoIdx, setEchoIdx] = useState(0)
+  useEffect(() => {
+    if (wordEchoes.length < 2) return
+    const id = setInterval(() => {
+      setEchoIdx((i) => (i + 1) % wordEchoes.length)
+    }, 3800)
+    return () => clearInterval(id)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [wordEchoes.length])
 
   useEffect(() => {
     const id = setInterval(() => {
@@ -280,7 +311,7 @@ export function ProcessingScreen({ audience }: { audience: Audience }) {
 
       if (!active) return
 
-      scorePromise = fetchClarityScoreInBackground(state.responses, state.firstName, state.audience ?? "individual")
+      scorePromise = fetchClarityScoreInBackground(state.responses, state.firstName, state.audience ?? "main")
       void scorePromise.then((score) => {
         if (score) setClarityScore(score)
       })
@@ -361,7 +392,7 @@ export function ProcessingScreen({ audience }: { audience: Audience }) {
       }
       void streamSummaryInBackground({
         firstName: state.firstName,
-        audience: state.audience ?? "individual",
+        audience: state.audience ?? "main",
         beats: finalBeats,
       }).then((text) => {
         if (text) {
@@ -454,7 +485,7 @@ export function ProcessingScreen({ audience }: { audience: Audience }) {
       <div className="flex min-h-screen items-center justify-center px-5">
         <div className="s-card-static animate-fade-in-up w-full max-w-md p-8 text-center">
           <h2 className="mb-3 font-serif text-[24px] leading-snug text-ink">
-            {audience === "team" ? "Team content" : "Content"} not yet
+            Content not yet
             <span className="block font-serif-italic">configured.</span>
           </h2>
           <p className="mb-7 text-[15px] leading-[1.75] text-foreground/85">
@@ -550,9 +581,25 @@ export function ProcessingScreen({ audience }: { audience: Audience }) {
           What you shared is being read
           <span className="block font-serif-italic text-foreground">carefully.</span>
         </h1>
-        <p className="mb-10 max-w-sm text-center font-serif-italic text-[16px] leading-[1.7] text-foreground/75">
+        <p className="mb-6 max-w-sm text-center font-serif-italic text-[16px] leading-[1.7] text-foreground/75">
           What surfaces has always been yours.
         </p>
+
+        {/* Cycling fragments of their own answers - fixed height so the
+            swap never reflows the checklist below. */}
+        {wordEchoes.length > 0 && (
+          <div className="mb-8 flex min-h-16 w-full max-w-sm flex-col items-center justify-center text-center">
+            <p
+              key={echoIdx}
+              className="animate-fade-in-up font-serif text-[15px] leading-[1.6] text-ink/90"
+            >
+              &ldquo;{wordEchoes[echoIdx]}&rdquo;
+            </p>
+            <p className="mt-1.5 text-[10px] uppercase tracking-[0.24em] text-foreground/50">
+              Your words, being read
+            </p>
+          </div>
+        )}
 
         <ul className="mb-8 w-full space-y-3" aria-label="Processing steps">
           {processingSteps.map((label, i) => {

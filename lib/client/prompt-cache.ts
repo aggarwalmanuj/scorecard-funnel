@@ -1,5 +1,7 @@
 "use client"
 
+import { VERTICALS, type Vertical } from "@/lib/verticals"
+
 /**
  * Client cache for the audience-scoped funnel copy (question prompts + beat
  * display copy), fetched together from /api/admin/question-prompts.
@@ -46,7 +48,7 @@ export interface BeatDisplay {
   feedbackQuestion: string
 }
 
-export type PromptAudience = "individual" | "team"
+export type PromptAudience = Vertical
 
 export type PromptBundle = {
   questions: QuestionPrompt[] | null
@@ -88,7 +90,7 @@ if (typeof document !== "undefined") {
   let previouslyHidden = document.visibilityState === "hidden"
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "visible" && previouslyHidden) {
-      for (const audience of ["individual", "team"] as const) {
+      for (const audience of VERTICALS) {
         const entry = readCached(audience)
         if (entry) writeCached(audience, { ...entry, fetchedAt: 0 })
       }
