@@ -5,6 +5,11 @@ import { useRouter } from "next/navigation"
 import { ArrowRight, Volume2, Square, Loader2, Download } from "lucide-react"
 import { useChallenge, type Audience } from "@/context/challenge-context"
 import { displayFor } from "@/lib/vertical-display"
+import {
+  DIMENSION_COLORS,
+  DIMENSION_ICONS,
+  ScoreRing,
+} from "@/components/challenge/score-visuals"
 import { isAbortErrorLike } from "@/lib/stream-beat-client"
 import {
   getCachedSummaryAudio,
@@ -619,6 +624,11 @@ export function JourneySummaryScreen({ audience }: { audience: Audience }) {
                 reasons={scoreReasons}
                 nsState={nsState}
                 audience={audience}
+                totalWords={Object.values(state.responses)
+                  .join(" ")
+                  .trim()
+                  .split(/\s+/)
+                  .filter(Boolean).length}
                 unlocked={unlocked}
                 onUnlock={() => {
                   // Navigate without flipping local `unlocked` state - flipping
@@ -737,26 +747,97 @@ export function JourneySummaryScreen({ audience }: { audience: Audience }) {
               </p>
             )}
 
-            <div className="space-y-5 max-w-3xl">
-              {paragraphs.map((para, idx) => (
-                <p
-                  key={idx}
-                  className="font-serif text-[17px] leading-[1.85] text-foreground/90 sm:text-[18px]"
-                  style={{
-                    animation: "fade-in-up 0.5s cubic-bezier(0.22,1,0.36,1) both",
-                    animationDelay: `${idx * 80}ms`,
-                  }}
-                >
-                  {para}
-                  {idx === paragraphs.length - 1 && isCursorVisible && (
-                    <span
-                      className="typewriter-cursor ml-0.5 inline-block h-[1.1em] w-px align-middle bg-ink"
-                      aria-hidden
-                    />
+            {/* The reflection as a designed reading artifact - a card with
+                a movement rail (numbered markers on a connecting line), a
+                drop cap opening, and a closing seal - instead of loose
+                paragraphs floating on the page background. */}
+            {summaryText && (
+              <div className="max-w-3xl overflow-hidden rounded-md border border-border bg-card">
+                <div className="flex items-center justify-between gap-3 border-b border-border px-6 py-4 sm:px-8">
+                  <p className="eyebrow flex items-center gap-2.5 text-foreground/70">
+                    <span className="pulse-dot" aria-hidden />
+                    Your closing reflection
+                  </p>
+                  <span className="hidden font-serif-italic text-[12.5px] text-foreground/55 sm:block">
+                    Written from your five beats
+                  </span>
+                </div>
+
+                <div className="px-5 py-7 sm:px-8 sm:py-9">
+                  <div className="relative space-y-8">
+                    {/* Connecting rail behind the movement markers */}
+                    {paragraphs.length > 1 && (
+                      <span
+                        aria-hidden
+                        className="absolute bottom-3 left-[14px] top-3 w-px"
+                        style={{
+                          background:
+                            "linear-gradient(180deg, transparent, var(--border) 12%, var(--border) 88%, transparent)",
+                        }}
+                      />
+                    )}
+                    {paragraphs.map((para, idx) => (
+                      <div
+                        key={idx}
+                        className="relative flex items-start gap-4 sm:gap-6"
+                        style={{
+                          animation: "fade-in-up 0.5s cubic-bezier(0.22,1,0.36,1) both",
+                          animationDelay: `${idx * 80}ms`,
+                        }}
+                      >
+                        <span
+                          className="z-10 mt-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-full border bg-card font-serif text-[11px]"
+                          style={{
+                            borderColor:
+                              "color-mix(in srgb, var(--signal) 50%, transparent)",
+                            color: "var(--signal)",
+                          }}
+                          aria-hidden
+                        >
+                          {["I", "II", "III", "IV", "V", "VI"][idx] ?? idx + 1}
+                        </span>
+                        <p
+                          className={`min-w-0 flex-1 font-serif text-[16.5px] leading-[1.85] text-foreground/90 sm:text-[17.5px] ${
+                            idx === 0
+                              ? "first-letter:float-left first-letter:mr-2.5 first-letter:mt-1 first-letter:font-serif first-letter:text-[2.9em] first-letter:leading-[0.8] first-letter:text-ink"
+                              : ""
+                          }`}
+                        >
+                          {para}
+                          {idx === paragraphs.length - 1 && isCursorVisible && (
+                            <span
+                              className="typewriter-cursor ml-0.5 inline-block h-[1.1em] w-px align-middle bg-ink"
+                              aria-hidden
+                            />
+                          )}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Closing seal once fully revealed */}
+                  {!isCursorVisible && (
+                    <div className="mt-9 flex items-center gap-4" aria-hidden>
+                      <span
+                        className="h-px flex-1"
+                        style={{
+                          background:
+                            "linear-gradient(90deg, transparent, var(--border))",
+                        }}
+                      />
+                      <span style={{ color: "var(--signal)", fontSize: 10 }}>◆</span>
+                      <span
+                        className="h-px flex-1"
+                        style={{
+                          background:
+                            "linear-gradient(90deg, var(--border), transparent)",
+                        }}
+                      />
+                    </div>
                   )}
-                </p>
-              ))}
-            </div>
+                </div>
+              </div>
+            )}
 
             {/* Visible skip for the typewriter — double-click (above) is
                 undiscoverable and impossible on touch. */}
@@ -835,6 +916,7 @@ function ClarityScoreCard({
   reasons,
   nsState,
   audience,
+  totalWords,
   unlocked,
   onUnlock,
 }: {
@@ -843,61 +925,90 @@ function ClarityScoreCard({
   reasons: ScoreReasons
   nsState?: string
   audience: Audience
+  /** Total words across the user's five answers - insight-tile fact. */
+  totalWords: number
   unlocked: boolean
   onUnlock: () => void
 }) {
   const bandColor = bandAccent(clarity.band)
+  const display = displayFor(audience)
+
+  // Honest session facts for the insight tiles - every number is real.
+  const strongest = clarity.subscoreDetails.reduce((a, b) => (b.value > a.value ? b : a))
+  const weakest = clarity.subscoreDetails.reduce((a, b) => (b.value < a.value ? b : a))
+  const vsMean = clarity.overall - clarity.benchmarkMean
 
   return (
     <section
-      aria-label={displayFor(audience).productName}
+      aria-label={display.productName}
       className="overflow-hidden rounded-md border border-border bg-card"
     >
-      <div className="border-b border-border px-6 pb-5 pt-6 sm:px-8">
-        <div className="mb-2 flex items-center justify-between gap-2">
+      {/* ── HERO: the score as an identity moment ── */}
+      <div
+        className="relative overflow-hidden border-b border-border px-6 pb-8 pt-6 sm:px-8"
+        style={{
+          background: `linear-gradient(155deg, color-mix(in srgb, ${bandColor} 16%, var(--card)) 0%, var(--card) 62%)`,
+        }}
+      >
+        {/* Decorative glow orbs in the band color - pure atmosphere */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -right-12 -top-12 h-44 w-44 rounded-full opacity-25 blur-3xl"
+          style={{ background: bandColor }}
+        />
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -bottom-16 -left-10 h-36 w-36 rounded-full opacity-10 blur-3xl"
+          style={{ background: bandColor }}
+        />
+
+        <div className="relative mb-6 flex items-center justify-between gap-2">
           <p className="eyebrow flex items-center gap-2 text-foreground/70">
             <span
               className="h-1.5 w-1.5 rounded-full"
               style={{ background: bandColor }}
             />
-            {displayFor(audience).productName}
+            {display.productName}
           </p>
           {nsState && nsState !== "UNKNOWN" ? (
             <span
-              className="rounded-full border border-border px-3 py-0.5 text-[10px] uppercase tracking-[0.2em] text-foreground/75"
+              className="rounded-full border border-border bg-background/40 px-3 py-0.5 text-[10px] uppercase tracking-[0.2em] text-foreground/75"
               title="Nervous-system state evidenced across your answers"
             >
-              {nsState}
+              State · {nsState}
             </span>
           ) : null}
         </div>
 
-        <div className="flex flex-wrap items-end justify-between gap-4">
-          <div className="flex items-baseline gap-2">
+        <div className="relative flex flex-col items-center gap-6 sm:flex-row sm:items-center sm:gap-9">
+          <ScoreRing value={clarity.overall} size={168} stroke={10} color={bandColor}>
             <span
               className="font-serif leading-none tabular-nums text-ink"
-              style={{ fontSize: "clamp(48px, 7vw, 72px)" }}
+              style={{ fontSize: 52 }}
             >
               {clarity.overall}
             </span>
-            <span className="font-serif-italic text-foreground/55">/ 100</span>
-          </div>
-
-          <div
-            className="rounded-full px-3 py-1.5 text-[11px] uppercase tracking-[0.18em]"
-            style={{
-              background: `color-mix(in srgb, ${bandColor} 18%, transparent)`,
-              border: `1px solid color-mix(in srgb, ${bandColor} 55%, transparent)`,
-              color: bandColor,
-            }}
-          >
-            {clarity.bandLabel}
+            <span className="mt-1.5 text-[10px] uppercase tracking-[0.2em] text-foreground/55">
+              of 100
+            </span>
+          </ScoreRing>
+          <div className="flex min-w-0 flex-1 flex-col items-center text-center sm:items-start sm:text-left">
+            <div
+              className="inline-flex items-center gap-2 rounded-full px-4 py-2 text-[12px] uppercase tracking-[0.18em]"
+              style={{
+                background: `color-mix(in srgb, ${bandColor} 20%, transparent)`,
+                border: `1px solid color-mix(in srgb, ${bandColor} 60%, transparent)`,
+                color: bandColor,
+              }}
+            >
+              <span aria-hidden style={{ fontSize: 9 }}>◆</span>
+              {clarity.bandLabel}
+            </div>
+            <p className="mt-4 max-w-md font-serif-italic text-[16.5px] leading-[1.7] text-foreground/90">
+              {clarity.bandMessage}
+            </p>
           </div>
         </div>
-
-        <p className="mt-4 font-serif-italic text-[16px] leading-[1.7] text-foreground/85">
-          {clarity.bandMessage}
-        </p>
       </div>
 
       <div className="relative">
@@ -910,32 +1021,99 @@ function ClarityScoreCard({
             userSelect: !unlocked ? "none" : "auto",
           }}
         >
-          <div className="space-y-5 px-6 py-6 sm:px-8">
-            {/* Labels resolve per vertical at render time (stored
-                subscoreDetails keep the canonical main labels). */}
-            {clarity.subscoreDetails.map((s) => {
-              const meta = displayFor(audience).pillarLabels[s.key]
-              return (
-                <SubscoreRow
-                  key={s.key}
-                  label={meta?.label ?? s.label}
-                  pillar={meta?.pillar ?? s.pillar}
-                  value={s.value}
-                  reason={reasons[s.key]}
-                />
-              )
-            })}
+          {/* ── The four dimensions, PrinciplesYou-style grouped rows:
+              icon chip + name + reason on the left, animated ring on the
+              right, a colored rail carrying the dimension's identity.
+              Labels resolve per vertical at render time. ── */}
+          <div className="px-6 pt-7 sm:px-8">
+            <p className="eyebrow text-foreground/65">Your four dimensions</p>
+            <div className="mt-4 space-y-3">
+              {clarity.subscoreDetails.map((s, i) => {
+                const meta = display.pillarLabels[s.key]
+                const color = DIMENSION_COLORS[s.key]
+                const Icon = DIMENSION_ICONS[s.key]
+                return (
+                  <div
+                    key={s.key}
+                    className="flex items-start gap-4 rounded-md border border-border bg-background/40 p-4 sm:items-center sm:p-5"
+                    style={{ borderLeft: `3px solid ${color}` }}
+                  >
+                    <span
+                      className="mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full sm:mt-0"
+                      style={{
+                        background: `color-mix(in srgb, ${color} 18%, transparent)`,
+                        color,
+                      }}
+                    >
+                      <Icon className="h-4 w-4" strokeWidth={1.8} aria-hidden />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[9px] uppercase tracking-[0.22em] text-foreground/50">
+                        {meta?.pillar ?? s.pillar}
+                        {strongest.key === s.key ? " · strongest" : ""}
+                      </p>
+                      <p className="font-serif text-[16.5px] leading-snug text-ink">
+                        {meta?.label ?? s.label}
+                      </p>
+                      {reasons[s.key] && (
+                        <p className="mt-1.5 text-[13.5px] leading-[1.65] text-foreground/75">
+                          {reasons[s.key]}
+                        </p>
+                      )}
+                    </div>
+                    <ScoreRing value={s.value} size={58} stroke={5} color={color}>
+                      <span className="font-serif text-[16px] leading-none tabular-nums text-ink">
+                        {s.value}
+                      </span>
+                    </ScoreRing>
+                  </div>
+                )
+              })}
+            </div>
           </div>
 
-          <div className="border-t border-border bg-secondary/40 px-6 py-5 sm:px-8">
-            <div className="mb-2 flex items-center justify-between gap-3">
+          {/* ── Insight tiles - real facts from THIS session ── */}
+          <div className="px-6 pt-7 sm:px-8">
+            <p className="eyebrow text-foreground/65">From your session</p>
+            <div className="mt-4 grid grid-cols-2 gap-2.5 sm:gap-3">
+              <InsightTile
+                label="Strongest dimension"
+                value={display.pillarLabels[strongest.key]?.label ?? strongest.label}
+                accent={DIMENSION_COLORS[strongest.key]}
+              />
+              <InsightTile
+                label="Biggest opportunity"
+                value={display.pillarLabels[weakest.key]?.label ?? weakest.label}
+                accent={DIMENSION_COLORS[weakest.key]}
+              />
+              <InsightTile
+                label="Words you shared"
+                value={totalWords > 0 ? totalWords.toLocaleString("en-US") : "—"}
+              />
+              <InsightTile
+                label="Vs. peer average"
+                value={`${vsMean >= 0 ? "+" : "−"}${Math.abs(vsMean)} points`}
+              />
+            </div>
+          </div>
+
+          {/* ── Peer comparison as a labeled scale ── */}
+          <div className="mt-7 border-t border-border bg-secondary/40 px-6 py-6 sm:px-8">
+            <div className="mb-4 flex items-center justify-between gap-3">
               <span className="eyebrow text-foreground/65">Peer benchmark</span>
-              <span className="font-serif-italic text-[13px] text-foreground/65">
+              <span className="hidden font-serif-italic text-[13px] text-foreground/65 sm:block">
                 Among professionals who take this assessment
               </span>
             </div>
             <BenchmarkBar overall={clarity.overall} mean={clarity.benchmarkMean} />
-            <p className="mt-7 font-serif text-[15px] leading-[1.7] text-foreground/85">
+            <div className="mt-2 flex justify-between text-[9px] uppercase tracking-[0.16em] text-foreground/45">
+              <span>Very low</span>
+              <span className="hidden sm:inline">Low</span>
+              <span>Moderate</span>
+              <span className="hidden sm:inline">High</span>
+              <span>Very high</span>
+            </div>
+            <p className="mt-5 font-serif text-[15px] leading-[1.7] text-foreground/85">
               {clarity.comparisonLabel}
             </p>
             {source === "fallback" ? (
@@ -994,54 +1172,32 @@ function ClarityScoreCard({
   )
 }
 
-function SubscoreRow({
+/** Small stat tile for the "From your session" strip - label + one fact,
+ *  optional dimension-color dot as identity accent. */
+function InsightTile({
   label,
-  pillar,
   value,
-  reason,
+  accent,
 }: {
   label: string
-  pillar: string
-  value: number
-  reason?: string
+  value: string
+  accent?: string
 }) {
-  const barColor = subscoreColor(value)
   return (
-    <div>
-      <div className="mb-1.5 flex items-baseline justify-between gap-3">
-        <div className="flex min-w-0 items-baseline gap-3">
-          <span className="truncate font-serif text-[15px] text-ink">
-            {label}
-          </span>
-          <span className="text-[10px] uppercase tracking-[0.22em] text-foreground/55">
-            {pillar}
-          </span>
-        </div>
-        <span
-          className="tabular-nums font-serif text-[15px]"
-          style={{ color: barColor }}
-        >
-          {value}
-        </span>
-      </div>
-      <div
-        className="relative h-1 overflow-hidden rounded-full"
-        style={{ background: "color-mix(in srgb, var(--foreground) 8%, transparent)" }}
-      >
-        <div
-          className="absolute inset-y-0 left-0 rounded-full"
-          style={{
-            width: `${Math.max(2, Math.min(100, value))}%`,
-            background: barColor,
-            transition: "width 1.2s cubic-bezier(0.22,1,0.36,1)",
-          }}
-        />
-      </div>
-      {reason ? (
-        <p className="mt-2 text-[13px] leading-snug text-foreground/75">
-          {reason}
-        </p>
-      ) : null}
+    <div className="rounded-md border border-border bg-background/40 px-3.5 py-3.5 sm:px-4">
+      <p className="text-[9px] uppercase tracking-[0.2em] text-foreground/50">
+        {label}
+      </p>
+      <p className="mt-1.5 flex items-center gap-2 font-serif text-[15px] leading-snug text-ink">
+        {accent && (
+          <span
+            aria-hidden
+            className="h-2 w-2 shrink-0 rounded-full"
+            style={{ background: accent }}
+          />
+        )}
+        {value}
+      </p>
     </div>
   )
 }
@@ -1094,11 +1250,4 @@ function bandAccent(band: ClarityScore["band"]): string {
     case "deep-stuck":
       return "#f68b8b"
   }
-}
-
-function subscoreColor(value: number): string {
-  if (value >= 65) return "#5fc5d4"
-  if (value >= 45) return "#9bc8d8"
-  if (value >= 30) return "#f6c07c"
-  return "#f68b8b"
 }

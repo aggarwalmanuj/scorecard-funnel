@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { ArrowRight, ArrowLeft, Check, Lock, Shield } from "lucide-react"
+import { ArrowRight, ArrowLeft, CalendarCheck, Footprints, Lock, Map, NotebookPen, Shield } from "lucide-react"
 import { useChallenge, type Audience } from "@/context/challenge-context"
 import { ChallengeNavHome } from "@/components/challenge/challenge-nav-home"
 import { ChallengeMenuButton } from "@/components/challenge/challenge-funnel-header-actions"
@@ -11,6 +11,7 @@ import posthog from "posthog-js"
 import { track } from "@/lib/fbpixel"
 import { STRIPE_PAYMENT_LINKS } from "@/lib/offers"
 import { displayFor } from "@/lib/vertical-display"
+import { DIMENSION_COLORS, DIMENSION_ORDER, ScoreRing } from "@/components/challenge/score-visuals"
 
 /**
  * The $47 offer page - a SINGLE product decision, per the product-strategy
@@ -37,18 +38,22 @@ const PRICE = 47
 // here, the summary prompt's Movement 3 must change in the same release).
 const DELIVERABLES = [
   {
+    icon: Map,
     title: "Your pattern map",
     body: "The repeated moment in plain language, with the earliest point to catch it before it takes over.",
   },
   {
+    icon: Footprints,
     title: "First moves, anchored to your life",
     body: "What to do when the trigger appears, built around a person, place, or object already in your week - when, the action, and what done looks like.",
   },
   {
+    icon: NotebookPen,
     title: "Your Evidence Log",
     body: "Not affirmations - evidence. A log for each time you catch the moment, with the first entry already filled in from your own answers.",
   },
   {
+    icon: CalendarCheck,
     title: "A 30-day rhythm, with a day-30 check-in",
     body: "Week by week, including what to do when a day slips. No streaks, no scores to retake - your own evidence, checked at day 30.",
   },
@@ -242,25 +247,35 @@ export function OfferScreen({ audience }: { audience: Audience }) {
             Action Plan helps you act when it appears.
           </p>
 
-          <ul className="mt-8 space-y-5">
-            {DELIVERABLES.map((d) => (
-              <li key={d.title} className="flex items-start gap-4">
-                <span
-                  className="mt-1 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full"
-                  style={{ background: "var(--signal)", color: "var(--background)" }}
+          {/* Deliverables as icon cards - the "what's inside" made scannable
+              on a phone: one card per artifact, icon chip carrying the
+              signal accent, 2-up from sm. */}
+          <ul className="mt-8 grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
+            {DELIVERABLES.map((d) => {
+              const Icon = d.icon
+              return (
+                <li
+                  key={d.title}
+                  className="rounded-md border border-border bg-background/50 p-5"
                 >
-                  <Check className="h-3.5 w-3.5" strokeWidth={2.5} />
-                </span>
-                <div>
-                  <p className="font-serif text-[18px] leading-snug text-ink">
+                  <span
+                    className="inline-flex h-10 w-10 items-center justify-center rounded-full"
+                    style={{
+                      background: "color-mix(in srgb, var(--signal) 18%, transparent)",
+                      color: "var(--signal)",
+                    }}
+                  >
+                    <Icon className="h-4.5 w-4.5" strokeWidth={1.7} aria-hidden />
+                  </span>
+                  <p className="mt-3.5 font-serif text-[17px] leading-snug text-ink">
                     {d.title}
                   </p>
-                  <p className="mt-1 text-[14.5px] leading-[1.7] text-foreground/75">
+                  <p className="mt-1.5 text-[14px] leading-[1.7] text-foreground/75">
                     {d.body}
                   </p>
-                </div>
-              </li>
-            ))}
+                </li>
+              )
+            })}
           </ul>
 
           {/* Personalization proof - honestly labeled locked fields */}
@@ -271,6 +286,32 @@ export function OfferScreen({ audience }: { audience: Audience }) {
             <p className="mb-4 text-[13px] leading-[1.6] text-foreground/60">
               Generated after purchase, from your completed {display.productName}.
             </p>
+            {/* Their ACTUAL four dimension scores - the personalization
+                claim made visible with real session data, not a mockup. */}
+            {state.clarityScore && (
+              <div className="mb-5 grid grid-cols-2 gap-2.5 sm:grid-cols-4">
+                {DIMENSION_ORDER.map((k) => (
+                  <div
+                    key={k}
+                    className="flex flex-col items-center gap-1.5 rounded-md border border-border bg-card/50 px-2 py-3 text-center"
+                  >
+                    <ScoreRing
+                      value={state.clarityScore!.subscores[k]}
+                      size={52}
+                      stroke={5}
+                      color={DIMENSION_COLORS[k]}
+                    >
+                      <span className="font-serif text-[15px] leading-none tabular-nums text-ink">
+                        {state.clarityScore!.subscores[k]}
+                      </span>
+                    </ScoreRing>
+                    <span className="text-[8.5px] uppercase leading-tight tracking-[0.14em] text-foreground/60">
+                      {display.pillarLabels[k].label}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
             <ul className="space-y-2.5">
               {[
                 "Your pattern loop and earliest intervention point",

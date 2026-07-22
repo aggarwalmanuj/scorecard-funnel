@@ -11,6 +11,7 @@ import { preloadBeatAudio } from "@/lib/client/beat-audio-cache"
 import { ChallengeNavHome } from "@/components/challenge/challenge-nav-home"
 import { ChallengeMenuButton } from "@/components/challenge/challenge-funnel-header-actions"
 import { displayFor } from "@/lib/vertical-display"
+import { DIMENSION_COLORS, DIMENSION_ORDER, ScoreRing } from "@/components/challenge/score-visuals"
 
 // Step labels carry the vertical's product vocabulary (One-Name Law): an
 // ADHD visitor watches their "ADHD Belief Score" being built, a healthcare
@@ -162,7 +163,8 @@ async function fetchReportInBackground(args: {
 export function ProcessingScreen({ audience }: { audience: Audience }) {
   const router = useRouter()
   const { state, setBeat, isHydrated, setClarityScore, setReportData, setSummaryText } = useChallenge()
-  const processingSteps = processingStepsFor(displayFor(audience).productName)
+  const display = displayFor(audience)
+  const processingSteps = processingStepsFor(display.productName)
   const [activeStep, setActiveStep] = useState(0)
   const [minElapsed, setMinElapsed] = useState(false)
   const [showClosingLine, setShowClosingLine] = useState(false)
@@ -574,6 +576,35 @@ export function ProcessingScreen({ audience }: { audience: Audience }) {
               {Math.round(progressPercent)}%
             </span>
           </div>
+        </div>
+
+        {/* The four dimensions filling in sequence - progress choreography
+            (like the checklist), not live scores: no numbers shown, each
+            ring simply completes as its phase of the pipeline passes. */}
+        <div className="mb-9 flex items-start justify-center gap-4 sm:gap-6">
+          {DIMENSION_ORDER.map((k, i) => {
+            const frac = Math.max(0, Math.min(1, (progressPercent / 100) * 4 - i))
+            const meta = display.pillarLabels[k]
+            return (
+              <div key={k} className="flex w-16 flex-col items-center gap-2 text-center">
+                <ScoreRing
+                  value={frac * 100}
+                  size={44}
+                  stroke={4}
+                  color={DIMENSION_COLORS[k]}
+                  animate={false}
+                  trackOpacity={0.3}
+                >
+                  {frac >= 1 && (
+                    <Check className="h-3.5 w-3.5 text-ink" strokeWidth={2} aria-hidden />
+                  )}
+                </ScoreRing>
+                <span className="text-[8.5px] uppercase leading-tight tracking-[0.14em] text-foreground/55">
+                  {meta.label}
+                </span>
+              </div>
+            )
+          })}
         </div>
 
         <p className="eyebrow mb-3 text-foreground/70">The mirror is being built</p>
