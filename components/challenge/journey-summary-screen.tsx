@@ -8,8 +8,10 @@ import { displayFor } from "@/lib/vertical-display"
 import {
   DIMENSION_COLORS,
   DIMENSION_ICONS,
+  DIMENSION_ORDER,
   ScoreRing,
 } from "@/components/challenge/score-visuals"
+import { Atmosphere } from "@/components/visuals/atmosphere"
 import { isAbortErrorLike } from "@/lib/stream-beat-client"
 import {
   getCachedSummaryAudio,
@@ -575,7 +577,8 @@ export function JourneySummaryScreen({ audience }: { audience: Audience }) {
           transform: isVisible ? "translateY(0)" : "translateY(24px)",
         }}
       >
-        <div className="mx-auto w-full max-w-3xl flex-1 px-5 pb-12 pt-12 sm:px-10 sm:pt-16">
+        <Atmosphere />
+        <div className="relative mx-auto w-full max-w-3xl flex-1 px-5 pb-12 pt-12 sm:px-10 sm:pt-16">
           {/* Header */}
           <div
             style={{
@@ -605,6 +608,28 @@ export function JourneySummaryScreen({ audience }: { audience: Audience }) {
                 opacity: isVisible ? 1 : 0,
               }}
             />
+
+            {/* The four dimensions announced up top - identity before data */}
+            <div className="mt-6 flex flex-wrap gap-2">
+              {DIMENSION_ORDER.map((k) => {
+                const Icon = DIMENSION_ICONS[k]
+                const color = DIMENSION_COLORS[k]
+                return (
+                  <span
+                    key={k}
+                    className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[9.5px] uppercase tracking-[0.16em]"
+                    style={{
+                      borderColor: `color-mix(in srgb, ${color} 40%, transparent)`,
+                      background: `color-mix(in srgb, ${color} 9%, transparent)`,
+                      color,
+                    }}
+                  >
+                    <Icon className="h-2.5 w-2.5" strokeWidth={2} aria-hidden />
+                    {displayFor(audience).pillarLabels[k].label}
+                  </span>
+                )
+              })}
+            </div>
           </div>
 
           {/* 1. Belief Score */}
@@ -864,26 +889,52 @@ export function JourneySummaryScreen({ audience }: { audience: Audience }) {
           }}
         >
           <div className="flex w-full flex-col items-center justify-between gap-4 px-5 py-5 sm:flex-row sm:px-10">
-            <p className="font-serif-italic text-[14px] text-foreground/70 sm:text-left">
+            <p className="hidden font-serif-italic text-[14px] text-foreground/70 sm:block sm:text-left">
               Five reflections. One thread. The signal is clear.
             </p>
 
-            <button
-              type="button"
-              id="summary-continue-btn"
-              onClick={() =>
-                unlocked
-                  ? router.push(`/challenge/${audience}/offer`)
-                  : router.push("/")
-              }
-              className={unlocked ? "s-btn group" : "s-btn-ghost group"}
-            >
-              {unlocked ? "See what comes next" : "Exit"}
-              <ArrowRight
-                className="h-3.5 w-3.5 transition-transform duration-500 group-hover:translate-x-1"
-                strokeWidth={1.6}
-              />
-            </button>
+            <div className="flex w-full flex-col-reverse items-stretch gap-2.5 sm:w-auto sm:flex-row sm:items-center sm:gap-3">
+              <button
+                type="button"
+                id="summary-continue-btn"
+                onClick={() =>
+                  unlocked
+                    ? router.push(`/challenge/${audience}/offer`)
+                    : router.push("/")
+                }
+                className={`${unlocked ? "s-btn" : "s-btn-ghost"} group justify-center`}
+              >
+                {unlocked ? "See what comes next" : "Exit"}
+                <ArrowRight
+                  className="h-3.5 w-3.5 transition-transform duration-500 group-hover:translate-x-1"
+                  strokeWidth={1.6}
+                />
+              </button>
+
+              {/* Free users: the plan is the footer's PRIMARY action - Exit
+                  alone made the page's most persistent surface a dead end. */}
+              {!unlocked && (
+                <button
+                  type="button"
+                  id="summary-getplan-btn"
+                  onClick={() => router.push(`/challenge/${audience}/offer`)}
+                  className="s-btn group justify-center"
+                  style={{
+                    background: "var(--signal)",
+                    color: "var(--background)",
+                    border:
+                      "1px solid color-mix(in srgb, var(--signal) 60%, transparent)",
+                    boxShadow: "0 14px 40px -16px rgba(var(--glow), 0.55)",
+                  }}
+                >
+                  Get My Personalized Plan
+                  <ArrowRight
+                    className="h-3.5 w-3.5 transition-transform duration-500 group-hover:translate-x-1"
+                    strokeWidth={1.6}
+                  />
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>

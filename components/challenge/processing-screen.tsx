@@ -561,7 +561,6 @@ export function ProcessingScreen({ audience }: { audience: Audience }) {
               strokeDasharray={`${2 * Math.PI * 50}`}
               strokeDashoffset={`${2 * Math.PI * 50 * (1 - progressPercent / 100)}`}
               className="transition-all duration-700 ease-out"
-              style={{ filter: "drop-shadow(0 0 6px rgba(var(--glow), 0.45))" }}
             />
           </svg>
           <div

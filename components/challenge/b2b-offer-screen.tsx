@@ -210,7 +210,19 @@ export function B2BOfferScreen({ audience }: { audience: Audience }) {
         />
 
         <div className="mx-auto max-w-3xl">
-          <p className="eyebrow mb-3 text-foreground/70">One-time purchase</p>
+          <div className="mb-3 flex flex-wrap items-center gap-3">
+            <p className="eyebrow text-foreground/70">One-time purchase</p>
+            <span
+              className="rounded-full px-3 py-1 font-serif text-[14px] tabular-nums"
+              style={{
+                background: "color-mix(in srgb, var(--signal) 16%, transparent)",
+                border: "1px solid color-mix(in srgb, var(--signal) 50%, transparent)",
+                color: "var(--signal)",
+              }}
+            >
+              ${B2B_ACTION_PLAN_PRICE}
+            </span>
+          </div>
           <h2 className="font-serif text-[26px] leading-[1.12] text-ink sm:text-[32px]">
             Healthcare Operations
             <span className="block font-serif-italic text-foreground">
@@ -272,13 +284,26 @@ export function B2BOfferScreen({ audience }: { audience: Audience }) {
             Mensa Research Journal.
           </p>
 
-          {/* Price + CTA */}
-          <div className="mt-7">
-            {ctaButton}
-            <p className="mt-4 text-[13px] leading-relaxed text-foreground/60">
-              One-time ${B2B_ACTION_PLAN_PRICE}. Nothing recurring, nothing
-              auto-renewing, no seat licenses.
-            </p>
+          {/* Price lockup + CTA - stated plainly; price integrity is
+              register integrity in the B2B lane. */}
+          <div className="mt-10 rounded-md border border-border bg-background/50 p-6 sm:p-7">
+            <div className="flex flex-wrap items-end justify-between gap-x-8 gap-y-4">
+              <div className="flex items-baseline gap-3">
+                <span className="font-serif leading-none tabular-nums text-ink" style={{ fontSize: "clamp(52px, 8vw, 68px)" }}>
+                  ${B2B_ACTION_PLAN_PRICE}
+                </span>
+                <span className="pb-1 text-[11px] uppercase tracking-[0.22em] text-foreground/60">
+                  one-time
+                </span>
+              </div>
+              <div className="pb-1.5 text-[13.5px] leading-[1.6] text-foreground/75">
+                Inside personal card authority.
+                <span className="block text-foreground/60">
+                  Nothing recurring, nothing auto-renewing, no seat licenses.
+                </span>
+              </div>
+            </div>
+            <div className="mt-6">{ctaButton}</div>
             <p className="mt-4 flex items-center gap-2 text-[11px] uppercase tracking-[0.22em] text-foreground/60">
               <Shield className="h-3 w-3" strokeWidth={1.5} />
               Secure checkout · 30-day leadership-usefulness refund, one email

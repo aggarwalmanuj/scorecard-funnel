@@ -18,6 +18,13 @@ import { PhoneField } from "@/components/phone-field"
 import { dialFor } from "@/lib/country-codes"
 import type { EntryContent } from "@/lib/entry-content"
 import type { Vertical } from "@/lib/verticals"
+import { displayFor } from "@/lib/vertical-display"
+import { Atmosphere } from "@/components/visuals/atmosphere"
+import {
+  DIMENSION_COLORS,
+  DIMENSION_ICONS,
+  DIMENSION_ORDER,
+} from "@/components/challenge/score-visuals"
 
 // Proper format check (the old `.includes("@")` accepted "a@"). Mirrors the
 // offer-screen validator: something@something.tld with a 2+ char TLD.
@@ -205,8 +212,9 @@ export function AudienceEntryForm({
         </div>
       </header>
 
-      <main className="flex flex-1 items-start justify-center px-5 py-16 sm:py-20">
-        <div className="w-full max-w-4xl">
+      <main className="relative flex flex-1 items-start justify-center overflow-hidden px-5 py-16 sm:py-20">
+        <Atmosphere />
+        <div className="relative w-full max-w-4xl">
           {/* The entrance animation runs straight from the SSR classes —
               never hold this page at opacity-0 until hydration. */}
           <div className="mb-10 text-center animate-fade-in-up">
@@ -223,6 +231,29 @@ export function AudienceEntryForm({
             <p className="mx-auto mt-6 max-w-xl text-[15px] leading-[1.8] text-foreground/85 sm:text-base">
               {content.subcopy}
             </p>
+
+            {/* The four dimensions they're about to be scored on - the
+                product's shape, visible before a single field is typed. */}
+            <div className="mt-7 flex flex-wrap justify-center gap-2">
+              {DIMENSION_ORDER.map((k) => {
+                const Icon = DIMENSION_ICONS[k]
+                const color = DIMENSION_COLORS[k]
+                return (
+                  <span
+                    key={k}
+                    className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[9.5px] uppercase tracking-[0.16em]"
+                    style={{
+                      borderColor: `color-mix(in srgb, ${color} 40%, transparent)`,
+                      background: `color-mix(in srgb, ${color} 9%, transparent)`,
+                      color,
+                    }}
+                  >
+                    <Icon className="h-2.5 w-2.5" strokeWidth={2} aria-hidden />
+                    {displayFor(vertical).pillarLabels[k].label}
+                  </span>
+                )
+              })}
+            </div>
           </div>
 
           <form

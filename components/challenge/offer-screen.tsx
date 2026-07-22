@@ -12,8 +12,14 @@ import { track } from "@/lib/fbpixel"
 import { STRIPE_PAYMENT_LINKS } from "@/lib/offers"
 import { displayFor } from "@/lib/vertical-display"
 import { MacWindow } from "@/components/visuals/mac-window"
-import { ReportPreviewCard } from "@/components/visuals/report-preview"
+import { ReportPreviewCard, overallOf } from "@/components/visuals/report-preview"
 import { PlanTimeline } from "@/components/visuals/plan-timeline"
+import { Atmosphere } from "@/components/visuals/atmosphere"
+import {
+  DIMENSION_COLORS,
+  DIMENSION_ORDER,
+  ScoreRing,
+} from "@/components/challenge/score-visuals"
 
 /**
  * The $47 offer page - a SINGLE product decision, per the product-strategy
@@ -159,7 +165,7 @@ export function OfferScreen({ audience }: { audience: Audience }) {
   )
 
   return (
-    <div className="min-h-screen">
+    <div className="relative min-h-screen pb-24 sm:pb-0">
       {/* Header */}
       <header className="sticky top-0 z-40 w-full border-b border-border bg-background/85 backdrop-blur-xl">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-5 sm:px-8">
@@ -171,48 +177,84 @@ export function OfferScreen({ audience }: { audience: Audience }) {
         </div>
       </header>
 
-      {/* 1. Result bridge - their insight, pointed forward */}
-      <section className="px-5 pt-8 pb-10 sm:px-8 sm:pt-12 sm:pb-14">
-        <div className="mx-auto max-w-4xl">
-          <Link
-            href={`/challenge/${audience}/beat-5`}
-            prefetch={false}
-            className="mb-6 inline-flex items-center gap-1.5 text-[11px] uppercase tracking-[0.22em] text-foreground/65 transition-colors hover:text-ink"
-          >
-            <ArrowLeft className="h-3.5 w-3.5" strokeWidth={1.5} />
-            Review your results
-          </Link>
+      {/* 1. Result bridge - their insight, pointed forward, with their
+          score standing beside the headline as the thing they earned */}
+      <section className="relative overflow-hidden px-5 pt-8 pb-12 sm:px-8 sm:pt-12 sm:pb-16">
+        <Atmosphere />
+        <div className="relative mx-auto grid max-w-5xl grid-cols-1 items-center gap-10 lg:grid-cols-[1fr_auto]">
+          <div>
+            <Link
+              href={`/challenge/${audience}/beat-5`}
+              prefetch={false}
+              className="mb-6 inline-flex items-center gap-1.5 text-[11px] uppercase tracking-[0.22em] text-foreground/65 transition-colors hover:text-ink"
+            >
+              <ArrowLeft className="h-3.5 w-3.5" strokeWidth={1.5} />
+              Review your results
+            </Link>
 
-          <p className="eyebrow mb-4 flex items-center gap-3 text-foreground/70">
-            <span className="pulse-dot" aria-hidden />
-            VIII · From seeing it to acting on it
-          </p>
+            <p className="eyebrow mb-4 flex items-center gap-3 text-foreground/70">
+              <span className="pulse-dot" aria-hidden />
+              VIII · From seeing it to acting on it
+            </p>
 
-          <h1 className="mb-5 font-serif text-[1.7rem] leading-[1.1] text-ink sm:text-[2rem] sm:leading-[1.06] md:text-[2.4rem]">
-            {state.firstName ? `${state.firstName}, you` : "You"} have
-            identified the loop.
-            <span className="block font-serif-italic text-foreground">
-              Now turn it into a plan for the moment it returns.
-            </span>
-          </h1>
-
-          {/* Their own words, reflected - the moment they named in Q1.
-              Grounds the page in their session instead of generic promise. */}
-          {quotedMoment && (
-            <blockquote className="mb-5 max-w-xl border-l border-foreground/40 pl-5 font-serif-italic text-[16px] leading-[1.6] text-foreground/80 sm:text-[17px]">
-              &ldquo;{quotedMoment}&rdquo;
-              <span className="mt-1 block text-[11px] font-sans not-italic uppercase tracking-[0.2em] text-foreground/50">
-                What you told us
+            <h1 className="mb-5 font-serif text-[1.7rem] leading-[1.1] text-ink sm:text-[2rem] sm:leading-[1.06] md:text-[2.4rem]">
+              {state.firstName ? `${state.firstName}, you` : "You"} have
+              identified the loop.
+              <span className="block font-serif-italic text-foreground">
+                Now turn it into a plan for the moment it returns.
               </span>
-            </blockquote>
-          )}
+            </h1>
 
-          {/* 2. The gap */}
-          <p className="max-w-xl text-[15.5px] leading-[1.8] text-foreground/80 sm:text-[16.5px]">
-            You now know what may be happening and where it begins. What you do
-            not yet have is the exact response: what to do inside that moment,
-            what to prepare beforehand, and how to tell whether it is changing.
-          </p>
+            {/* Their own words, reflected - the moment they named in Q1.
+                Grounds the page in their session instead of generic promise. */}
+            {quotedMoment && (
+              <blockquote className="mb-5 max-w-xl border-l border-foreground/40 pl-5 font-serif-italic text-[16px] leading-[1.6] text-foreground/80 sm:text-[17px]">
+                &ldquo;{quotedMoment}&rdquo;
+                <span className="mt-1 block text-[11px] font-sans not-italic uppercase tracking-[0.2em] text-foreground/50">
+                  What you told us
+                </span>
+              </blockquote>
+            )}
+
+            {/* 2. The gap */}
+            <p className="max-w-xl text-[15.5px] leading-[1.8] text-foreground/80 sm:text-[16.5px]">
+              You now know what may be happening and where it begins. What you
+              do not yet have is the exact response: what to do inside that
+              moment, what to prepare beforehand, and how to tell whether it
+              is changing.
+            </p>
+          </div>
+
+          {/* Their earned score, carried onto this page */}
+          {state.clarityScore && (
+            <div className="mx-auto flex w-full max-w-[240px] flex-col items-center gap-3 rounded-md border border-border bg-card/70 px-6 py-7 text-center backdrop-blur-sm lg:mx-0">
+              <ScoreRing
+                value={overallOf(state.clarityScore.subscores)}
+                size={116}
+                stroke={8}
+                color="var(--signal)"
+              >
+                <span className="font-serif text-[34px] leading-none tabular-nums text-ink">
+                  {overallOf(state.clarityScore.subscores)}
+                </span>
+              </ScoreRing>
+              <p className="text-[10px] uppercase tracking-[0.2em] text-foreground/60">
+                Your {display.productName}
+              </p>
+              <div className="flex gap-1.5" aria-hidden>
+                {DIMENSION_ORDER.map((k) => (
+                  <span
+                    key={k}
+                    className="h-1.5 w-6 rounded-full"
+                    style={{ background: DIMENSION_COLORS[k], opacity: 0.85 }}
+                  />
+                ))}
+              </div>
+              <p className="text-[11.5px] leading-snug text-foreground/60">
+                Scored from your five answers
+              </p>
+            </div>
+          )}
         </div>
       </section>
 
@@ -235,7 +277,19 @@ export function OfferScreen({ audience }: { audience: Audience }) {
         />
 
         <div className="mx-auto max-w-3xl">
-          <p className="eyebrow mb-3 text-foreground/70">One-time purchase</p>
+          <div className="mb-3 flex flex-wrap items-center gap-3">
+            <p className="eyebrow text-foreground/70">One-time purchase</p>
+            <span
+              className="rounded-full px-3 py-1 font-serif text-[14px] tabular-nums"
+              style={{
+                background: "color-mix(in srgb, var(--signal) 16%, transparent)",
+                border: "1px solid color-mix(in srgb, var(--signal) 50%, transparent)",
+                color: "var(--signal)",
+              }}
+            >
+              ${PRICE}
+            </span>
+          </div>
           <h2 className="font-serif text-[26px] leading-[1.12] text-ink sm:text-[32px]">
             Personalized 30-Day
             <span className="block font-serif-italic text-foreground">
@@ -363,13 +417,27 @@ export function OfferScreen({ audience }: { audience: Audience }) {
             </p>
           </div>
 
-          {/* Price + CTA */}
-          <div className="mt-7">
-            {ctaButton}
-            <p className="mt-4 text-[13px] leading-relaxed text-foreground/60">
-              ${PRICE}, one time. Not a subscription. Built from the answers
-              you just gave.
-            </p>
+          {/* Price lockup + CTA - the price IS the offer's headline fact:
+              impulse-decidable, honestly anchored, nothing recurring. */}
+          <div className="mt-10 rounded-md border border-border bg-background/50 p-6 sm:p-7">
+            <div className="flex flex-wrap items-end justify-between gap-x-8 gap-y-4">
+              <div className="flex items-baseline gap-3">
+                <span className="font-serif leading-none tabular-nums text-ink" style={{ fontSize: "clamp(52px, 8vw, 68px)" }}>
+                  ${PRICE}
+                </span>
+                <span className="pb-1 text-[11px] uppercase tracking-[0.22em] text-foreground/60">
+                  one-time
+                </span>
+              </div>
+              <div className="pb-1.5 text-[13.5px] leading-[1.6] text-foreground/75">
+                Less than a single coaching session.
+                <span className="block text-foreground/60">
+                  Not a subscription. Nothing recurring. Built from the answers
+                  you just gave.
+                </span>
+              </div>
+            </div>
+            <div className="mt-6">{ctaButton}</div>
             <p className="mt-4 flex items-center gap-2 text-[11px] uppercase tracking-[0.22em] text-foreground/60">
               <Shield className="h-3 w-3" strokeWidth={1.5} />
               Secure checkout · 30-day rebuild-or-refund, one email
@@ -441,16 +509,38 @@ export function OfferScreen({ audience }: { audience: Audience }) {
         </p>
       </section>
 
-      {/* Second ask after the proof */}
-      <section className="border-t border-border px-5 py-14 sm:px-8">
-        <div className="mx-auto flex max-w-3xl flex-col items-start gap-4">
-          <h3 className="font-serif text-[22px] leading-snug text-ink sm:text-[26px]">
+      {/* Second ask after the proof - a poster moment, not a paragraph */}
+      <section className="relative overflow-hidden border-t border-border px-5 py-16 sm:px-8 sm:py-20">
+        <Atmosphere intensity={1.5} />
+        <div className="relative mx-auto flex max-w-3xl flex-col items-center gap-7 text-center">
+          {/* Decorative dimension arcs crowning the ask */}
+          <div className="flex items-end gap-3" aria-hidden>
+            {DIMENSION_ORDER.map((k, i) => (
+              <ScoreRing
+                key={k}
+                value={[62, 78, 54, 70][i]}
+                size={i % 2 === 0 ? 40 : 52}
+                stroke={4}
+                color={DIMENSION_COLORS[k]}
+                animate={false}
+                trackOpacity={0.25}
+              />
+            ))}
+          </div>
+          <h3 className="font-serif text-[24px] leading-snug text-ink sm:text-[30px]">
             Turn the pattern you identified
             <span className="block font-serif-italic text-foreground">
               into a sequence you can use.
             </span>
           </h3>
           {ctaButton}
+          <p className="flex flex-wrap items-center justify-center gap-x-5 gap-y-1.5 text-[10.5px] uppercase tracking-[0.2em] text-foreground/55">
+            <span>${PRICE} one-time</span>
+            <span aria-hidden>·</span>
+            <span>Not a subscription</span>
+            <span aria-hidden>·</span>
+            <span>30-day refund, one email</span>
+          </p>
         </div>
       </section>
 
@@ -506,6 +596,27 @@ export function OfferScreen({ audience }: { audience: Audience }) {
           </p>
         </div>
       </footer>
+
+      {/* Sticky mobile buy bar - the decision is never a scroll away on a
+          phone. Zone-A microcopy only (spec, no hedges, no urgency). */}
+      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background/92 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur-xl sm:hidden">
+        <button
+          type="button"
+          onClick={proceedToCheckout}
+          disabled={isProcessing}
+          className="s-btn group h-12 w-full justify-center text-[12px]"
+          style={{
+            background: "var(--signal)",
+            color: "var(--background)",
+            border: "1px solid color-mix(in srgb, var(--signal) 60%, transparent)",
+          }}
+        >
+          {isProcessing ? "Opening secure checkout…" : `Get My Action Plan · $${PRICE}`}
+        </button>
+        <p className="mt-1.5 text-center text-[9px] uppercase tracking-[0.18em] text-foreground/55">
+          One-time · 30-day refund · Yours to keep
+        </p>
+      </div>
     </div>
   )
 }

@@ -49,7 +49,7 @@ export function ScoreRing({
   size = 120,
   stroke = 7,
   color,
-  trackOpacity = 0.35,
+  trackOpacity = 0.45,
   animate = true,
   children,
 }: {
@@ -93,6 +93,10 @@ export function ScoreRing({
           strokeWidth={stroke}
           opacity={trackOpacity}
         />
+        {/* No drop-shadow glow on the arc: at low values the blurred
+            rounded cap reads as a floating blob ("comet smear") instead of
+            a dial. A crisp arc on a clearly visible track stays legible at
+            any value - the track carries the dial's shape. */}
         <circle
           cx={size / 2}
           cy={size / 2}
@@ -105,7 +109,6 @@ export function ScoreRing({
           strokeDashoffset={c * (1 - shown / 100)}
           style={{
             transition: "stroke-dashoffset 1.1s cubic-bezier(0.22, 1, 0.36, 1)",
-            filter: `drop-shadow(0 0 ${Math.round(stroke * 0.9)}px color-mix(in srgb, ${color} 45%, transparent))`,
           }}
         />
       </svg>

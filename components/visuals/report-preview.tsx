@@ -28,7 +28,7 @@ export const SAMPLE_SUBSCORES: Record<PillarKey, number> = {
   energyAlignment: 54,
 }
 
-function overallOf(s: Record<PillarKey, number>): number {
+export function overallOf(s: Record<PillarKey, number>): number {
   // Same weighting as lib/scoring.ts - keep the preview arithmetic honest.
   return Math.round(
     s.directionClarity * 0.35 +
