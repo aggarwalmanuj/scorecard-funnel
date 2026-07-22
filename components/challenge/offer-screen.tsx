@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { ArrowRight, ArrowLeft, CalendarCheck, Footprints, Lock, Map, NotebookPen, Shield } from "lucide-react"
+import { ArrowRight, ArrowLeft, BadgeCheck, CalendarCheck, Footprints, Lock, Map, NotebookPen, Shield } from "lucide-react"
 import { useChallenge, type Audience } from "@/context/challenge-context"
 import { ChallengeNavHome } from "@/components/challenge/challenge-nav-home"
 import { ChallengeMenuButton } from "@/components/challenge/challenge-funnel-header-actions"
@@ -11,7 +11,9 @@ import posthog from "posthog-js"
 import { track } from "@/lib/fbpixel"
 import { STRIPE_PAYMENT_LINKS } from "@/lib/offers"
 import { displayFor } from "@/lib/vertical-display"
-import { DIMENSION_COLORS, DIMENSION_ORDER, ScoreRing } from "@/components/challenge/score-visuals"
+import { MacWindow } from "@/components/visuals/mac-window"
+import { ReportPreviewCard } from "@/components/visuals/report-preview"
+import { PlanTimeline } from "@/components/visuals/plan-timeline"
 
 /**
  * The $47 offer page - a SINGLE product decision, per the product-strategy
@@ -278,79 +280,88 @@ export function OfferScreen({ audience }: { audience: Audience }) {
             })}
           </ul>
 
-          {/* Personalization proof - honestly labeled locked fields */}
-          <div className="mt-9 rounded-md border border-border bg-background/60 p-5 sm:p-6">
-            <p className="eyebrow mb-1 text-foreground/60">
-              Six pages, yours to keep
-            </p>
-            <p className="mb-4 text-[13px] leading-[1.6] text-foreground/60">
-              Generated after purchase, from your completed {display.productName}.
-            </p>
-            {/* Their ACTUAL four dimension scores - the personalization
-                claim made visible with real session data, not a mockup. */}
-            {state.clarityScore && (
-              <div className="mb-5 grid grid-cols-2 gap-2.5 sm:grid-cols-4">
-                {DIMENSION_ORDER.map((k) => (
-                  <div
-                    key={k}
-                    className="flex flex-col items-center gap-1.5 rounded-md border border-border bg-card/50 px-2 py-3 text-center"
+          {/* The artifact itself - page one of THEIR report, framed as the
+              product it is. Uses the session's real dimension scores when
+              they exist; the caption stays honest either way. This is the
+              page's proof-adjacency moment: the thing being bought, shown. */}
+          <div className="mt-10 grid grid-cols-1 items-start gap-8 lg:grid-cols-2">
+            <div className="mx-auto w-full max-w-md lg:max-w-none">
+              <MacWindow title="your-action-plan.pdf">
+                <ReportPreviewCard
+                  vertical={audience}
+                  subscores={state.clarityScore?.subscores ?? undefined}
+                  animate
+                />
+              </MacWindow>
+              <p className="mt-3 text-center text-[10.5px] uppercase tracking-[0.18em] text-foreground/50">
+                {state.clarityScore
+                  ? "Preview built from your actual scores"
+                  : "Illustrative example - yours is built from your answers"}
+              </p>
+            </div>
+
+            <div className="rounded-md border border-border bg-background/60 p-5 sm:p-6">
+              <p className="eyebrow mb-1 text-foreground/60">
+                Six pages, yours to keep
+              </p>
+              <p className="mb-5 text-[13px] leading-[1.6] text-foreground/60">
+                Generated after purchase, from your completed {display.productName}.
+              </p>
+              <ul className="space-y-3">
+                {[
+                  "Your pattern loop and earliest intervention point",
+                  "Your first moves, in order",
+                  "Your Evidence Log, first entry filled in",
+                  "Your 30-day rhythm and day-30 check-in",
+                ].map((row) => (
+                  <li
+                    key={row}
+                    className="flex items-center gap-3 rounded-md border border-border/60 bg-card/40 px-3.5 py-2.5 text-[14px] text-foreground/75"
                   >
-                    <ScoreRing
-                      value={state.clarityScore!.subscores[k]}
-                      size={52}
-                      stroke={5}
-                      color={DIMENSION_COLORS[k]}
-                    >
-                      <span className="font-serif text-[15px] leading-none tabular-nums text-ink">
-                        {state.clarityScore!.subscores[k]}
-                      </span>
-                    </ScoreRing>
-                    <span className="text-[8.5px] uppercase leading-tight tracking-[0.14em] text-foreground/60">
-                      {display.pillarLabels[k].label}
-                    </span>
-                  </div>
+                    <Lock className="h-3.5 w-3.5 shrink-0 text-foreground/45" strokeWidth={1.6} />
+                    {row}
+                  </li>
                 ))}
-              </div>
-            )}
-            <ul className="space-y-2.5">
-              {[
-                "Your pattern loop and earliest intervention point",
-                "Your first moves, in order",
-                "Your Evidence Log, first entry filled in",
-                "Your 30-day rhythm and day-30 check-in",
-              ].map((row) => (
-                <li
-                  key={row}
-                  className="flex items-center gap-3 text-[14px] text-foreground/70"
-                >
-                  <Lock className="h-3.5 w-3.5 shrink-0 text-foreground/45" strokeWidth={1.6} />
-                  {row}
-                </li>
-              ))}
-            </ul>
+              </ul>
+              <p className="mt-5 flex items-center gap-2 text-[10.5px] uppercase tracking-[0.18em] text-foreground/50">
+                <span className="pulse-dot" aria-hidden />
+                Unlocks in minutes after purchase
+              </p>
+            </div>
           </div>
 
-          {/* Honest value frame */}
-          <p className="mt-9 max-w-xl text-[15px] leading-[1.8] text-foreground/80">
-            A generic worksheet could tell you to set reminders, break the task
-            down, or be more consistent. Your Action Plan is built around the
-            exact moment you identified, the conclusion that may be active
-            inside it, and the evidence you said would matter.
-          </p>
+          {/* The 30-day arc, mapped */}
+          <div className="mt-10 rounded-md border border-border bg-background/50 p-6 sm:p-8">
+            <p className="eyebrow mb-7 text-foreground/70">Your 30 days, mapped</p>
+            <PlanTimeline />
+          </div>
 
-          {/* Vertical-specific reassurance (e.g. the ADHD anti-system line) */}
-          {display.offerAccent && (
-            <p className="mt-4 max-w-xl font-serif-italic text-[15.5px] leading-[1.7] text-ink">
-              {display.offerAccent}
+          {/* Honest value frame - carded with a signal rail so the page's
+              one "why this is different" argument reads as a designed
+              moment, not a paragraph adrift. */}
+          <div
+            className="mt-10 max-w-xl rounded-md border border-border bg-background/50 p-5 sm:p-6"
+            style={{ borderLeft: "3px solid var(--signal)" }}
+          >
+            <p className="text-[15px] leading-[1.8] text-foreground/85">
+              A generic worksheet could tell you to set reminders, break the
+              task down, or be more consistent. Your Action Plan is built
+              around the exact moment you identified, the conclusion that may
+              be active inside it, and the evidence you said would matter.
             </p>
-          )}
-
-          {/* One credibility sentence (credential role only - no ladder,
-              no logos on this page) */}
-          <p className="mt-6 text-[13.5px] leading-[1.7] text-foreground/65">
-            This comes from AI Merge, a peer-reviewed methodology published
-            in the Mensa Research Journal.
-          </p>
+            {/* Vertical-specific reassurance (e.g. the ADHD anti-system line) */}
+            {display.offerAccent && (
+              <p className="mt-3.5 font-serif-italic text-[15.5px] leading-[1.7] text-ink">
+                {display.offerAccent}
+              </p>
+            )}
+            {/* One credibility line (credential role only - no ladder,
+                no logos on this page) */}
+            <p className="mt-4 flex items-center gap-2 text-[11px] uppercase tracking-[0.18em] text-foreground/60">
+              <BadgeCheck className="h-3.5 w-3.5 shrink-0" strokeWidth={1.6} aria-hidden />
+              AI Merge · peer-reviewed · Mensa Research Journal
+            </p>
+          </div>
 
           {/* Price + CTA */}
           <div className="mt-7">
@@ -367,17 +378,33 @@ export function OfferScreen({ audience }: { audience: Audience }) {
         </div>
       </section>
 
-      {/* 4. Objection handling - tight, honest */}
+      {/* 4. Objection handling - carded, scannable, honest */}
       <section className="px-5 py-14 sm:px-8 sm:py-16">
-        <div className="mx-auto max-w-3xl">
-          <p className="eyebrow mb-8 text-foreground/70">Asked plainly</p>
-          <dl className="space-y-7">
+        <div className="mx-auto max-w-4xl">
+          <p className="eyebrow mb-8 text-foreground/70">
+            <span className="mr-3 inline-block h-px w-6 align-middle bg-foreground/40" />
+            Asked plainly
+          </p>
+          <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5">
             {OBJECTIONS.map((o) => (
-              <div key={o.q}>
-                <dt className="font-serif text-[18px] leading-snug text-ink">
+              <div
+                key={o.q}
+                className="rounded-md border border-border bg-card/60 p-5 sm:p-6"
+              >
+                <dt className="flex items-start gap-3 font-serif text-[17px] leading-snug text-ink">
+                  <span
+                    className="mt-0.5 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full font-sans text-[13px]"
+                    style={{
+                      background: "color-mix(in srgb, var(--signal) 15%, transparent)",
+                      color: "var(--signal)",
+                    }}
+                    aria-hidden
+                  >
+                    ?
+                  </span>
                   {o.q}
                 </dt>
-                <dd className="mt-2 max-w-xl text-[14.5px] leading-[1.75] text-foreground/75">
+                <dd className="mt-3 text-[14px] leading-[1.75] text-foreground/75">
                   {o.a}
                 </dd>
               </div>

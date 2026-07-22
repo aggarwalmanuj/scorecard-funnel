@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useMemo, useCallback } from "react"
 import { useRouter } from "next/navigation"
-import { ArrowRight, Volume2, Square, Loader2, Download } from "lucide-react"
+import { ArrowRight, Volume2, Square, Loader2, Download, Lock } from "lucide-react"
 import { useChallenge, type Audience } from "@/context/challenge-context"
 import { displayFor } from "@/lib/vertical-display"
 import {
@@ -1011,71 +1011,96 @@ function ClarityScoreCard({
         </div>
       </div>
 
-      <div className="relative">
-        <div
-          aria-hidden={!unlocked}
-          style={{
-            filter: !unlocked ? "blur(14px) saturate(120%)" : "none",
-            transition: "filter 0.5s cubic-bezier(0.22,1,0.36,1)",
-            pointerEvents: !unlocked ? "none" : "auto",
-            userSelect: !unlocked ? "none" : "auto",
-          }}
-        >
-          {/* ── The four dimensions, PrinciplesYou-style grouped rows:
-              icon chip + name + reason on the left, animated ring on the
-              right, a colored rail carrying the dimension's identity.
-              Labels resolve per vertical at render time. ── */}
-          <div className="px-6 pt-7 sm:px-8">
-            <p className="eyebrow text-foreground/65">Your four dimensions</p>
-            <div className="mt-4 space-y-3">
-              {clarity.subscoreDetails.map((s, i) => {
-                const meta = display.pillarLabels[s.key]
-                const color = DIMENSION_COLORS[s.key]
-                const Icon = DIMENSION_ICONS[s.key]
-                return (
-                  <div
-                    key={s.key}
-                    className="flex items-start gap-4 rounded-md border border-border bg-background/40 p-4 sm:items-center sm:p-5"
-                    style={{ borderLeft: `3px solid ${color}` }}
-                  >
-                    <span
-                      className="mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full sm:mt-0"
-                      style={{
-                        background: `color-mix(in srgb, ${color} 18%, transparent)`,
-                        color,
-                      }}
-                    >
-                      <Icon className="h-4 w-4" strokeWidth={1.8} aria-hidden />
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-[9px] uppercase tracking-[0.22em] text-foreground/50">
-                        {meta?.pillar ?? s.pillar}
-                        {strongest.key === s.key ? " · strongest" : ""}
-                      </p>
-                      <p className="font-serif text-[16.5px] leading-snug text-ink">
-                        {meta?.label ?? s.label}
-                      </p>
-                      {reasons[s.key] && (
-                        <p className="mt-1.5 text-[13.5px] leading-[1.65] text-foreground/75">
-                          {reasons[s.key]}
-                        </p>
-                      )}
+      {/* ── The four dimensions - the STRUCTURE is always visible in full
+          design (colors, icons, per-vertical names); the values and reasons
+          render only when unlocked. While locked, value cells are lock
+          chips and reasons are redaction bars - which both looks premium
+          in the free view and, unlike the old blur, never puts the paid
+          numbers in a free user's DOM. ── */}
+      <div className="px-6 pt-7 sm:px-8">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <p className="eyebrow text-foreground/65">Your four dimensions</p>
+          {!unlocked && (
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1 text-[9.5px] uppercase tracking-[0.18em] text-foreground/60">
+              <Lock className="h-3 w-3" strokeWidth={1.7} aria-hidden />
+              Scored - unlocks with your plan
+            </span>
+          )}
+        </div>
+        <div className="mt-4 space-y-3">
+          {clarity.subscoreDetails.map((s) => {
+            const meta = display.pillarLabels[s.key]
+            const color = DIMENSION_COLORS[s.key]
+            const Icon = DIMENSION_ICONS[s.key]
+            return (
+              <div
+                key={s.key}
+                className="flex items-start gap-4 rounded-md border border-border bg-background/40 p-4 sm:items-center sm:p-5"
+                style={{ borderLeft: `3px solid ${color}` }}
+              >
+                <span
+                  className="mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full sm:mt-0"
+                  style={{
+                    background: `color-mix(in srgb, ${color} 18%, transparent)`,
+                    color,
+                  }}
+                >
+                  <Icon className="h-4 w-4" strokeWidth={1.8} aria-hidden />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[9px] uppercase tracking-[0.22em] text-foreground/50">
+                    {meta?.pillar ?? s.pillar}
+                    {unlocked && strongest.key === s.key ? " · strongest" : ""}
+                  </p>
+                  <p className="font-serif text-[16.5px] leading-snug text-ink">
+                    {meta?.label ?? s.label}
+                  </p>
+                  {unlocked && reasons[s.key] ? (
+                    <p className="mt-1.5 text-[13.5px] leading-[1.65] text-foreground/75">
+                      {reasons[s.key]}
+                    </p>
+                  ) : !unlocked ? (
+                    <div className="mt-2.5 space-y-1.5" aria-hidden>
+                      <div className="h-2 w-10/12 rounded-full bg-foreground/10" />
+                      <div className="h-2 w-6/12 rounded-full bg-foreground/[0.07]" />
                     </div>
-                    <ScoreRing value={s.value} size={58} stroke={5} color={color}>
-                      <span className="font-serif text-[16px] leading-none tabular-nums text-ink">
-                        {s.value}
-                      </span>
-                    </ScoreRing>
-                  </div>
-                )
-              })}
-            </div>
-          </div>
+                  ) : null}
+                </div>
+                {unlocked ? (
+                  <ScoreRing value={s.value} size={58} stroke={5} color={color}>
+                    <span className="font-serif text-[16px] leading-none tabular-nums text-ink">
+                      {s.value}
+                    </span>
+                  </ScoreRing>
+                ) : (
+                  <span
+                    className="inline-flex h-[58px] w-[58px] shrink-0 items-center justify-center rounded-full border border-dashed"
+                    style={{
+                      borderColor: `color-mix(in srgb, ${color} 45%, transparent)`,
+                      color: `color-mix(in srgb, ${color} 80%, var(--foreground))`,
+                    }}
+                    aria-label="Score locked"
+                  >
+                    <Lock className="h-4 w-4" strokeWidth={1.6} aria-hidden />
+                  </span>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      </div>
 
-          {/* ── Insight tiles - real facts from THIS session ── */}
-          <div className="px-6 pt-7 sm:px-8">
-            <p className="eyebrow text-foreground/65">From your session</p>
-            <div className="mt-4 grid grid-cols-2 gap-2.5 sm:gap-3">
+      {/* ── Insight tiles - the words count is always real and free; the
+          score-derived facts unlock with the plan. ── */}
+      <div className="px-6 pt-7 sm:px-8">
+        <p className="eyebrow text-foreground/65">From your session</p>
+        <div className="mt-4 grid grid-cols-2 gap-2.5 sm:gap-3">
+          <InsightTile
+            label="Words you shared"
+            value={totalWords > 0 ? totalWords.toLocaleString("en-US") : "—"}
+          />
+          {unlocked ? (
+            <>
               <InsightTile
                 label="Strongest dimension"
                 value={display.pillarLabels[strongest.key]?.label ?? strongest.label}
@@ -1087,24 +1112,31 @@ function ClarityScoreCard({
                 accent={DIMENSION_COLORS[weakest.key]}
               />
               <InsightTile
-                label="Words you shared"
-                value={totalWords > 0 ? totalWords.toLocaleString("en-US") : "—"}
-              />
-              <InsightTile
                 label="Vs. peer average"
                 value={`${vsMean >= 0 ? "+" : "−"}${Math.abs(vsMean)} points`}
               />
-            </div>
-          </div>
+            </>
+          ) : (
+            <>
+              <LockedInsightTile label="Strongest dimension" />
+              <LockedInsightTile label="Biggest opportunity" />
+              <LockedInsightTile label="Vs. peer average" />
+            </>
+          )}
+        </div>
+      </div>
 
-          {/* ── Peer comparison as a labeled scale ── */}
-          <div className="mt-7 border-t border-border bg-secondary/40 px-6 py-6 sm:px-8">
-            <div className="mb-4 flex items-center justify-between gap-3">
-              <span className="eyebrow text-foreground/65">Peer benchmark</span>
-              <span className="hidden font-serif-italic text-[13px] text-foreground/65 sm:block">
-                Among professionals who take this assessment
-              </span>
-            </div>
+      {/* ── Peer comparison - the scale and the average are shown; where
+          THEY sit on it unlocks with the plan. ── */}
+      <div className="mt-7 border-t border-border bg-secondary/40 px-6 py-6 sm:px-8">
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <span className="eyebrow text-foreground/65">Peer benchmark</span>
+          <span className="hidden font-serif-italic text-[13px] text-foreground/65 sm:block">
+            Among professionals who take this assessment
+          </span>
+        </div>
+        {unlocked ? (
+          <>
             <BenchmarkBar overall={clarity.overall} mean={clarity.benchmarkMean} />
             <div className="mt-2 flex justify-between text-[9px] uppercase tracking-[0.16em] text-foreground/45">
               <span>Very low</span>
@@ -1124,50 +1156,77 @@ function ClarityScoreCard({
                 Preliminary score · refined in your full report
               </p>
             ) : null}
-          </div>
-        </div>
+          </>
+        ) : (
+          <>
+            <div
+              className="relative h-1.5 rounded-full"
+              style={{ background: "color-mix(in srgb, var(--foreground) 8%, transparent)" }}
+            >
+              <div
+                className="absolute top-1/2 h-3 w-px -translate-y-1/2"
+                style={{ left: `${clarity.benchmarkMean}%`, background: "var(--ink)" }}
+                aria-label={`Peer average: ${clarity.benchmarkMean}`}
+              />
+              <span
+                className="absolute -top-2.5 inline-flex h-6 w-6 -translate-x-1/2 items-center justify-center rounded-full border border-dashed border-foreground/40 bg-card text-foreground/60"
+                style={{ left: "50%" }}
+                aria-label="Your position - locked"
+              >
+                <Lock className="h-2.5 w-2.5" strokeWidth={1.8} aria-hidden />
+              </span>
+            </div>
+            <div className="mt-3 flex justify-between text-[9px] uppercase tracking-[0.16em] text-foreground/45">
+              <span>Very low</span>
+              <span className="hidden sm:inline">Low</span>
+              <span>Moderate</span>
+              <span className="hidden sm:inline">High</span>
+              <span>Very high</span>
+            </div>
+            <p className="mt-4 font-serif-italic text-[14px] leading-[1.7] text-foreground/70">
+              The average sits at {clarity.benchmarkMean}. Where you sit - and
+              what to do about it - unlocks with your plan.
+            </p>
+          </>
+        )}
+      </div>
 
-        {!unlocked ? (
-          <div
-            className="absolute inset-0 z-10 flex items-center justify-center px-5 py-6 sm:px-8"
+      {/* ── CTA band (locked only) - a designed section, not an overlay ── */}
+      {!unlocked && (
+        <div
+          className="border-t border-border px-6 py-9 text-center sm:px-8"
+          style={{
+            background:
+              "linear-gradient(160deg, color-mix(in srgb, var(--signal) 10%, var(--card)) 0%, var(--card) 70%)",
+          }}
+        >
+          <p className="mx-auto max-w-md font-serif text-[16px] leading-[1.5] text-ink sm:text-[17px]">
+            You can now see the loop.
+            <span className="block font-serif-italic text-foreground">
+              You do not yet have the sequence for interrupting it.
+            </span>
+          </p>
+          <button
+            type="button"
+            onClick={onUnlock}
+            className="s-btn group mt-6 h-12 px-7 text-[12px]"
             style={{
-              background:
-                "linear-gradient(180deg, color-mix(in srgb, var(--background) 30%, transparent) 0%, color-mix(in srgb, var(--background) 55%, transparent) 100%)",
-              borderTop: "1px solid var(--border)",
+              background: "var(--signal)",
+              color: "var(--background)",
+              border: "1px solid color-mix(in srgb, var(--signal) 60%, transparent)",
+              boxShadow: "0 14px 40px -16px rgba(var(--glow), 0.55)",
             }}
           >
-            <div className="flex max-w-md flex-col items-center text-center">
-              <p className="font-serif text-[15.5px] leading-[1.5] text-ink sm:text-[16.5px]">
-                You can now see the loop.
-                <span className="block font-serif-italic text-foreground">
-                  You do not yet have the sequence for interrupting it.
-                </span>
-              </p>
-              <button
-                type="button"
-                onClick={onUnlock}
-                className="s-btn group mt-5 h-12 px-6 text-[12px]"
-                style={{
-                  background: "var(--signal)",
-                  color: "var(--background)",
-                  border:
-                    "1px solid color-mix(in srgb, var(--signal) 60%, transparent)",
-                  boxShadow:
-                    "0 14px 40px -16px rgba(var(--glow), 0.55)",
-                }}
-              >
-                Get My Personalized Action Plan
-                <span
-                  aria-hidden
-                  className="ml-1 inline-block transition-transform duration-500 group-hover:translate-x-1"
-                >
-                  →
-                </span>
-              </button>
-            </div>
-          </div>
-        ) : null}
-      </div>
+            Get My Personalized Action Plan
+            <span
+              aria-hidden
+              className="ml-1 inline-block transition-transform duration-500 group-hover:translate-x-1"
+            >
+              →
+            </span>
+          </button>
+        </div>
+      )}
     </section>
   )
 }
@@ -1197,6 +1256,22 @@ function InsightTile({
           />
         )}
         {value}
+      </p>
+    </div>
+  )
+}
+
+/** Locked twin of InsightTile - same silhouette, lock chip instead of the
+ *  fact, so the free view keeps the designed shape without the paid data. */
+function LockedInsightTile({ label }: { label: string }) {
+  return (
+    <div className="rounded-md border border-dashed border-border bg-background/25 px-3.5 py-3.5 sm:px-4">
+      <p className="text-[9px] uppercase tracking-[0.2em] text-foreground/45">
+        {label}
+      </p>
+      <p className="mt-1.5 flex items-center gap-2 text-[12px] uppercase tracking-[0.14em] text-foreground/50">
+        <Lock className="h-3 w-3 shrink-0" strokeWidth={1.7} aria-hidden />
+        In your plan
       </p>
     </div>
   )

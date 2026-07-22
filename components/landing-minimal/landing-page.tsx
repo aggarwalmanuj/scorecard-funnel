@@ -1,5 +1,6 @@
 import { MinimalHeader } from "@/components/landing-minimal/header"
 import { MinimalHero } from "@/components/landing-minimal/hero"
+import { ProductShowcaseSection } from "@/components/landing-minimal/product-showcase"
 import { WalkthroughSection } from "@/components/landing-minimal/walkthrough"
 import { SanctuarySection } from "@/components/landing-minimal/sanctuary"
 import { EssenceSection } from "@/components/landing-minimal/essence"
@@ -33,6 +34,9 @@ export function LandingPage({ headline }: { headline?: HeadlineVariant }) {
       <MinimalHeader />
       <main>
         <MinimalHero headline={headline} />
+        {/* Block 01B (Doorway System): the artifact demonstrated immediately
+            after the hero - what you physically get, shown, not described. */}
+        <ProductShowcaseSection />
         <CredentialsSection />
         <WalkthroughSection />
         <EssenceSection />
