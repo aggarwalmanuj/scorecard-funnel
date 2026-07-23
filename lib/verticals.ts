@@ -45,6 +45,10 @@ const VERTICAL_ALIASES: Record<string, Vertical> = {
   "healthcare-automations": "healthcare",
   "healthcare-automation": "healthcare",
   retarget: "retargeting",
+  // The B2B vertical's public identity - business.aimerge.live - maps to
+  // the healthcare vertical id (Healthcare Operations is its first ICP).
+  business: "healthcare",
+  b2b: "healthcare",
 }
 
 /**
@@ -57,4 +61,25 @@ export function normalizeVertical(v: string | null | undefined): Vertical | null
   const lowered = v.trim().toLowerCase()
   if (isVertical(lowered)) return lowered
   return VERTICAL_ALIASES[lowered] ?? null
+}
+
+/**
+ * Resolve a vertical from the request's Host header - each vertical has
+ * its own subdomain as its public entry point:
+ *   aimerge.live           -> main
+ *   adhd.aimerge.live      -> adhd
+ *   retarget.aimerge.live  -> retargeting
+ *   business.aimerge.live  -> healthcare (the B2B lane)
+ * The first host label is normalized through the alias table, so
+ * retargeting./b2b. variants also work. Unknown or missing hosts (and
+ * localhost, previews, www) resolve to null - callers fall back to other
+ * signals (?vertical= param) and then to main.
+ */
+export function verticalFromHost(host: string | null | undefined): Vertical | null {
+  if (!host) return null
+  const name = host.split(":")[0].trim().toLowerCase()
+  if (!name || name === "localhost" || /^[0-9.]+$/.test(name)) return null
+  const label = name.split(".")[0]
+  if (label === "www" || label === "aimerge") return null
+  return normalizeVertical(label)
 }

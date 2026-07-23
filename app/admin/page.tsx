@@ -3149,7 +3149,7 @@ export default function AdminPage() {
                     try {
                       await downloadReportPdf(
                         root,
-                        `${reportFileSlug(reportModal.name)}-belief-score-report.pdf`
+                        `${reportFileSlug(reportModal.name)}-${reportModal.vertical}-report.pdf`
                       )
                     } catch (err) {
                       console.error("Admin PDF download failed:", err)

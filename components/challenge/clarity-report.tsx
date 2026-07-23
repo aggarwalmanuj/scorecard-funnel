@@ -393,7 +393,7 @@ export function ClarityReport({ preview = false }: { preview?: boolean } = {}) {
     try {
       await downloadReportPdf(
         root,
-        `${reportFileSlug(state.firstName)}-belief-score-action-plan.pdf`
+        `${reportFileSlug(state.firstName)}-${reportFileSlug(display.reportName)}.pdf`
       )
     } catch (e) {
       console.error("PDF download failed:", e)
@@ -514,8 +514,8 @@ export function ClarityReport({ preview = false }: { preview?: boolean } = {}) {
           <AlertCircle size={28} />
           <p className="status-title">Nothing here yet.</p>
           <p className="status-sub">
-            Complete the Belief Score assessment first - your action plan is
-            built from your answers.
+            Complete the {display.productName} assessment first - your action
+            plan is built from your answers.
           </p>
           <Link href="/" className="status-link">
             Start the challenge
@@ -1340,7 +1340,7 @@ function ScoreDonut({ value }: { value: number }) {
     <svg
       className="donut"
       viewBox="0 0 120 120"
-      aria-label={`Overall Belief Score ${v} of 100`}
+      aria-label={`Overall score ${v} of 100`}
     >
       <defs>
         <linearGradient id="ringGrad" x1="0" y1="0" x2="1" y2="1">
@@ -1439,6 +1439,7 @@ function PillarBlock({
 }
 
 function BenchmarkBlock({ overall, mean }: { overall: number; mean: number }) {
+  const display = useContext(ReportDisplayContext)
   const youPos = Math.max(2, Math.min(98, overall))
   const meanPos = Math.max(2, Math.min(98, mean))
   // Neutral forward framing (Funnel v2): the number is a baseline to move
@@ -1448,7 +1449,7 @@ function BenchmarkBlock({ overall, mean }: { overall: number; mean: number }) {
     <div className="bench">
       <div className="bench-head">
         <div>
-          <h3>Overall Belief Score</h3>
+          <h3>Overall {display.productName}</h3>
           <small>Peer set · everyone who completes this assessment</small>
         </div>
         <div className="bench-num">

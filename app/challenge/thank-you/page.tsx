@@ -5,6 +5,7 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { ArrowRight, Download, Loader2, Shield } from "lucide-react"
 import { useChallenge } from "@/context/challenge-context"
+import { displayFor } from "@/lib/vertical-display"
 import { isFunnelEnforced } from "@/lib/funnel-guard"
 import {
   getCachedSummaryAudio,
@@ -43,10 +44,13 @@ interface TierCopy {
 
 // Copy is per the "Thank-you pages" spec. Tone differs by tier; the report is
 // the single deliverable framed on every page (no on-page upsell).
-const TIER_COPY: Record<SuccessTier, TierCopy> = {
+// Parameterized by the vertical's product name (One-Name Law: an ADHD buyer
+// is thanked for their ADHD Belief Score, a healthcare leader for their
+// Belief Profile).
+const tierCopyFor = (productName: string): Record<SuccessTier, TierCopy> => ({
   diagnostic: {
-    eyebrow: "Your Belief Score is ready",
-    headLead: "Your Belief Score is",
+    eyebrow: `Your ${productName} is ready`,
+    headLead: `Your ${productName} is`,
     headEmphasis: "composed.",
     body: [
       "What you felt but couldn't name is now on the page - the specific pattern running quietly underneath your effort, read across all seven dimensions.",
@@ -65,7 +69,7 @@ const TIER_COPY: Record<SuccessTier, TierCopy> = {
     headLead: "Thank you.",
     headEmphasis: "Your Story is being written.",
     body: [
-      "This is where your Belief Score stops being a page and becomes a narrative - your Purpose Story, built from your actual life and returned to you in your own words.",
+      `This is where your ${productName} stops being a page and becomes a narrative - your Purpose Story, built from your actual life and returned to you in your own words.`,
       "First, your action plan. Download it below - the steps to submit the details for your Story are on their way to your inbox, and your action plan is the ground it's built on.",
     ],
     reportTitle: "Your action plan -",
@@ -102,7 +106,7 @@ const TIER_COPY: Record<SuccessTier, TierCopy> = {
     reportNote:
       "Your intake details and a copy of the action plan are on their way to your inbox. If the timing needs to shift, the reschedule link is in that email - and check your spam folder if it hasn't arrived shortly.",
   },
-}
+})
 
 // Facebook "Purchase" value per tier (USD). Firing this on the thank-you page
 // is what lets the ad algorithm learn which clicks convert - see the spec.
@@ -150,7 +154,8 @@ export default function ThankYouPage() {
     if (!hasSignal) router.replace("/")
   }, [router])
 
-  const copy = TIER_COPY[tier]
+  const productName = displayFor(state.audience).productName
+  const copy = tierCopyFor(productName)[tier]
 
   useEffect(() => {
     markComplete()
@@ -331,7 +336,7 @@ export default function ThankYouPage() {
             <DownloadCard
               preview={<AudioPreview />}
               eyebrow="Audio summary · MP3"
-              title="Your Belief Score, in voice -"
+              title={`Your ${productName}, in voice -`}
               titleItalic="for listening, not reading."
               description="The personalized audio summary generated from your responses. Use it on walks, in transit, or anywhere the written page doesn't reach."
               actionLabel={

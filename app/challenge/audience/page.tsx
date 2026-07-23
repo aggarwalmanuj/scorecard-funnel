@@ -1,16 +1,20 @@
+import { headers } from "next/headers"
 import { AudienceEntryForm } from "@/components/challenge/audience-entry-form"
 import { getEntryContent } from "@/lib/server/challenge-prompts"
-import { DEFAULT_VERTICAL, normalizeVertical } from "@/lib/verticals"
+import { DEFAULT_VERTICAL, normalizeVertical, verticalFromHost } from "@/lib/verticals"
 
 /**
  * Funnel entry: the "your details" page every landing page hands off to.
  *
- * External vertical landing pages (ADHD, Retargeting, Healthcare) link here
- * with `?vertical=<id>` (plus their utm/ref params, captured separately by
- * lib/client/attribution.ts). The vertical is resolved SERVER-side and its
- * admin-authored entry copy is in the first byte of HTML - no client-side
- * content swap. No param (or an unknown one) means the main vertical, which
- * is what this site's own landing page sends.
+ * Vertical resolution, server-side, in priority order:
+ *  1. `?vertical=<id>` query param - explicit override, used by external
+ *     landing links and local testing (the dev switcher).
+ *  2. The SUBDOMAIN - adhd.aimerge.live / retarget.aimerge.live /
+ *     business.aimerge.live are the verticals' public entry points
+ *     (middleware also forwards it as the x-vertical header).
+ *  3. Main.
+ * The resolved vertical's admin-authored entry copy is in the first byte
+ * of HTML - no client-side content swap.
  */
 
 // Admin-edited copy must not be cached per-URL; the site is fully dynamic
@@ -27,10 +31,14 @@ export default async function AudienceEntryPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>
 }) {
   const sp = await searchParams
+  const h = await headers()
   const vertical =
     normalizeVertical(
       firstParam(sp.vertical) ?? firstParam(sp.lp) ?? firstParam(sp.v),
-    ) ?? DEFAULT_VERTICAL
+    ) ??
+    normalizeVertical(h.get("x-vertical")) ??
+    verticalFromHost(h.get("host")) ??
+    DEFAULT_VERTICAL
   const content = await getEntryContent(vertical)
   return <AudienceEntryForm vertical={vertical} content={content} />
 }

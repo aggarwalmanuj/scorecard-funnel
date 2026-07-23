@@ -2,6 +2,7 @@ import { NextResponse, type NextFetchEvent, type NextRequest } from "next/server
 import { Ratelimit } from "@upstash/ratelimit"
 import { Redis } from "@upstash/redis"
 import { HEADLINE_COOKIE } from "@/lib/headline-shared"
+import { verticalFromHost } from "@/lib/verticals"
 
 /* ─────────────────────────────────────────────
    Security middleware — nonce-based CSP,
@@ -118,6 +119,20 @@ export async function middleware(request: NextRequest, event: NextFetchEvent) {
     return NextResponse.redirect(url, 308)
   }
 
+  // ── Subdomain verticals ──
+  // adhd.aimerge.live / retarget.aimerge.live / business.aimerge.live are
+  // the verticals' public entry points. The resolved vertical rides to
+  // server components as the x-vertical request header, and a vertical
+  // subdomain's ROOT goes straight to the funnel entry (per the funnel
+  // contract: vertical landing pages hand off directly to name-gathering;
+  // the marketing landing lives on the apex domain only).
+  const hostVertical = verticalFromHost(request.headers.get("host"))
+  if (hostVertical && hostVertical !== "main" && pathname === "/") {
+    const url = request.nextUrl.clone()
+    url.pathname = "/challenge/audience"
+    return NextResponse.redirect(url, 307)
+  }
+
   if (pathname.startsWith("/api/")) {
     const ip =
       request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown"
@@ -185,6 +200,7 @@ export async function middleware(request: NextRequest, event: NextFetchEvent) {
   const requestHeaders = new Headers(request.headers)
   requestHeaders.set("x-nonce", nonce)
   requestHeaders.set("content-security-policy", csp)
+  if (hostVertical) requestHeaders.set("x-vertical", hostVertical)
 
   // Headline A/B: rewrite `/` to the visitor's assigned variant page.
   // Skipped entirely when the experiment is off (no active variants).

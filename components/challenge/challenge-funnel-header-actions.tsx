@@ -11,6 +11,8 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet"
 import { cn } from "@/lib/utils"
+import { useChallenge } from "@/context/challenge-context"
+import { displayFor } from "@/lib/vertical-display"
 
 type Variant = "light" | "dark"
 
@@ -39,6 +41,7 @@ export function ChallengeMenuButton({
   className?: string
 }) {
   const _isDark = variant === "dark"
+  const { state } = useChallenge()
   return (
     <Sheet>
       <SheetTrigger asChild>
@@ -70,7 +73,7 @@ export function ChallengeMenuButton({
               </SheetTitle>
             </div>
             <p className="font-serif-italic text-[14px] leading-snug text-foreground/75">
-              Navigate your Belief Score.
+              Navigate your {displayFor(state.audience).productName}.
             </p>
           </SheetHeader>
 

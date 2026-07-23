@@ -10,8 +10,14 @@ import { preloadSummaryAudio } from "@/lib/client/summary-audio-cache"
 import { preloadBeatAudio } from "@/lib/client/beat-audio-cache"
 import { ChallengeNavHome } from "@/components/challenge/challenge-nav-home"
 import { ChallengeMenuButton } from "@/components/challenge/challenge-funnel-header-actions"
-import { displayFor } from "@/lib/vertical-display"
-import { DIMENSION_COLORS, DIMENSION_ORDER, ScoreRing } from "@/components/challenge/score-visuals"
+import { displayFor, type VerticalDisplay } from "@/lib/vertical-display"
+import {
+  DIMENSION_COLORS,
+  DIMENSION_ICONS,
+  DIMENSION_ORDER,
+  ScoreRing,
+} from "@/components/challenge/score-visuals"
+import { MacWindow } from "@/components/visuals/mac-window"
 
 // Step labels carry the vertical's product vocabulary (One-Name Law): an
 // ADHD visitor watches their "ADHD Belief Score" being built, a healthcare
@@ -158,6 +164,109 @@ async function fetchReportInBackground(args: {
   } catch {
     return null
   }
+}
+
+/**
+ * The report's page one, mid-assembly: dimension meters fill with the
+ * pipeline's progress, narrative lines materialize one by one, and the
+ * score slot stays deliberately empty ("···") - the number doesn't exist
+ * yet, and showing choreography as fact would be a lie. Pure FOMO physics:
+ * watching your own artifact being written is the one thing you can't
+ * walk away from.
+ */
+function AssemblingReport({
+  progress,
+  display,
+}: {
+  progress: number
+  display: VerticalDisplay
+}) {
+  // Target widths are layout choreography (no numbers are shown).
+  const targets = [78, 62, 70, 55]
+  const frac = (i: number) => Math.max(0, Math.min(1, (progress / 100) * 4 - i))
+  return (
+    <div className="bg-card p-5">
+      <div className="mb-4 flex items-center justify-between gap-3 border-b border-border pb-3.5">
+        <span className="flex items-center gap-2.5">
+          <span className="brand-mark brand-mark-sm" aria-hidden />
+          <span className="text-[9px] uppercase tracking-[0.2em] text-foreground/60">
+            {display.reportName}
+          </span>
+        </span>
+        <span className="flex items-center gap-1.5 text-[9px] uppercase tracking-[0.18em] text-foreground/50">
+          <span className="pulse-dot" aria-hidden />
+          Writing
+        </span>
+      </div>
+
+      <div className="flex items-center gap-4">
+        <ScoreRing
+          value={progress}
+          size={72}
+          stroke={6}
+          color="var(--signal)"
+          animate={false}
+          trackOpacity={0.3}
+        >
+          <span className="font-serif text-[18px] text-ink/45" aria-label="Score pending">
+            ···
+          </span>
+        </ScoreRing>
+        <div className="min-w-0 flex-1">
+          <p className="text-[9px] uppercase tracking-[0.2em] text-foreground/50">
+            {display.productName}
+          </p>
+          <div className="mt-2 space-y-1.5" aria-hidden>
+            <div className="h-2 w-11/12 animate-pulse rounded-full bg-ink/20" />
+            <div className="h-2 w-7/12 animate-pulse rounded-full bg-ink/10" style={{ animationDelay: "0.4s" }} />
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-4 space-y-2.5">
+        {DIMENSION_ORDER.map((k, i) => {
+          const Icon = DIMENSION_ICONS[k]
+          const color = DIMENSION_COLORS[k]
+          return (
+            <div key={k} className="flex items-center gap-2.5">
+              <span
+                className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full"
+                style={{ background: `color-mix(in srgb, ${color} 18%, transparent)`, color }}
+              >
+                <Icon className="h-2.5 w-2.5" strokeWidth={2} aria-hidden />
+              </span>
+              <span className="w-24 truncate text-[9.5px] uppercase tracking-[0.12em] text-foreground/60 sm:w-28">
+                {display.pillarLabels[k].label}
+              </span>
+              <span className="relative h-1.5 flex-1 overflow-hidden rounded-full bg-foreground/10">
+                <span
+                  className="absolute inset-y-0 left-0 rounded-full transition-all duration-700 ease-out"
+                  style={{ width: `${targets[i] * frac(i)}%`, background: color }}
+                />
+              </span>
+            </div>
+          )
+        })}
+      </div>
+
+      <div className="mt-4 space-y-1.5 border-t border-border pt-3.5" aria-hidden>
+        {[92, 83, 88, 41].map((w, i) => (
+          <div
+            key={i}
+            className="h-1.5 rounded-full bg-foreground/10 transition-opacity duration-700"
+            style={{
+              width: `${w}%`,
+              opacity: progress > 25 + i * 16 ? 1 : 0.15,
+            }}
+          />
+        ))}
+      </div>
+
+      <p className="mt-3.5 text-[9px] uppercase tracking-[0.16em] text-foreground/40">
+        Page 1 of 6 · built from your own words
+      </p>
+    </div>
+  )
 }
 
 export function ProcessingScreen({ audience }: { audience: Audience }) {
@@ -503,7 +612,7 @@ export function ProcessingScreen({ audience }: { audience: Audience }) {
   }
 
   return (
-    <div className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden px-5">
+    <div className="relative flex h-svh flex-col items-center justify-center overflow-hidden px-5">
       {/* Marine palette already gives us a deep navy bg + teal signal - the
           atmospheric layers below paint with palette tokens, not hardcoded
           colors, so they re-skin if Marine is ever changed. */}
@@ -533,163 +642,147 @@ export function ProcessingScreen({ audience }: { audience: Audience }) {
         <ChallengeNavHome variant="dark" />
       </div>
 
-      <div className="page-enter relative z-10 flex w-full max-w-md flex-col items-center">
-        {/* Progress ring - uses signal for the active stroke */}
-        <div className="relative mb-10 h-28 w-28">
-          <div
-            className="absolute -inset-4 rounded-full opacity-[0.18] animate-glow-pulse"
-            style={{ background: "rgba(var(--glow), 0.5)" }}
-          />
-          <svg className="absolute inset-0 h-full w-full -rotate-90" viewBox="0 0 112 112">
-            <circle
-              cx="56"
-              cy="56"
-              r="50"
-              fill="none"
-              stroke="var(--border)"
-              strokeWidth="2"
-              opacity="0.4"
-            />
-            <circle
-              cx="56"
-              cy="56"
-              r="50"
-              fill="none"
-              stroke="var(--signal)"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeDasharray={`${2 * Math.PI * 50}`}
-              strokeDashoffset={`${2 * Math.PI * 50 * (1 - progressPercent / 100)}`}
-              className="transition-all duration-700 ease-out"
-            />
-          </svg>
-          <div
-            className="animate-spin-slow absolute inset-3 rounded-full border-2 border-transparent"
-            style={{
-              borderTopColor: "color-mix(in srgb, var(--signal) 60%, transparent)",
-              borderRightColor: "color-mix(in srgb, var(--signal) 20%, transparent)",
-            }}
-          />
-          <div className="absolute inset-0 flex items-center justify-center">
-            <span className="font-serif text-[28px] tabular-nums text-ink">
-              {Math.round(progressPercent)}%
-            </span>
-          </div>
-        </div>
-
-        {/* The four dimensions filling in sequence - progress choreography
-            (like the checklist), not live scores: no numbers shown, each
-            ring simply completes as its phase of the pipeline passes. */}
-        <div className="mb-9 flex items-start justify-center gap-4 sm:gap-6">
-          {DIMENSION_ORDER.map((k, i) => {
-            const frac = Math.max(0, Math.min(1, (progressPercent / 100) * 4 - i))
-            const meta = display.pillarLabels[k]
-            return (
-              <div key={k} className="flex w-16 flex-col items-center gap-2 text-center">
-                <ScoreRing
-                  value={frac * 100}
-                  size={44}
-                  stroke={4}
-                  color={DIMENSION_COLORS[k]}
-                  animate={false}
-                  trackOpacity={0.3}
-                >
-                  {frac >= 1 && (
-                    <Check className="h-3.5 w-3.5 text-ink" strokeWidth={2} aria-hidden />
-                  )}
-                </ScoreRing>
-                <span className="text-[8.5px] uppercase leading-tight tracking-[0.14em] text-foreground/55">
-                  {meta.label}
+      <div className="page-enter relative z-10 grid w-full max-w-6xl grid-cols-1 items-center gap-8 lg:grid-cols-[1fr_minmax(0,430px)] lg:gap-14">
+        {/* ── LEFT: the progress core ── */}
+        <div className="flex flex-col items-center text-center lg:items-start lg:text-left">
+          <div className="flex flex-col items-center gap-5 sm:flex-row sm:gap-7">
+            {/* Progress ring - uses signal for the active stroke */}
+            <div className="relative h-24 w-24 shrink-0 sm:h-28 sm:w-28">
+              <div
+                className="absolute -inset-4 rounded-full opacity-[0.18] animate-glow-pulse"
+                style={{ background: "rgba(var(--glow), 0.5)" }}
+              />
+              <svg className="absolute inset-0 h-full w-full -rotate-90" viewBox="0 0 112 112">
+                <circle
+                  cx="56"
+                  cy="56"
+                  r="50"
+                  fill="none"
+                  stroke="var(--border)"
+                  strokeWidth="2"
+                  opacity="0.4"
+                />
+                <circle
+                  cx="56"
+                  cy="56"
+                  r="50"
+                  fill="none"
+                  stroke="var(--signal)"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeDasharray={`${2 * Math.PI * 50}`}
+                  strokeDashoffset={`${2 * Math.PI * 50 * (1 - progressPercent / 100)}`}
+                  className="transition-all duration-700 ease-out"
+                />
+              </svg>
+              <div
+                className="animate-spin-slow absolute inset-3 rounded-full border-2 border-transparent"
+                style={{
+                  borderTopColor: "color-mix(in srgb, var(--signal) 60%, transparent)",
+                  borderRightColor: "color-mix(in srgb, var(--signal) 20%, transparent)",
+                }}
+              />
+              <div className="absolute inset-0 flex items-center justify-center">
+                <span className="font-serif text-[24px] tabular-nums text-ink sm:text-[28px]">
+                  {Math.round(progressPercent)}%
                 </span>
               </div>
-            )
-          })}
-        </div>
+            </div>
 
-        <p className="eyebrow mb-3 text-foreground/70">The mirror is being built</p>
-        <h1 className="mb-3 text-center font-serif text-[28px] leading-tight text-ink sm:text-[32px]">
-          What you shared is being read
-          <span className="block font-serif-italic text-foreground">carefully.</span>
-        </h1>
-        <p className="mb-6 max-w-sm text-center font-serif-italic text-[16px] leading-[1.7] text-foreground/75">
-          What surfaces has always been yours.
-        </p>
-
-        {/* Cycling fragments of their own answers - fixed height so the
-            swap never reflows the checklist below. */}
-        {wordEchoes.length > 0 && (
-          <div className="mb-8 flex min-h-16 w-full max-w-sm flex-col items-center justify-center text-center">
-            <p
-              key={echoIdx}
-              className="animate-fade-in-up font-serif text-[15px] leading-[1.6] text-ink/90"
-            >
-              &ldquo;{wordEchoes[echoIdx]}&rdquo;
-            </p>
-            <p className="mt-1.5 text-[10px] uppercase tracking-[0.24em] text-foreground/50">
-              Your words, being read
-            </p>
+            <div>
+              <p className="eyebrow mb-2.5 text-foreground/70">
+                The mirror is being built
+              </p>
+              <h1 className="font-serif text-[24px] leading-tight text-ink sm:text-[30px]">
+                What you shared is being read
+                <span className="block font-serif-italic text-foreground">
+                  carefully.
+                </span>
+              </h1>
+            </div>
           </div>
-        )}
 
-        <ul className="mb-8 w-full space-y-3" aria-label="Processing steps">
-          {processingSteps.map((label, i) => {
-            const done = i < activeStep
-            const active = i === activeStep
-            const visible = i <= activeStep
-            return (
-              <li
-                key={label}
-                className={`flex items-center gap-4 text-[15px] transition-all duration-500 ${
-                  visible ? "animate-stagger-in" : "opacity-0"
-                } ${
-                  done
-                    ? "text-foreground/55"
-                    : active
-                      ? "font-medium text-ink"
-                      : "text-foreground/30"
-                }`}
-                style={{ animationDelay: visible ? `${i * 150}ms` : undefined }}
+          {/* Current step - one live line with a counter, never a tall list */}
+          <div className="mt-7 flex min-h-12 w-full max-w-md items-center gap-3 rounded-md border border-border bg-card/60 px-4 py-3 backdrop-blur-sm">
+            <span
+              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full"
+              style={{ background: "color-mix(in srgb, var(--signal) 20%, transparent)" }}
+            >
+              <span className="pulse-dot" aria-hidden />
+            </span>
+            <span
+              key={activeStep}
+              className="animate-fade-in-up min-w-0 flex-1 text-left text-[14px] leading-snug text-ink"
+              aria-live="polite"
+            >
+              {processingSteps[activeStep]}
+            </span>
+            <span className="shrink-0 text-[10px] uppercase tabular-nums tracking-[0.18em] text-foreground/50">
+              {Math.min(activeStep + 1, processingSteps.length)} / {processingSteps.length}
+            </span>
+          </div>
+
+          {/* Cycling fragments of their own answers - fixed height so the
+              swap never reflows the layout */}
+          {wordEchoes.length > 0 && (
+            <div className="mt-5 flex min-h-16 w-full max-w-md flex-col items-center justify-center text-center lg:items-start lg:text-left">
+              <p
+                key={echoIdx}
+                className="animate-fade-in-up font-serif text-[15px] leading-[1.6] text-ink/90"
               >
-                {done ? (
-                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-secondary">
-                    <Check className="h-3 w-3 text-ink" strokeWidth={2} aria-hidden />
-                  </span>
-                ) : active ? (
-                  <span
-                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full"
-                    style={{
-                      background: "color-mix(in srgb, var(--signal) 20%, transparent)",
-                    }}
-                  >
-                    <span className="pulse-dot" aria-hidden />
-                  </span>
-                ) : (
-                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-border">
-                    <span className="h-1 w-1 rounded-full bg-foreground/30" aria-hidden />
-                  </span>
-                )}
-                <span>{label}</span>
-              </li>
-            )
-          })}
-        </ul>
+                &ldquo;{wordEchoes[echoIdx]}&rdquo;
+              </p>
+              <p className="mt-1.5 text-[10px] uppercase tracking-[0.24em] text-foreground/50">
+                Your words, being read
+              </p>
+            </div>
+          )}
 
-        {showClosingLine && (
-          <div className="animate-curtain-rise text-center">
-            <p className="font-serif-italic text-[19px] leading-snug text-ink sm:text-[20px]">
+          {/* The four dimensions filling in sequence - progress
+              choreography, not live scores: no numbers shown */}
+          <div className="mt-6 flex items-start gap-4 sm:gap-6">
+            {DIMENSION_ORDER.map((k, i) => {
+              const frac = Math.max(0, Math.min(1, (progressPercent / 100) * 4 - i))
+              const meta = display.pillarLabels[k]
+              return (
+                <div key={k} className="flex w-16 flex-col items-center gap-2 text-center">
+                  <ScoreRing
+                    value={frac * 100}
+                    size={44}
+                    stroke={4}
+                    color={DIMENSION_COLORS[k]}
+                    animate={false}
+                    trackOpacity={0.3}
+                  >
+                    {frac >= 1 && (
+                      <Check className="h-3.5 w-3.5 text-ink" strokeWidth={2} aria-hidden />
+                    )}
+                  </ScoreRing>
+                  <span className="text-[8.5px] uppercase leading-tight tracking-[0.14em] text-foreground/55">
+                    {meta.label}
+                  </span>
+                </div>
+              )
+            })}
+          </div>
+
+          {showClosingLine && (
+            <p className="animate-curtain-rise mt-6 max-w-md font-serif-italic text-[16px] leading-snug text-ink sm:text-[17px]">
               What you are about to see could only have been built from your
               words.
             </p>
-            <div
-              className="mx-auto mt-4 h-px w-full max-w-xs"
-              style={{
-                background:
-                  "linear-gradient(90deg, transparent, var(--signal), transparent)",
-              }}
-            />
-          </div>
-        )}
+          )}
+        </div>
 
+        {/* ── RIGHT: the artifact, visibly assembling (desktop) ── */}
+        <div className="hidden lg:block">
+          <MacWindow title="your-score.pdf · assembling">
+            <AssemblingReport progress={progressPercent} display={display} />
+          </MacWindow>
+          <p className="mt-3 text-center text-[10.5px] uppercase tracking-[0.18em] text-foreground/50">
+            Being written from your words - nothing here is a template
+          </p>
+        </div>
       </div>
 
       {/* Slow-network banner - fixed at the viewport bottom so it's always
