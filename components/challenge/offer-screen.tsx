@@ -341,16 +341,24 @@ export function OfferScreen({ audience }: { audience: Audience }) {
           <div className="mt-10 grid grid-cols-1 items-start gap-8 lg:grid-cols-2">
             <div className="mx-auto w-full max-w-md lg:max-w-none">
               <MacWindow title="your-action-plan.pdf">
+                {/* Only the OVERALL score is ever real pre-purchase; the
+                    four dimension readings are paid content and render
+                    sealed (policy: pillar scores live inside the plan). */}
                 <ReportPreviewCard
                   vertical={audience}
-                  subscores={state.clarityScore?.subscores ?? undefined}
+                  locked
+                  overall={
+                    state.clarityScore
+                      ? overallOf(state.clarityScore.subscores)
+                      : undefined
+                  }
                   animate
                 />
               </MacWindow>
               <p className="mt-3 text-center text-[10.5px] uppercase tracking-[0.18em] text-foreground/50">
                 {state.clarityScore
-                  ? "Preview built from your actual scores"
-                  : "Illustrative example - yours is built from your answers"}
+                  ? "Your overall score is real - the four readings unlock inside"
+                  : "Illustrative - yours is built from your answers"}
               </p>
             </div>
 

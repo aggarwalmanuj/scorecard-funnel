@@ -1,5 +1,6 @@
 "use client"
 
+import { Lock } from "lucide-react"
 import type { Audience } from "@/context/challenge-context"
 import { displayFor, type PillarKey } from "@/lib/vertical-display"
 import {
@@ -41,15 +42,23 @@ export function overallOf(s: Record<PillarKey, number>): number {
 export function ReportPreviewCard({
   vertical,
   subscores = SAMPLE_SUBSCORES,
+  overall: overallProp,
+  locked = false,
   animate = false,
 }: {
   vertical: Audience
-  /** Real session subscores when available; sample values otherwise. */
+  /** Sample values for illustrative previews. Ignored when `locked`. */
   subscores?: Record<PillarKey, number>
+  /** Explicit overall (e.g. the user's REAL overall in locked mode). */
+  overall?: number
+  /** Paid-content gate: dimension readings render as sealed rows - no
+   *  numbers, no proportional bars - per policy that only the overall
+   *  score is visible before purchase. */
+  locked?: boolean
   animate?: boolean
 }) {
   const display = displayFor(vertical)
-  const overall = overallOf(subscores)
+  const overall = overallProp ?? overallOf(subscores)
 
   return (
     <div className="bg-card p-5 sm:p-6">
@@ -86,7 +95,9 @@ export function ReportPreviewCard({
         </div>
       </div>
 
-      {/* Four dimensions */}
+      {/* Four dimensions. Locked mode: the rows exist (structure sells),
+          but bars are uniform sealed strips and the value cell is a lock -
+          nothing on screen implies any dimension's actual magnitude. */}
       <div className="mt-5 space-y-2.5">
         {DIMENSION_ORDER.map((k) => {
           const Icon = DIMENSION_ICONS[k]
@@ -103,15 +114,33 @@ export function ReportPreviewCard({
               <span className="w-24 truncate text-[9.5px] uppercase tracking-[0.12em] text-foreground/60 sm:w-28">
                 {display.pillarLabels[k].label}
               </span>
-              <span className="relative h-1.5 flex-1 overflow-hidden rounded-full bg-foreground/10">
-                <span
-                  className="absolute inset-y-0 left-0 rounded-full"
-                  style={{ width: `${v}%`, background: color }}
-                />
-              </span>
-              <span className="w-6 text-right font-serif text-[11px] tabular-nums text-ink">
-                {v}
-              </span>
+              {locked ? (
+                <>
+                  <span
+                    className="relative h-1.5 flex-1 overflow-hidden rounded-full border border-dashed"
+                    style={{
+                      borderColor: `color-mix(in srgb, ${color} 40%, transparent)`,
+                      background: `color-mix(in srgb, ${color} 8%, transparent)`,
+                    }}
+                    aria-label="Reading locked"
+                  />
+                  <span className="flex w-6 justify-end text-foreground/45">
+                    <Lock className="h-3 w-3" strokeWidth={1.7} aria-hidden />
+                  </span>
+                </>
+              ) : (
+                <>
+                  <span className="relative h-1.5 flex-1 overflow-hidden rounded-full bg-foreground/10">
+                    <span
+                      className="absolute inset-y-0 left-0 rounded-full"
+                      style={{ width: `${v}%`, background: color }}
+                    />
+                  </span>
+                  <span className="w-6 text-right font-serif text-[11px] tabular-nums text-ink">
+                    {v}
+                  </span>
+                </>
+              )}
             </div>
           )
         })}

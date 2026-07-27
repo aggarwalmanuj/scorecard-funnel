@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { ArrowRight, X } from "lucide-react"
+import { ArrowRight, Lock, X } from "lucide-react"
 import { useChallenge, type Audience } from "@/context/challenge-context"
 import { normalizeVertical, verticalFromHost, type Vertical } from "@/lib/verticals"
 import { displayFor } from "@/lib/vertical-display"
@@ -303,11 +303,12 @@ export function FunnelExitIntent() {
                   <p className="text-[9px] uppercase tracking-[0.2em] text-foreground/55">
                     Your {display.productName}
                   </p>
+                  {/* Dimension readings are paid content - sealed strips
+                      only, no values, no proportional bars. */}
                   <div className="mt-2 space-y-1.5">
                     {DIMENSION_ORDER.map((k) => {
                       const Icon = DIMENSION_ICONS[k]
                       const color = DIMENSION_COLORS[k]
-                      const v = state.clarityScore!.subscores[k]
                       return (
                         <div key={k} className="flex items-center gap-2">
                           <span
@@ -316,14 +317,16 @@ export function FunnelExitIntent() {
                           >
                             <Icon className="h-2 w-2" strokeWidth={2.2} aria-hidden />
                           </span>
-                          <span className="relative h-1 flex-1 overflow-hidden rounded-full bg-foreground/10">
-                            <span
-                              className="absolute inset-y-0 left-0 rounded-full"
-                              style={{ width: `${v}%`, background: color }}
-                            />
-                          </span>
-                          <span className="w-5 text-right font-serif text-[10.5px] tabular-nums text-ink">
-                            {v}
+                          <span
+                            className="relative h-1 flex-1 overflow-hidden rounded-full border border-dashed"
+                            style={{
+                              borderColor: `color-mix(in srgb, ${color} 40%, transparent)`,
+                              background: `color-mix(in srgb, ${color} 8%, transparent)`,
+                            }}
+                            aria-label="Reading locked"
+                          />
+                          <span className="flex w-5 justify-end text-foreground/45">
+                            <Lock className="h-2.5 w-2.5" strokeWidth={1.8} aria-hidden />
                           </span>
                         </div>
                       )
@@ -332,7 +335,8 @@ export function FunnelExitIntent() {
                 </div>
               </div>
               <p className="mt-3 text-[12px] leading-[1.6] text-foreground/70">
-                Scored from your own words - waiting on the other side of this tab.
+                Scored from your own words - the four readings unlock inside
+                your plan.
               </p>
             </div>
           ) : (

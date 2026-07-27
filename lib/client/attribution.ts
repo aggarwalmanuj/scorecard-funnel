@@ -57,20 +57,41 @@ export type Attribution = Partial<
 const MAX_LEN = 500
 const clamp = (v: string) => v.slice(0, MAX_LEN)
 
+/** Campaign-grade signal: explicit UTM tags, an ad click id, or a landing-page
+ *  hand-off (ref/lp/vertical). A bare referrer is NOT campaign-grade. */
+function hasCampaignSignal(a: Attribution): boolean {
+  return CAPTURE_KEYS.some((k) => a[k])
+}
+
 function hasMeaningfulSignal(a: Attribution): boolean {
-  return Boolean(CAPTURE_KEYS.some((k) => a[k]) || a.referrer)
+  return Boolean(hasCampaignSignal(a) || a.referrer)
 }
 
 /**
- * Capture attribution from the current URL + referrer into localStorage, once.
- * Safe to call on every boot — it no-ops if a first-touch record already exists
- * or if there's no meaningful signal (so a direct/no-referrer first visit
- * doesn't block a later campaign landing from being captured).
+ * Capture attribution from the current URL + referrer into localStorage.
+ * Safe to call on every boot.
+ *
+ * "First touch" with one deliberate exception: a stored record that holds
+ * ONLY a referrer (e.g. an organic search visit last week) is UPGRADED by a
+ * later visit carrying real campaign data. Without that, an organic visit
+ * would permanently mask the paid click that actually drove the signup —
+ * the exact question the marketing team uses this data to answer. Once a
+ * campaign record exists, first campaign wins and is never overwritten.
  */
 export function captureAttribution(): void {
   if (typeof window === "undefined") return
   try {
-    if (window.localStorage.getItem(STORAGE_KEY)) return
+    const existingRaw = window.localStorage.getItem(STORAGE_KEY)
+    if (existingRaw) {
+      let existing: Attribution | null = null
+      try {
+        existing = JSON.parse(existingRaw) as Attribution
+      } catch {
+        existing = null
+      }
+      // A valid, campaign-grade first touch is final.
+      if (existing && hasCampaignSignal(existing)) return
+    }
 
     const params = new URLSearchParams(window.location.search)
     const captured: Attribution = {}
@@ -94,6 +115,9 @@ export function captureAttribution(): void {
     }
 
     if (!hasMeaningfulSignal(captured)) return
+    // Don't downgrade a stored referrer-only record with another
+    // referrer-only one - the first referrer still wins among equals.
+    if (existingRaw && !hasCampaignSignal(captured)) return
 
     captured.landing_page = clamp(
       window.location.pathname + window.location.search,
