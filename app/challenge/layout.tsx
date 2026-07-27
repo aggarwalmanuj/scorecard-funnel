@@ -1,5 +1,6 @@
 import type { ReactNode } from "react"
 import { VerticalDevSwitcher } from "@/components/dev/vertical-dev-switcher"
+import { FunnelExitIntent } from "@/components/challenge/funnel-exit-intent"
 
 /**
  * Locks every page under /challenge/* to the Marine palette by tagging the
@@ -16,6 +17,9 @@ export default function ChallengeLayout({ children }: { children: ReactNode }) {
   return (
     <div data-palette="marine" className="bg-background text-foreground min-h-screen font-sans">
       {children}
+      {/* Vertical-voiced, stage-aware exit-intent across the whole funnel
+          (self-suppresses on thank-you/report and after purchase). */}
+      <FunnelExitIntent />
       <VerticalDevSwitcher />
     </div>
   )

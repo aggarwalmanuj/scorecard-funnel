@@ -12,7 +12,7 @@ import { CredentialsSection } from "@/components/landing-minimal/credentials"
 import { NotesSection } from "@/components/landing-minimal/notes"
 import { ClosingSection } from "@/components/landing-minimal/closing"
 import { MinimalFooter } from "@/components/landing-minimal/footer"
-import { ExitIntent } from "@/components/exit-intent"
+import { FunnelExitIntent } from "@/components/challenge/funnel-exit-intent"
 import type { HeadlineVariant } from "@/lib/headline-shared"
 
 /**
@@ -30,7 +30,9 @@ export function LandingPage({ headline }: { headline?: HeadlineVariant }) {
       data-palette="marine"
       className="min-h-screen bg-background text-foreground font-sans"
     >
-      <ExitIntent />
+      {/* Same redesigned exit modal as the funnel - one system, one look.
+          On the landing its started-stage CTA routes into the assessment. */}
+      <FunnelExitIntent />
       <MinimalHeader />
       <main>
         <MinimalHero headline={headline} />
