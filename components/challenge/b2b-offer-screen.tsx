@@ -136,7 +136,7 @@ export function B2BOfferScreen({ audience }: { audience: Audience }) {
   )
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen pb-24 sm:pb-20">
       {/* Header */}
       <header className="sticky top-0 z-40 w-full border-b border-border bg-background/85 backdrop-blur-xl">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-5 sm:px-8">
@@ -396,6 +396,41 @@ export function B2BOfferScreen({ audience }: { audience: Audience }) {
           </p>
         </div>
       </footer>
+
+      {/* Sticky buy bar - same affordance as the B2C page, in the B2B
+          register: price stated plainly, no urgency, no hype. Self-disables
+          while checkout isn't configured (see ctaButton). */}
+      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background/92 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur-xl sm:px-8 sm:py-3.5">
+        <div className="mx-auto flex max-w-5xl flex-col gap-1.5 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
+          <div className="hidden min-w-0 items-baseline gap-3 sm:flex">
+            <span className="font-serif text-[26px] leading-none tabular-nums text-ink">
+              ${B2B_ACTION_PLAN_PRICE}
+            </span>
+            <span className="truncate text-[11px] uppercase tracking-[0.18em] text-foreground/60">
+              One-time · Nothing recurring · 30-day refund
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={proceedToCheckout}
+            disabled={isProcessing || !checkoutReady}
+            title={checkoutReady ? undefined : "Checkout not configured yet for this product"}
+            className="s-btn group h-12 w-full justify-center text-[12px] disabled:opacity-60 sm:h-11 sm:w-auto sm:shrink-0 sm:px-7"
+            style={{
+              background: "var(--signal)",
+              color: "var(--background)",
+              border: "1px solid color-mix(in srgb, var(--signal) 60%, transparent)",
+            }}
+          >
+            {isProcessing
+              ? "Opening secure checkout…"
+              : `Get the Action Plan · $${B2B_ACTION_PLAN_PRICE}`}
+          </button>
+          <p className="text-center text-[9px] uppercase tracking-[0.18em] text-foreground/55 sm:hidden">
+            One-time · Nothing recurring · 30-day refund
+          </p>
+        </div>
+      </div>
     </div>
   )
 }

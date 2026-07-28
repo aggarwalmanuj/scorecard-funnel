@@ -1156,7 +1156,10 @@ export default function AdminPage() {
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null)
 
   const [audience, setAudience] = useState<Audience>("main")
-  const [tab, setTab] = useState<"system" | "entry" | "questions" | "beats" | "score" | "report" | "summary" | "responses" | "headlines" | "analytics">("system")
+  // User responses is the default landing tab - it's what the team opens the
+  // console for day to day (the prompt editors are occasional-use). The
+  // responses loader auto-fires for this tab, so data is on screen at login.
+  const [tab, setTab] = useState<"system" | "entry" | "questions" | "beats" | "score" | "report" | "summary" | "responses" | "headlines" | "analytics">("responses")
   // The same console powers /admin and /techadmin. On /techadmin we unlock the
   // Analytics tab + per-user telemetry (PostHog session, purchase, journey).
   const pathname = usePathname()

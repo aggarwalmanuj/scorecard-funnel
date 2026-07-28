@@ -160,16 +160,35 @@ export function FunnelExitIntent() {
   const { state, isHydrated } = useChallenge()
   const [open, setOpen] = useState(false)
 
-  // Vertical: URL segment first, then session state, then subdomain.
+  // ── Vertical: the PAGE decides, never the visitor's stored session ──
+  // Resolution: /challenge/<vertical>/* segment → ?vertical|lp|v param (the
+  // entry page) → subdomain → main.
+  //
+  // `state.audience` is deliberately NOT consulted. It used to be, and that
+  // caused a cross-vertical leak: a visitor who had previously run the ADHD
+  // funnel carried `audience: "adhd"` in localStorage, so the MAIN landing
+  // page (no /challenge segment to match) fell through to that stale value
+  // and served them the ADHD modal. A page's vertical is a property of the
+  // page, not of whoever is looking at it.
   const segMatch = pathname?.match(/^\/challenge\/([^/]+)/)
+  const params =
+    typeof window !== "undefined"
+      ? new URLSearchParams(window.location.search)
+      : null
   const vertical: Vertical =
     normalizeVertical(segMatch?.[1]) ??
-    state.audience ??
+    normalizeVertical(
+      params?.get("vertical") ?? params?.get("lp") ?? params?.get("v"),
+    ) ??
     (typeof window !== "undefined" ? verticalFromHost(window.location.hostname) : null) ??
     "main"
 
-  // Stage: scored once the clarity score exists (summary reached).
-  const stage: Stage = state.clarityScore ? "scored" : "started"
+  // Stage: "scored" only when the stored session belongs to THIS vertical.
+  // A stored ADHD score must never be rendered under main's pillar labels
+  // (or vice versa) - that session's result belongs to a different funnel.
+  const sessionMatchesPage = state.audience === vertical
+  const stage: Stage =
+    state.clarityScore && sessionMatchesPage ? "scored" : "started"
   const stageRef = useRef(stage)
   stageRef.current = stage
 

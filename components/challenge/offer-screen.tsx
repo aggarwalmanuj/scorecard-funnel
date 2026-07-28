@@ -165,7 +165,7 @@ export function OfferScreen({ audience }: { audience: Audience }) {
   )
 
   return (
-    <div className="relative min-h-screen pb-24 sm:pb-0">
+    <div className="relative min-h-screen pb-24 sm:pb-20">
       {/* Header */}
       <header className="sticky top-0 z-40 w-full border-b border-border bg-background/85 backdrop-blur-xl">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-5 sm:px-8">
@@ -605,25 +605,36 @@ export function OfferScreen({ audience }: { audience: Audience }) {
         </div>
       </footer>
 
-      {/* Sticky mobile buy bar - the decision is never a scroll away on a
-          phone. Zone-A microcopy only (spec, no hedges, no urgency). */}
-      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background/92 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur-xl sm:hidden">
-        <button
-          type="button"
-          onClick={proceedToCheckout}
-          disabled={isProcessing}
-          className="s-btn group h-12 w-full justify-center text-[12px]"
-          style={{
-            background: "var(--signal)",
-            color: "var(--background)",
-            border: "1px solid color-mix(in srgb, var(--signal) 60%, transparent)",
-          }}
-        >
-          {isProcessing ? "Opening secure checkout…" : `Get My Action Plan · $${PRICE}`}
-        </button>
-        <p className="mt-1.5 text-center text-[9px] uppercase tracking-[0.18em] text-foreground/55">
-          One-time · 30-day refund · Yours to keep
-        </p>
+      {/* Sticky buy bar - at EVERY breakpoint, so the decision is never a
+          scroll away. Zone-A microcopy only (spec, no hedges, no urgency).
+          On desktop it reads as a price+CTA rail; on phones, a thumb bar. */}
+      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background/92 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur-xl sm:px-8 sm:py-3.5">
+        <div className="mx-auto flex max-w-5xl flex-col gap-1.5 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
+          <div className="hidden min-w-0 items-baseline gap-3 sm:flex">
+            <span className="font-serif text-[26px] leading-none tabular-nums text-ink">
+              ${PRICE}
+            </span>
+            <span className="truncate text-[11px] uppercase tracking-[0.18em] text-foreground/60">
+              One-time · 30-day refund · Yours to keep
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={proceedToCheckout}
+            disabled={isProcessing}
+            className="s-btn group h-12 w-full justify-center text-[12px] sm:h-11 sm:w-auto sm:shrink-0 sm:px-7"
+            style={{
+              background: "var(--signal)",
+              color: "var(--background)",
+              border: "1px solid color-mix(in srgb, var(--signal) 60%, transparent)",
+            }}
+          >
+            {isProcessing ? "Opening secure checkout…" : `Get My Action Plan · $${PRICE}`}
+          </button>
+          <p className="text-center text-[9px] uppercase tracking-[0.18em] text-foreground/55 sm:hidden">
+            One-time · 30-day refund · Yours to keep
+          </p>
+        </div>
       </div>
     </div>
   )
