@@ -51,7 +51,26 @@ const BOOTED_ON_ADMIN =
   typeof window !== "undefined" &&
   /^\/(admin|techadmin)(\/|$|\?)/.test(window.location.pathname)
 
-if (typeof window !== "undefined" && POSTHOG_KEY && (!IS_DEV || POSTHOG_DEV_ENABLED)) {
+// ── GDPR consent gate ───────────────────────────────────────────────────────
+// PostHog sets cookies + localStorage, so it must not start until the visitor
+// has accepted. CookieConsent already persists the choice under this key and
+// dispatches this event — exactly the hook its own docblock anticipated:
+// "Other client-side trackers (FB Pixel, PostHog) can listen for it and gate
+//  their loading on consent."
+const CONSENT_KEY = "aimerge:cookie-consent"
+const CONSENT_EVENT = "aimerge:cookie-consent"
+
+function consentGranted(): boolean {
+  try {
+    return window.localStorage.getItem(CONSENT_KEY) === "accepted"
+  } catch {
+    // Private mode / storage blocked — treat as "not granted".
+    return false
+  }
+}
+
+function startPostHog() {
+  if (!POSTHOG_KEY || (IS_DEV && !POSTHOG_DEV_ENABLED)) return
   posthog.init(POSTHOG_KEY, {
     // Don't start session replay at all when booting on an admin route — the
     // recorder would otherwise capture a beat before `loaded` stops it. SPA
@@ -150,4 +169,18 @@ if (typeof window !== "undefined" && POSTHOG_KEY && (!IS_DEV || POSTHOG_DEV_ENAB
       }
     },
   })
+}
+
+// Start immediately for returning visitors who already accepted; otherwise wait
+// for the banner's decision. A "rejected" choice simply never starts PostHog.
+if (typeof window !== "undefined") {
+  if (consentGranted()) {
+    startPostHog()
+  } else {
+    window.addEventListener(CONSENT_EVENT, (e) => {
+      if ((e as CustomEvent<"accepted" | "rejected">).detail === "accepted") {
+        startPostHog()
+      }
+    })
+  }
 }
