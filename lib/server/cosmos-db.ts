@@ -175,7 +175,18 @@ export type UserDocument = {
   paid_tier?: string
   paid_amount?: string
   paid_at?: string
+  /**
+   * Sort key for the admin list. Set at row creation AND bumped on every
+   * re-signup, so a returning lead surfaces at the top where the team looks
+   * for it. (Before this, a re-signup silently patched the old row and left
+   * its date untouched, so it stayed buried and read as "never registered".)
+   */
   createdAt: string
+  /** The TRUE first signup time, preserved when createdAt is bumped above.
+   *  Absent on rows that have only ever signed up once. */
+  firstSignupAt?: string
+  /** How many times this email has submitted the signup form. */
+  signupCount?: number
 }
 
 /** First-touch acquisition attribution captured at signup. */
@@ -523,10 +534,25 @@ export async function appendSignupRow(
     try {
       // Latest name/audience/phone win; first-touch attribution is preserved —
       // we only fill attribution keys the original row was missing.
-      const ops: { op: "set"; path: string; value: string }[] = [
+      const now = new Date().toISOString()
+      const ops: { op: "set"; path: string; value: string | number }[] = [
         { op: "set", path: "/firstName", value: firstName },
         { op: "set", path: "/audience", value: audience },
+        // Bump the sort key so this re-signup surfaces at the top of the
+        // admin list. Without this the row keeps its original date, stays
+        // buried, and the team reads it as "the signup never registered" —
+        // which is exactly what happened in production on 2026-07-29.
+        { op: "set", path: "/createdAt", value: now },
+        { op: "set", path: "/signupCount", value: (reusable.signupCount ?? 1) + 1 },
       ]
+      // Preserve the TRUE first signup time the first time we bump.
+      if (!reusable.firstSignupAt) {
+        ops.push({
+          op: "set",
+          path: "/firstSignupAt",
+          value: reusable.createdAt || now,
+        })
+      }
       if (phone) {
         ops.push({ op: "set", path: "/phone", value: phone.trim().slice(0, 40) })
       }
@@ -578,9 +604,70 @@ export async function appendSignupRow(
     beat4_output: "",
     beat5_output: "",
     createdAt: new Date().toISOString(),
+    // Equal on a first signup; createdAt is bumped on later re-signups
+    // while firstSignupAt stays put (see the reuse branch above).
+    firstSignupAt: new Date().toISOString(),
+    signupCount: 1,
   })
 
   return sno
+}
+
+/**
+ * Permanently delete user rows by serial number (id). Admin-only.
+ *
+ * Cosmos deletes require the partition key (email), which the caller does
+ * not send - so each id is resolved to its row first. A missing row counts
+ * as "already gone" rather than an error, which keeps the operation
+ * idempotent (a double-click can't produce a failure).
+ *
+ * The serial counter is deliberately NOT rewound: serial numbers must stay
+ * unique forever, since they are the join key on every answer/beat write
+ * and on Stripe's client_reference_id.
+ */
+export async function deleteUserRows(
+  ids: string[]
+): Promise<{ deleted: string[]; missing: string[]; failed: string[] }> {
+  await ensureInitialized()
+  const container = usersContainer()
+  const deleted: string[] = []
+  const missing: string[] = []
+  const failed: string[] = []
+
+  for (const rawId of ids) {
+    const id = String(rawId).trim()
+    if (!id) continue
+    try {
+      // Resolve the partition key (email) for this id.
+      const { resources } = await container.items
+        .query<{ id: string; email: string }>({
+          query: "SELECT c.id, c.email FROM c WHERE c.id = @id",
+          parameters: [{ name: "@id", value: id }],
+        })
+        .fetchAll()
+      const row = resources[0]
+      if (!row?.email) {
+        missing.push(id)
+        continue
+      }
+      await container.item(row.id, row.email).delete()
+      deleted.push(id)
+    } catch (e) {
+      const code = (e as { code?: number | string })?.code
+      if (code === 404 || code === "NotFound") {
+        missing.push(id)
+      } else {
+        console.error(
+          "[cosmos-db] deleteUserRows failed for id",
+          id,
+          (e as Error)?.message?.slice(0, 120)
+        )
+        failed.push(id)
+      }
+    }
+  }
+
+  return { deleted, missing, failed }
 }
 
 /**

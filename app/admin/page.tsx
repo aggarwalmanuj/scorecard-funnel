@@ -35,6 +35,7 @@ import {
   FileText,
   Volume2,
   Loader2,
+  Trash2,
   MessageCircle,
 } from "lucide-react"
 import {
@@ -1207,6 +1208,9 @@ export default function AdminPage() {
     /** Vertical id at signup; older rows hold legacy "individual"/"team". */
     audience?: string
     createdAt: string
+    /** Set once a lead re-signs up; createdAt then reflects the latest. */
+    firstSignupAt?: string
+    signupCount?: number
     question1: string; question2: string; question3: string; question4: string; question5: string
     question1_text?: string; question2_text?: string; question3_text?: string; question4_text?: string; question5_text?: string
     beat1_feedback: string; beat2_feedback: string; beat3_feedback: string; beat4_feedback: string; beat5_feedback: string
@@ -1485,6 +1489,77 @@ export default function AdminPage() {
     const displayed = isSearchActive ? searchResults : responses
     if (displayed.length === 0) return
     downloadResponses(displayed)
+  }
+
+  const [deletingIds, setDeletingIds] = useState<Set<string>>(new Set())
+
+  /**
+   * Permanently delete response rows. Irreversible, so it always confirms
+   * first and names exactly what is going - and offers a CSV backup, since
+   * an accidental delete of a real lead is otherwise unrecoverable.
+   */
+  const deleteResponses = async (rows: UserResponse[]) => {
+    if (rows.length === 0) return
+    const label =
+      rows.length === 1
+        ? `response #${rows[0].id} (${rows[0].email || "no email"})`
+        : `${rows.length} responses`
+    const completed = rows.filter((r) => (r.question5 ?? "").trim()).length
+    if (
+      !window.confirm(
+        `Permanently delete ${label}?\n\n` +
+          (completed > 0
+            ? `${completed} of these completed the assessment - their answers, beat outputs, score and report will be destroyed.\n\n`
+            : "") +
+          "This cannot be undone.\n\nTip: Cancel and use Download first if you want a CSV backup.",
+      )
+    ) {
+      return
+    }
+
+    const ids = rows.map((r) => r.id)
+    setDeletingIds((prev) => new Set([...prev, ...ids]))
+    try {
+      const headers: Record<string, string> = { "Content-Type": "application/json" }
+      const stored = sessionStorage.getItem("admin-api-password")
+      if (stored) headers["X-Admin-Password"] = stored
+      const res = await fetch("/api/admin/responses", {
+        method: "DELETE",
+        headers,
+        body: JSON.stringify({ ids }),
+      })
+      const json = await res.json().catch(() => null)
+      if (!res.ok || !json?.ok) {
+        throw new Error(json?.error || `HTTP ${res.status}`)
+      }
+      const removed: string[] = json.deleted ?? []
+      const gone = new Set([...removed, ...(json.missing ?? [])])
+      // Drop them from both lists so the UI matches the database without a
+      // full refetch (which would reset pagination).
+      setResponses((prev) => prev.filter((r) => !gone.has(r.id)))
+      setSearchResults((prev) => prev.filter((r) => !gone.has(r.id)))
+      setSelectedIds((prev) => {
+        const next = new Set(prev)
+        gone.forEach((id) => next.delete(id))
+        return next
+      })
+      if (json.failed?.length) {
+        alert(`Deleted ${removed.length}. Failed to delete: ${json.failed.join(", ")}`)
+      }
+    } catch (e) {
+      alert(`Delete failed: ${e instanceof Error ? e.message : String(e)}`)
+    } finally {
+      setDeletingIds((prev) => {
+        const next = new Set(prev)
+        ids.forEach((id) => next.delete(id))
+        return next
+      })
+    }
+  }
+
+  const deleteSelected = () => {
+    const displayed = isSearchActive ? searchResults : responses
+    void deleteResponses(displayed.filter((r) => selectedIds.has(r.id)))
   }
 
   const validatePassword = useCallback(
@@ -2847,6 +2922,21 @@ export default function AdminPage() {
                             Download Selected ({selectedIds.size})
                           </Button>
                         )}
+                        {selectedIds.size > 0 && (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={deleteSelected}
+                            disabled={deletingIds.size > 0}
+                            className="h-8 rounded-full border border-destructive/45 text-destructive hover:border-destructive hover:bg-destructive/10 text-[10px] uppercase tracking-[0.2em] px-4 disabled:opacity-50"
+                          >
+                            <Trash2 className="w-3.5 h-3.5 mr-1.5" />
+                            {deletingIds.size > 0
+                              ? "Deleting…"
+                              : `Delete Selected (${selectedIds.size})`}
+                          </Button>
+                        )}
                         <Button type="button" variant="outline" size="sm" onClick={downloadAll} className="h-8 rounded-full border border-foreground/35 text-foreground hover:border-ink hover:text-ink text-[10px] uppercase tracking-[0.2em] px-4">
                           <Download className="w-3.5 h-3.5 mr-1.5" />
                           Download All
@@ -2945,6 +3035,23 @@ export default function AdminPage() {
                                   <p className="eyebrow text-foreground/70">{r.firstName || "-"}</p>
                                   <p className="text-sm text-foreground truncate mt-0.5">{r.email || "-"}</p>
                                 </div>
+                                {/* A re-signup patches the existing row rather than
+                                    creating a new one, so flag it explicitly -
+                                    otherwise a returning lead looks identical to
+                                    a brand-new one. */}
+                                {(r.signupCount ?? 1) > 1 && (
+                                  <Badge
+                                    variant="outline"
+                                    className="rounded-lg border-ink/25 text-[10px] font-bold shrink-0 mr-1 text-foreground/80"
+                                    title={
+                                      r.firstSignupAt
+                                        ? `First signed up ${formatDate(r.firstSignupAt)}`
+                                        : undefined
+                                    }
+                                  >
+                                    ×{r.signupCount} signups
+                                  </Badge>
+                                )}
                                 <Badge variant="secondary" className={`rounded-lg text-[10px] font-bold shrink-0 mr-1 ${r.question5 ? "bg-green-500/10 text-green-600 border-green-500/20" : "bg-amber-500/10 text-amber-600 border-amber-500/20"}`}>
                                   {r.question5 ? "Complete" : "Incomplete"}
                                 </Badge>
@@ -2954,10 +3061,24 @@ export default function AdminPage() {
                               <button
                                 type="button"
                                 onClick={() => downloadResponses([r])}
-                                className="pr-4 pl-1 text-muted-foreground hover:text-ink transition-colors"
+                                className="pl-1 pr-1 text-muted-foreground hover:text-ink transition-colors"
                                 title="Download this response"
                               >
                                 <Download className="w-4 h-4" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => void deleteResponses([r])}
+                                disabled={deletingIds.has(r.id)}
+                                className="pr-4 pl-1 text-muted-foreground transition-colors hover:text-destructive disabled:opacity-40"
+                                title="Delete this response permanently"
+                                aria-label={`Delete response #${r.id}`}
+                              >
+                                {deletingIds.has(r.id) ? (
+                                  <Loader2 className="w-4 h-4 animate-spin" />
+                                ) : (
+                                  <Trash2 className="w-4 h-4" />
+                                )}
                               </button>
                             </div>
 
@@ -3043,7 +3164,10 @@ export default function AdminPage() {
                                   Beat Outputs
                                 </p>
                                 {[1, 2, 3, 4, 5].map((n) => {
-                                  const val = r[`beat${n}_output` as keyof typeof r] || ""
+                                  // String() because the row type now carries a
+                                  // numeric field (signupCount), which widens
+                                  // this indexed lookup to string | number.
+                                  const val = String(r[`beat${n}_output` as keyof typeof r] ?? "")
                                   const outKey = `${r.id}-beat${n}`
                                   const outOpen = !!expandedOutputs[outKey]
                                   if (!val) return (

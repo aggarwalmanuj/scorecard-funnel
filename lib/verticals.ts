@@ -45,10 +45,16 @@ const VERTICAL_ALIASES: Record<string, Vertical> = {
   "healthcare-automations": "healthcare",
   "healthcare-automation": "healthcare",
   retarget: "retargeting",
-  // The B2B vertical's public identity - business.aimerge.live - maps to
-  // the healthcare vertical id (Healthcare Operations is its first ICP).
+  // The B2B vertical's public identities all resolve to `healthcare`
+  // (Healthcare Operations is its first ICP). `b2b-healthcare-ops` is the
+  // slug the B2B landing page actually sends as `lp=`, and `healthcareops`
+  // is its deployed subdomain - both MUST stay here or that traffic falls
+  // through to the consumer funnel.
   business: "healthcare",
   b2b: "healthcare",
+  "b2b-healthcare-ops": "healthcare",
+  "healthcare-ops": "healthcare",
+  healthcareops: "healthcare",
 }
 
 /**
