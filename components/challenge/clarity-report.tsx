@@ -8,6 +8,7 @@ import type { ClarityScore } from "@/lib/scoring"
 import { UPSELL_OFFERS, offerBookingUrl } from "@/lib/offers"
 import { SAMPLE_REPORT, SAMPLE_REPORT_NAME } from "@/lib/sample-report"
 import { displayFor, type VerticalDisplay } from "@/lib/vertical-display"
+import { boardConfigFor, type BoardConfig } from "@/lib/report-gamification"
 
 type Pillar = {
   key:
@@ -604,8 +605,12 @@ function ReportPages({
     !!report.evidenceLog || (report.rhythm?.length ?? 0) > 0 || hasTools
   const hasPassagePage = !!report.openingPassage?.trim()
   const hasCompanionsPage = !!report.companions
+  const board = boardConfigFor(display.id)
   let nextPage = 4
   const logPageNum = hasLogPage ? ++nextPage : 0
+  // The board always renders - it is scaffolding plus (optionally) their
+  // first move, so it can never come out empty.
+  const boardPageNum = ++nextPage
   const passagePageNum = hasPassagePage ? ++nextPage : 0
   const companionsPageNum = hasCompanionsPage ? ++nextPage : 0
   const offersPageNum = includeOffers ? ++nextPage : 0
@@ -989,6 +994,20 @@ function ReportPages({
         </section>
       )}
 
+      {/* The 30-Day Board - the gamified working surface. Analog by design
+          (see lib/report-gamification.ts for the hard rules it obeys:
+          no streaks, returns counted, unlocks are content, nothing
+          expires). B2B renders the Evidence Loop variant instead. */}
+      <section className="page">
+        <ReportHeader name={name} today={today} rid={rid} compact />
+        <BoardPage
+          config={board}
+          firstMove={report.firstMove?.line}
+          rhythm={report.rhythm}
+        />
+        <ReportFooter page={boardPageNum} of={totalPages} name={name} />
+      </section>
+
       {/* Opening Passage - a first-person page assembled from their own
           transcript, meant to be read aloud once, slowly. The quiet preview
           of the voice modality the deeper work uses. */}
@@ -1271,6 +1290,212 @@ function ReportPages({
 }
 
 // ─────────────────────────── pieces ───────────────────────────
+
+/**
+ * The 30-Day Board / Evidence Loop page. Analog on purpose: the "game" is
+ * ink on paper, so there is no app to abandon, no notification to resent,
+ * and no streak state that can silently break. See lib/report-gamification.ts
+ * for the rules this obeys (no streaks, returns counted, unlocks are real
+ * content, nothing expires).
+ */
+function BoardPage({
+  config,
+  firstMove,
+  rhythm,
+}: {
+  config: BoardConfig
+  firstMove?: string
+  rhythm?: string[]
+}) {
+  const circle = (key: string, filled = false) => (
+    <span
+      key={key}
+      style={{
+        width: 26,
+        height: 26,
+        borderRadius: "50%",
+        border: `1.5px solid ${filled ? "var(--brand-dark)" : "rgba(15,44,59,0.35)"}`,
+        background: filled ? "var(--brand-dark)" : "transparent",
+        display: "inline-block",
+        flex: "0 0 auto",
+      }}
+    />
+  )
+
+  return (
+    <>
+      <div className="eyebrow">{config.eyebrow}</div>
+      <h1 className="title small">{config.title}</h1>
+      <p className="lede" style={{ marginBottom: 16 }}>
+        {config.lede}
+      </p>
+
+      {/* Their own first move, restated as the board's anchor */}
+      {firstMove && (
+        <div
+          style={{
+            border: "1px solid var(--brand-dark)",
+            borderRadius: 6,
+            padding: "10px 14px",
+            marginBottom: 16,
+          }}
+        >
+          <div className="eyebrow">The move this board is counting</div>
+          <p
+            style={{
+              fontFamily: "var(--font-serif)",
+              fontSize: 14.5,
+              color: "var(--brand-dark)",
+              margin: "3px 0 0",
+            }}
+          >
+            {firstMove}
+          </p>
+        </div>
+      )}
+
+      {/* Catches / Observations */}
+      <div style={{ marginBottom: 16 }}>
+        <div className="eyebrow" style={{ marginBottom: 6 }}>
+          {config.catchesLabel}
+        </div>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 9, marginBottom: 7 }}>
+          {Array.from({ length: config.catchCount }, (_, i) => circle(`c${i}`))}
+        </div>
+        <p style={{ fontSize: 11.5, lineHeight: 1.55, color: "var(--ink-soft)", margin: 0 }}>
+          {config.catchesRule}
+        </p>
+      </div>
+
+      {/* Returns / Checkpoints - the anti-streak mechanic */}
+      <div style={{ marginBottom: 16 }}>
+        <div className="eyebrow" style={{ marginBottom: 6 }}>
+          {config.returnsLabel}
+        </div>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 9, marginBottom: 7 }}>
+          {/* The first one is pre-inked: opening this page IS a return, so the
+              counter is never shown at zero. */}
+          {Array.from({ length: config.returnCount }, (_, i) => circle(`r${i}`, i === 0))}
+        </div>
+        <p style={{ fontSize: 11.5, lineHeight: 1.55, color: "var(--ink-soft)", margin: 0 }}>
+          {config.returnsRule}
+        </p>
+      </div>
+
+      {/* Milestones - unlocks are content, never badges */}
+      <div style={{ marginBottom: 16 }}>
+        <div className="eyebrow" style={{ marginBottom: 7 }}>
+          What opens as you go
+        </div>
+        <div style={{ display: "grid", gap: 7 }}>
+          {config.milestones.map((m) => (
+            <div
+              key={m.at}
+              style={{
+                display: "flex",
+                gap: 11,
+                alignItems: "baseline",
+                borderLeft: "2px solid rgba(15,44,59,0.2)",
+                paddingLeft: 11,
+              }}
+            >
+              <span
+                style={{
+                  fontFamily: "var(--font-serif)",
+                  fontSize: 12,
+                  color: "var(--brand-dark)",
+                  flex: "0 0 118px",
+                }}
+              >
+                {m.label}
+              </span>
+              <span style={{ fontSize: 12, lineHeight: 1.5, color: "var(--ink-soft)" }}>
+                {m.unlocks}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Week rhythm, if the generator produced one */}
+      {rhythm && rhythm.length > 0 && (
+        <div style={{ marginBottom: 16 }}>
+          <div className="eyebrow" style={{ marginBottom: 7 }}>
+            The shape of the month
+          </div>
+          <div style={{ display: "grid", gap: 5 }}>
+            {rhythm.slice(0, 4).map((line, i) => (
+              <div key={i} style={{ display: "flex", gap: 10, alignItems: "baseline" }}>
+                <span
+                  style={{
+                    fontFamily: "var(--font-mono, monospace)",
+                    fontSize: 10,
+                    color: "var(--brand-dark)",
+                    flex: "0 0 34px",
+                  }}
+                >
+                  WK{i + 1}
+                </span>
+                <span style={{ fontSize: 12, lineHeight: 1.5, color: "var(--ink-soft)" }}>
+                  {line}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* The completion event */}
+      <div
+        style={{
+          border: "1px solid rgba(15,44,59,0.25)",
+          borderRadius: 6,
+          padding: "11px 14px",
+          marginBottom: 12,
+        }}
+      >
+        <div className="eyebrow">{config.finishLabel}</div>
+        <p style={{ fontSize: 12.5, lineHeight: 1.6, color: "var(--ink-soft)", margin: "4px 0 0" }}>
+          {config.finishBody}
+        </p>
+      </div>
+
+      {/* The anti-shame guarantee - the most important line on the page */}
+      <p
+        style={{
+          fontFamily: "var(--font-serif)",
+          fontStyle: "italic",
+          fontSize: 12.5,
+          lineHeight: 1.6,
+          color: "var(--brand-dark)",
+          margin: "0 0 16px",
+        }}
+      >
+        {config.closingLine}
+      </p>
+
+      {/* Open ruled space - this is a working page, and a printed board needs
+          somewhere to actually write. Also keeps the page composed when the
+          optional generated fields (first move, week rhythm) are absent. */}
+      <div>
+        <div className="eyebrow" style={{ marginBottom: 8 }}>
+          {config.notesLabel}
+        </div>
+        <div style={{ display: "grid", gap: 0 }}>
+          {Array.from({ length: 7 }, (_, i) => (
+            <div
+              key={i}
+              style={{
+                height: 26,
+                borderBottom: "1px solid rgba(15,44,59,0.16)",
+              }}
+            />
+          ))}
+        </div>
+      </div>
+    </>
+  )
+}
 
 function ReportHeader({
   name,

@@ -29,6 +29,10 @@ export type PillarKey =
   | "energyAlignment"
 
 export interface VerticalDisplay {
+  /** The vertical this config belongs to - lets consumers that only receive
+   *  the display object (e.g. the report's context) resolve sibling
+   *  per-vertical config such as the 30-day board. */
+  id: Vertical
   /** The free product's public name (One-Name Law: exactly one per vertical). */
   productName: string
   /** The paid report artifact's name - toolbar, cover, page footers, PDF. */
@@ -50,6 +54,7 @@ const B2C_PILLARS: Record<PillarKey, PillarLabel> = {
 
 export const VERTICAL_DISPLAY: Record<Vertical, VerticalDisplay> = {
   main: {
+    id: "main",
     productName: "Belief Score",
     reportName: "Personalized 30-Day Action Plan",
     pillarLabels: B2C_PILLARS,
@@ -58,14 +63,19 @@ export const VERTICAL_DISPLAY: Record<Vertical, VerticalDisplay> = {
   // Retargeting re-enters the SAME product (recovery-system doc: never a
   // variant, never a retake) - identical display to main.
   retargeting: {
+    id: "retargeting",
     productName: "Belief Score",
     reportName: "Personalized 30-Day Action Plan",
     pillarLabels: B2C_PILLARS,
     offerVariant: "b2c",
   },
   adhd: {
+    id: "adhd",
     productName: "ADHD Belief Score",
-    reportName: "Personalized 30-Day Action Plan",
+    // Vertical-specific artifact name: an ADHD buyer's PDF, cover, footers
+    // and filename all say ADHD. (The One-Name Law governs the FREE product
+    // name; the paid artifact carries the vertical the same way.)
+    reportName: "ADHD 30-Day Action Plan",
     // Matches the ADHD score rubric: dimension 1 scores how clearly the
     // PATTERN is seen; dimension 2 scores the distance between the pattern
     // and the self ("something that happens" vs "something I am").
@@ -82,6 +92,7 @@ export const VERTICAL_DISPLAY: Record<Vertical, VerticalDisplay> = {
       "No new system to maintain, no daily hour, no streak to break.",
   },
   healthcare: {
+    id: "healthcare",
     productName: "Belief Profile",
     reportName: "Healthcare Operations Action Plan",
     // Operational register (B2B strategy: no psychology vocabulary anywhere
