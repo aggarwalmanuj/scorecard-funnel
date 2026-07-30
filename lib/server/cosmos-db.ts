@@ -365,9 +365,28 @@ export async function searchUsers(opts: {
 export async function readPrompts(): Promise<Record<string, string>> {
   await ensureInitialized()
   const container = promptsContainer()
-  const { resources } = await container.items
-    .query("SELECT c.id, c[\"value\"] FROM c")
-    .fetchAll()
+
+  // Retry transient failures (ETIMEDOUT / 429 / socket resets) before giving
+  // up. This read backs ALL funnel copy, and on a cold start there is no
+  // warm cache to fall back to - a single blip would otherwise serve an
+  // ADHD or healthcare visitor the generic default copy, silently and with
+  // ad spend running. Two fast retries make that vanishingly unlikely.
+  let resources: Array<{ id?: string; value?: unknown }> = []
+  let lastErr: unknown
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const res = await container.items
+        .query("SELECT c.id, c[\"value\"] FROM c")
+        .fetchAll()
+      resources = res.resources
+      lastErr = undefined
+      break
+    } catch (e) {
+      lastErr = e
+      if (attempt < 2) await new Promise((r) => setTimeout(r, 250 * (attempt + 1)))
+    }
+  }
+  if (lastErr) throw lastErr
 
   const result: Record<string, string> = {}
   for (const item of resources) {

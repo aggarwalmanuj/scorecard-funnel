@@ -47,22 +47,41 @@ interface TierCopy {
 // Parameterized by the vertical's product name (One-Name Law: an ADHD buyer
 // is thanked for their ADHD Belief Score, a healthcare leader for their
 // Belief Profile).
-const tierCopyFor = (productName: string): Record<SuccessTier, TierCopy> => ({
+const tierCopyFor = (
+  productName: string,
+  reportName: string,
+  isB2B: boolean,
+): Record<SuccessTier, TierCopy> => ({
   diagnostic: {
-    eyebrow: `Your ${productName} is ready`,
-    headLead: `Your ${productName} is`,
-    headEmphasis: "composed.",
-    body: [
-      "What you felt but couldn't name is now on the page - the specific pattern running quietly underneath your effort, read across all seven dimensions.",
-      "Take your time with it. It does not need to be repeated to be remembered.",
-    ],
+    eyebrow: isB2B ? `Your ${reportName} is ready` : `Your ${productName} is ready`,
+    headLead: isB2B ? `Your ${reportName} is` : `Your ${productName} is`,
+    headEmphasis: isB2B ? "ready." : "composed.",
+    body: isB2B
+      ? [
+          // Operational register - the B2B strategy bans psychology
+          // vocabulary in every written asset, and this page is the first
+          // thing a buyer reads after paying.
+          "The operating pattern you described is now written up: the loop, the one intervention point, the stakeholder and governance view, and a bounded first-proof you can run inside 30 days.",
+          "Start with the leadership briefing - it is built to be forwarded, so you do not have to translate any of this for your executive team.",
+        ]
+      : [
+          // Four scored dimensions, not seven. The old copy named a pillar
+          // count the product has never rendered.
+          "What you felt but couldn't name is now on the page - the specific pattern running quietly underneath your effort, read across all four scored dimensions.",
+          "Take your time with it. It does not need to be repeated to be remembered.",
+        ],
     reportTitle: "Download your action plan",
-    reportTitleItalic: "your full action plan.",
+    reportTitleItalic: isB2B ? "and the leadership briefing." : "your full action plan.",
     reportCta: "Download your action plan",
-    reportNote:
-      "A copy is also on its way to your inbox. If it hasn't arrived in a few minutes, check your spam folder - then add us to your contacts so the next one lands.",
-    footerLine:
-      "When you're ready to go deeper, there's a conversation available. No hurry.",
+    reportNote: isB2B
+      ? "A copy is also on its way to your inbox. A member of our team reviews each Action Plan for quality before it reaches you. If it hasn't arrived shortly, check your spam folder."
+      : "A copy is also on its way to your inbox. If it hasn't arrived in a few minutes, check your spam folder - then add us to your contacts so the next one lands.",
+    // B2B gets no post-purchase nudge at all: "nobody calls you" is a
+    // promise made on the offer page, and the Sprint is named once, in the
+    // Action Plan itself.
+    footerLine: isB2B
+      ? undefined
+      : "When you're ready to go deeper, there's a conversation available. No hurry.",
   },
   session: {
     eyebrow: "Payment received · Your Story is on the way",
@@ -154,8 +173,13 @@ export default function ThankYouPage() {
     if (!hasSignal) router.replace("/")
   }, [router])
 
-  const productName = displayFor(state.audience).productName
-  const copy = tierCopyFor(productName)[tier]
+  const display = displayFor(state.audience)
+  const productName = display.productName
+  const copy = tierCopyFor(
+    productName,
+    display.reportName,
+    display.offerVariant === "b2b",
+  )[tier]
 
   useEffect(() => {
     markComplete()

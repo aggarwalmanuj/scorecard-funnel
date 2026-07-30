@@ -93,7 +93,14 @@ export const VERTICAL_DISPLAY: Record<Vertical, VerticalDisplay> = {
   },
   healthcare: {
     id: "healthcare",
-    productName: "Belief Profile",
+    // MESSAGE MATCH with the B2B landing page, which is explicit that the
+    // free OFFER is the "Healthcare Operations Belief Score" and that it
+    // PRODUCES a "Belief Profile". Using the output's name as the offer's
+    // name meant a visitor clicked "Get Your Free Healthcare Operations
+    // Belief Score" and landed on "Get Your Free Belief Profile" - two
+    // names for one thing at the exact moment of highest doubt.
+    // "Belief Profile" remains correct for the RESULT (summary/report copy).
+    productName: "Operations Belief Score",
     reportName: "Healthcare Operations Action Plan",
     // Operational register (B2B strategy: no psychology vocabulary anywhere
     // in written B2B assets) - same keys, org-level meanings, mirroring the

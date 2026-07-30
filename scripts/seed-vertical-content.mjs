@@ -129,16 +129,41 @@ async function main() {
 
   let ok = 0
   let failed = 0
-  for (const plan of plans) {
-    for (const { id, value } of plan.keys) {
+  const failures = []
+  // Cosmos throttles (429) when a tight write loop exceeds provisioned RU.
+  // Without retry those writes fail SILENTLY as far as content goes - the
+  // vertical is left partially seeded and quietly falls back to main. Retry
+  // with backoff, honouring the server's retryAfterInMs when present.
+  const upsertWithRetry = async (id, value, attempts = 6) => {
+    let lastErr
+    for (let i = 0; i < attempts; i++) {
       try {
         await container.items.upsert({ id, value })
-        ok++
+        return true
       } catch (e) {
-        failed++
-        console.error(`  FAILED ${id}:`, e?.message || e)
+        lastErr = e
+        // Upserts are idempotent, so retry EVERY error - 429 throttling and
+        // transient RestError/socket failures both resolve on a retry, and
+        // a genuinely bad request will simply exhaust the attempts.
+        const waitMs = e?.retryAfterInMs ?? 300 * Math.pow(2, i)
+        await new Promise((r) => setTimeout(r, waitMs))
       }
     }
+    failures.push(`${id}: ${lastErr?.message || lastErr}`)
+    return false
+  }
+
+  for (const plan of plans) {
+    for (const { id, value } of plan.keys) {
+      if (await upsertWithRetry(id, value)) ok++
+      else failed++
+      // Small pacing gap keeps a 39-key seed under typical RU limits.
+      await new Promise((r) => setTimeout(r, 40))
+    }
+  }
+  if (failures.length) {
+    console.error("\nFAILED KEYS (re-run the script to retry these):")
+    failures.forEach((f) => console.error("  " + f))
   }
   console.log("")
   console.log(`Done. Wrote ${ok} keys. Failed: ${failed}.`)

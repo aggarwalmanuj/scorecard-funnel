@@ -5,7 +5,11 @@ import { Loader2, Download, AlertCircle, ArrowLeft } from "lucide-react"
 import Link from "next/link"
 import { useChallenge, type Audience } from "@/context/challenge-context"
 import type { ClarityScore } from "@/lib/scoring"
-import { UPSELL_OFFERS, offerBookingUrl } from "@/lib/offers"
+import {
+  B2B_ACTION_PLAN_PRICE,
+  offerBookingUrl,
+  upsellOffersFor,
+} from "@/lib/offers"
 import { SAMPLE_REPORT, SAMPLE_REPORT_NAME } from "@/lib/sample-report"
 import { displayFor, type VerticalDisplay } from "@/lib/vertical-display"
 import { boardConfigFor, type BoardConfig } from "@/lib/report-gamification"
@@ -590,7 +594,11 @@ function ReportPages({
   const display = useContext(ReportDisplayContext)
   // B2B verticals have no approved upsell ladder yet (the Sprint's price is
   // a pending decision) - their reports simply omit the offers page.
-  const offers = display.offerVariant === "b2b" ? [] : UPSELL_OFFERS
+  // Per-vertical next rung: the consumer ladder for B2C, the single Design
+  // Sprint for B2B (each rung sells only the next rung - the Vault is never
+  // sold from the Action Plan).
+  const isB2B = display.offerVariant === "b2b"
+  const offers = upsellOffersFor(display.id)
   const includeOffers = showOffers && offers.length > 0
 
   // Page numbering is dynamic: the Action Plan extension pages render only
@@ -1146,13 +1154,16 @@ function ReportPages({
         <section className="page">
           <ReportHeader name={name} today={today} rid={rid} compact />
 
-          <div className="eyebrow">When you are ready</div>
-          <h1 className="title small">Continue beyond the 30-day plan</h1>
+          <div className="eyebrow">
+            {isB2B ? "If the test shows movement" : "When you are ready"}
+          </div>
+          <h1 className="title small">
+            {isB2B ? "The next step, when the evidence supports it" : "Continue beyond the 30-day plan"}
+          </h1>
           <p className="lede" style={{ marginBottom: 10 }}>
-            Your Action Plan gives you a concrete way to interrupt this loop
-            over the next 30 days. These options are optional. They add
-            deeper narrative work, practitioner support, and longer-term
-            integration.
+            {isB2B
+              ? "This Action Plan gives you a bounded way to test the operating assumption over 30 days. The step below is optional and only makes sense once that test has run - it is named here so it never arrives as a surprise later."
+              : "Your Action Plan gives you a concrete way to interrupt this loop over the next 30 days. These options are optional. They add deeper narrative work, practitioner support, and longer-term integration."}
           </p>
           <p
             style={{
@@ -1164,8 +1175,9 @@ function ReportPages({
               color: "var(--ink-soft)",
             }}
           >
-            Your plan: $47. If it does not show you something you can act on
-            this week, tell us within 30 days for a full refund.
+            {isB2B
+              ? `Your Action Plan: $${B2B_ACTION_PLAN_PRICE}, one time. If your leadership team does not find it a credible, usable next step, one email within 30 days is a full refund - and you keep the Action Plan either way. Nothing here is bundled, and nobody calls you.`
+              : "Your plan: $47. If it does not show you something you can act on this week, tell us within 30 days for a full refund."}
           </p>
 
           <div style={{ display: "grid", gap: 16 }}>
@@ -1275,7 +1287,12 @@ function ReportPages({
                       fontWeight: 600,
                     }}
                   >
-                    {offer.id === "session" ? "Book the Story Session" : "Start the Deep Work"} →
+                    {offer.id === "session"
+                      ? "Book the Story Session"
+                      : offer.id === "b2b_sprint"
+                        ? "Discuss the Sprint"
+                        : "Start the Deep Work"}{" "}
+                    →
                   </span>
                 </a>
               )

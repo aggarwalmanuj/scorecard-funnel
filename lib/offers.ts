@@ -11,7 +11,7 @@
  * (absolute, so links work inside a downloaded PDF that's opened offline).
  */
 
-export type UpsellOfferId = "session" | "transformation"
+export type UpsellOfferId = "session" | "transformation" | "b2b_sprint"
 
 export interface UpsellOffer {
   id: UpsellOfferId
@@ -54,7 +54,13 @@ export const UPSELL_OFFERS: UpsellOffer[] = [
 /** All tiers. The offer screens and the in-report "go deeper" links both
  *  resolve to these Stripe Payment Links — single source of truth so they never
  *  drift apart. Hard-coded defaults work out of the box; override via env. */
-export type Tier = "diagnostic" | "session" | "transformation" | "elevated" | "b2b_actionplan"
+export type Tier =
+  | "diagnostic"
+  | "session"
+  | "transformation"
+  | "elevated"
+  | "b2b_actionplan"
+  | "b2b_sprint"
 
 export const STRIPE_PAYMENT_LINKS: Record<Tier, string> = {
   diagnostic:
@@ -71,24 +77,55 @@ export const STRIPE_PAYMENT_LINKS: Record<Tier, string> = {
     "https://buy.stripe.com/bJefZh8PgbXG0Fqd4a2wU0p",
   // Healthcare vertical: the $197 B2B Action Plan. NO hardcoded fallback —
   // a Payment Link must be created in Stripe and set via env before the
-  // healthcare offer page can take money; until then its CTA disables
-  // itself with an explanatory title.
-  b2b_actionplan: process.env.NEXT_PUBLIC_STRIPE_LINK_B2B_ACTIONPLAN ?? "",
+  // healthcare offer page can take money.
+  b2b_actionplan:
+    process.env.NEXT_PUBLIC_STRIPE_LINK_B2B_ACTIONPLAN ??
+    "https://buy.stripe.com/00w00jfdE6Dm1Ju5BI2wU0q",
+  // The B2B next rung: the Design Sprint. Priced at the bottom of the
+  // strategy's $2.5K-$5K range and creditable toward a Vault engagement.
+  b2b_sprint:
+    process.env.NEXT_PUBLIC_STRIPE_LINK_B2B_SPRINT ??
+    "https://buy.stripe.com/7sY7sLaXo8Lu3RCfci2wU0r",
 }
 
-/** The healthcare vertical's single paid product (B2B conversion strategy:
+/** The healthcare vertical's entry paid product (B2B conversion strategy:
  *  $197, corporate-card threshold, one-time, nothing recurring). */
 export const B2B_ACTION_PLAN_PRICE = 197
 
+/** The Sprint - the single rung the Action Plan is allowed to name. */
+export const B2B_SPRINT_PRICE = 2500
+
+/**
+ * The B2B "go deeper" rung shown on the Action Plan's final page.
+ *
+ * Deliberately ONE offer, not a ladder: the strategy is explicit that each
+ * rung sells only the next rung, and that the Vault is never sold from the
+ * Action Plan. Register is operational - no consumer transformation
+ * language, no urgency, and the creditable-toward mechanism stated plainly
+ * so the step carries no sunk cost.
+ */
+const B2B_UPSELL: UpsellOffer[] = [
+  {
+    id: "b2b_sprint",
+    price: B2B_SPRINT_PRICE,
+    label: "Design Sprint",
+    tagline: "The first working proof, built inside your systems.",
+    bullets: [
+      "We stop testing on paper and build the first working slice with your team",
+      "Scoped to the single intervention point named in this Action Plan",
+      "Runs against your real workflow - no new headcount, no platform migration",
+      "Creditable toward a Vault engagement if you take that step later",
+    ],
+  },
+]
+
 /**
  * The in-report "go deeper" offers, per vertical. B2C verticals share the
- * two-tier ladder above. Healthcare returns NONE: its next rung (the Sprint)
- * has no approved price yet — per the B2B strategy this is a pending
- * decision, and inventing an interim price is banned. An empty list makes
- * the report skip the offers page entirely for that vertical.
+ * two-tier consumer ladder; healthcare gets the single Sprint rung in its
+ * own register.
  */
 export function upsellOffersFor(vertical: string | null | undefined): UpsellOffer[] {
-  if (vertical === "healthcare") return []
+  if (vertical === "healthcare") return B2B_UPSELL
   return UPSELL_OFFERS
 }
 
