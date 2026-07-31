@@ -20,6 +20,13 @@ export interface PillarLabel {
   label: string
   /** Small over-line above the label (e.g. "Pillar I · Purpose"). */
   pillar: string
+  /**
+   * The label said in everyday words, for a reader who has never seen the
+   * term before. Printed directly under the label wherever a score appears,
+   * so no number in the report is ever unexplained. Keep it to one short
+   * sentence, second person, no vocabulary from the label itself.
+   */
+  plain: string
 }
 
 export type PillarKey =
@@ -38,6 +45,30 @@ export interface VerticalDisplay {
   /** The paid report artifact's name - toolbar, cover, page footers, PDF. */
   reportName: string
   pillarLabels: Record<PillarKey, PillarLabel>
+  /** What this vertical calls one of its four measures, lower-case, singular
+   *  and plural ("pillar"/"pillars" for B2C, "dimension"/"dimensions" for the
+   *  operational register). Used in running copy so the orientation page never
+   *  contradicts the labels above it. */
+  measureNoun: string
+  measureNounPlural: string
+  /**
+   * The plain-language orientation page ("How to read this"), per vertical.
+   * Every phrase here has to survive a reader who skipped the funnel copy -
+   * it is the page that answers "what am I actually looking at, and what do I
+   * do first?" before any score or narrative appears.
+   */
+  howToRead: {
+    /** What this document is, in two sentences, no product vocabulary. */
+    what: string
+    /** What the overall number does and does not mean. */
+    scoreMeaning: string
+    /** What the four measures are, collectively, in one sentence. */
+    measuresMeaning: string
+    /** The single instruction: what to do first, today. */
+    firstThing: string
+    /** Words this vertical uses that a first-time reader may not know. */
+    glossary: { term: string; meaning: string }[]
+  }
   /** Which offer page this vertical renders. */
   offerVariant: "b2c" | "b2b"
   /** Optional vertical-specific reassurance line on the B2C offer page
@@ -46,10 +77,59 @@ export interface VerticalDisplay {
 }
 
 const B2C_PILLARS: Record<PillarKey, PillarLabel> = {
-  directionClarity: { label: "Direction Clarity", pillar: "Pillar I · Purpose" },
-  identityAlignment: { label: "Identity Alignment", pillar: "Pillar II · Identity" },
-  decisionReadiness: { label: "Decision Readiness", pillar: "Pillar III · Peace of Mind" },
-  energyAlignment: { label: "Energy Alignment", pillar: "Pillar IV · Embodiment" },
+  directionClarity: {
+    label: "Direction Clarity",
+    pillar: "Pillar I · Purpose",
+    plain: "How clearly you can say what you actually want, in your own words.",
+  },
+  identityAlignment: {
+    label: "Identity Alignment",
+    pillar: "Pillar II · Identity",
+    plain: "How closely the way you act matches the person you feel you are.",
+  },
+  decisionReadiness: {
+    label: "Decision Readiness",
+    pillar: "Pillar III · Peace of Mind",
+    plain: "How ready you are to make the call instead of going round again.",
+  },
+  energyAlignment: {
+    label: "Energy Alignment",
+    pillar: "Pillar IV · Embodiment",
+    plain: "How much of your energy this pattern is quietly using up.",
+  },
+}
+
+/** Shared B2C orientation copy - main and retargeting are the same product. */
+const B2C_HOW_TO_READ: VerticalDisplay["howToRead"] = {
+  what: "This is a plan, not a test result. It was written from the five answers you typed in your own words, so everything in it should sound like your situation and not like general advice.",
+  scoreMeaning:
+    "The big number is a starting point, not a grade. It says how much room there is to move right now. A lower number means more to gain, not that something is wrong with you.",
+  measuresMeaning:
+    "The four smaller numbers break that starting point into four parts, so you can see which one is holding the most back. Each one is explained in plain words next to its score.",
+  firstThing:
+    "Go to the action page and do Step 1. It is meant to take a few minutes, today, with nothing to buy and nothing to set up. The rest of the plan builds on it.",
+  glossary: [
+    {
+      term: "The pattern",
+      meaning:
+        "The thing that keeps happening to you in the same way - the situation you described in your first answer.",
+    },
+    {
+      term: "The belief underneath it",
+      meaning:
+        "The conclusion you may have drawn from that happening over and over. We name it as a possibility to check, never as a fact about you.",
+    },
+    {
+      term: "The moment to watch",
+      meaning:
+        "The earliest point where you can tell the pattern is starting. Catching it there is what makes anything else possible.",
+    },
+    {
+      term: "A move",
+      meaning:
+        "One small thing to do in that moment. Every move here is small enough to finish in one go and needs no new app, system, or routine.",
+    },
+  ],
 }
 
 export const VERTICAL_DISPLAY: Record<Vertical, VerticalDisplay> = {
@@ -58,6 +138,9 @@ export const VERTICAL_DISPLAY: Record<Vertical, VerticalDisplay> = {
     productName: "Belief Score",
     reportName: "Personalized 30-Day Action Plan",
     pillarLabels: B2C_PILLARS,
+    measureNoun: "pillar",
+    measureNounPlural: "pillars",
+    howToRead: B2C_HOW_TO_READ,
     offerVariant: "b2c",
   },
   // Retargeting re-enters the SAME product (recovery-system doc: never a
@@ -67,6 +150,9 @@ export const VERTICAL_DISPLAY: Record<Vertical, VerticalDisplay> = {
     productName: "Belief Score",
     reportName: "Personalized 30-Day Action Plan",
     pillarLabels: B2C_PILLARS,
+    measureNoun: "pillar",
+    measureNounPlural: "pillars",
+    howToRead: B2C_HOW_TO_READ,
     offerVariant: "b2c",
   },
   adhd: {
@@ -80,10 +166,59 @@ export const VERTICAL_DISPLAY: Record<Vertical, VerticalDisplay> = {
     // PATTERN is seen; dimension 2 scores the distance between the pattern
     // and the self ("something that happens" vs "something I am").
     pillarLabels: {
-      directionClarity: { label: "Pattern Clarity", pillar: "Pillar I · The Pattern" },
-      identityAlignment: { label: "Identity Distance", pillar: "Pillar II · Identity" },
-      decisionReadiness: { label: "Decision Readiness", pillar: "Pillar III · Peace of Mind" },
-      energyAlignment: { label: "Energy Alignment", pillar: "Pillar IV · Embodiment" },
+      directionClarity: {
+        label: "Pattern Clarity",
+        pillar: "Pillar I · The Pattern",
+        plain: "How clearly you can see the pattern while it is happening.",
+      },
+      identityAlignment: {
+        label: "Identity Distance",
+        pillar: "Pillar II · Identity",
+        plain: "How much you see this as something you do, not something you are.",
+      },
+      decisionReadiness: {
+        label: "Decision Readiness",
+        pillar: "Pillar III · Peace of Mind",
+        plain: "How ready you are to try one small thing differently.",
+      },
+      energyAlignment: {
+        label: "Energy Alignment",
+        pillar: "Pillar IV · Embodiment",
+        plain: "What this pattern costs you in energy, and how much of that you notice.",
+      },
+    },
+    measureNoun: "pillar",
+    measureNounPlural: "pillars",
+    howToRead: {
+      what: "This is a plan, not a test result and not a diagnosis. It was written from the five answers you typed in your own words, so it should sound like your life and not like general ADHD advice.",
+      scoreMeaning:
+        "The big number is a starting point, not a grade. It says how much room there is to move right now. A lower number means more to gain - it is not a measure of how bad things are.",
+      measuresMeaning:
+        "The four smaller numbers break that starting point into four parts, so you can see which one is holding the most back. Each one is explained in plain words next to its score.",
+      firstThing:
+        "Go to the action page and do Step 1. There is no system to set up and no streak to keep. If you put this down for two weeks and come back, you pick up exactly where you left it.",
+      glossary: [
+        {
+          term: "The pattern",
+          meaning:
+            "The thing that keeps repeating - the situation you described in your first answer. Not a personality trait, and not a failure of effort.",
+        },
+        {
+          term: "The verdict",
+          meaning:
+            "What all those repeats may have taught you to believe about yourself. We name it so you can look at it, not because it is true.",
+        },
+        {
+          term: "The hinge moment",
+          meaning:
+            "The earliest second where you can tell the pattern is starting. It is the only moment you need to catch.",
+        },
+        {
+          term: "A move",
+          meaning:
+            "One small action inside that moment. Small enough to finish, needs no new app or planner, and skipping it costs you nothing.",
+        },
+      ],
     },
     offerVariant: "b2c",
     // Speaks directly to the graveyard of abandoned planners (Fear 4, the
@@ -106,10 +241,59 @@ export const VERTICAL_DISPLAY: Record<Vertical, VerticalDisplay> = {
     // in written B2B assets) - same keys, org-level meanings, mirroring the
     // healthcare score prompt's rubric.
     pillarLabels: {
-      directionClarity: { label: "Pattern Precision", pillar: "Dimension I · The Loop" },
-      identityAlignment: { label: "Ownership Clarity", pillar: "Dimension II · Ownership" },
-      decisionReadiness: { label: "Test Readiness", pillar: "Dimension III · Evidence" },
-      energyAlignment: { label: "Capacity Realism", pillar: "Dimension IV · Capacity" },
+      directionClarity: {
+        label: "Pattern Precision",
+        pillar: "Dimension I · The Loop",
+        plain: "How exactly you can point to the moment this loop starts.",
+      },
+      identityAlignment: {
+        label: "Ownership Clarity",
+        pillar: "Dimension II · Ownership",
+        plain: "How clear it is who would own this if it were fixed for good.",
+      },
+      decisionReadiness: {
+        label: "Test Readiness",
+        pillar: "Dimension III · Evidence",
+        plain: "How ready you are to run one small, bounded test of the fix.",
+      },
+      energyAlignment: {
+        label: "Capacity Realism",
+        pillar: "Dimension IV · Capacity",
+        plain: "Whether the change you described fits the time and people you actually have.",
+      },
+    },
+    measureNoun: "dimension",
+    measureNounPlural: "dimensions",
+    howToRead: {
+      what: "This is a working document built from the five answers you gave about one recurring operational moment. It is one informed perspective, written up - not an audit, a compliance finding, or a full diagnosis of your organization.",
+      scoreMeaning:
+        "The overall number describes how ready this specific loop is to be tested, based on how precisely you were able to describe it. It is a starting point for a test, not a rating of your team or your systems.",
+      measuresMeaning:
+        "The four smaller numbers break that readiness into four parts, so you can see which part needs sharpening before a test is worth running. Each one is explained in plain words next to its score.",
+      firstThing:
+        "Go to the action page and start with Step 1. It is one observation you can make inside your existing workflow this week, with no new headcount, no new platform, and no meeting to schedule.",
+      glossary: [
+        {
+          term: "The loop",
+          meaning:
+            "The recurring moment you described: the trigger arrives, someone resolves it, nothing is captured, and it comes back.",
+        },
+        {
+          term: "Operating assumption",
+          meaning:
+            "A rule the organization repeatedly acts as though true - visible in workflows, ownership, and escalation. A hypothesis to test, not a judgment of anyone.",
+        },
+        {
+          term: "Bounded test",
+          meaning:
+            "One small change, in one workflow, for a fixed window, with a number recorded before and after. Cheap enough that a negative result still pays for itself.",
+        },
+        {
+          term: "First evidence",
+          meaning:
+            "The earliest thing someone outside your team could see change. It is what makes the next conversation about facts rather than impressions.",
+        },
+      ],
     },
     offerVariant: "b2b",
   },

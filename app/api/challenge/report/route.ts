@@ -171,6 +171,13 @@ const reportSchema = z.object({
         title: z.string().max(120),
         body: z.string().max(600),
         urgency: z.enum(["now", "week", "month"]),
+        // Instruction shape - optional so prompts (and admin overrides) that
+        // predate it still validate. The renderer prints these as labelled
+        // WHEN / DO THIS / DONE WHEN lines; without them it falls back to
+        // `body` alone, which is what every report before this looked like.
+        when: z.string().max(300).optional(),
+        action: z.string().max(400).optional(),
+        done: z.string().max(300).optional(),
       })
     )
     .min(2)
@@ -402,8 +409,9 @@ export async function POST(request: Request) {
     // generates. At 2400 a richer per-vertical prompt (healthcare's, for
     // one) overruns the budget, the JSON is truncated mid-string, parsing
     // fails and the buyer receives NOTHING. Headroom is far cheaper than a
-    // failed delivery.
-    maxTokens: 4000,
+    // failed delivery - raised again when each takeaway grew its
+    // when/action/done instruction fields.
+    maxTokens: 5200,
   })
 
   const scorePromise: Promise<string | null> = precomputedScore
@@ -525,7 +533,7 @@ export async function POST(request: Request) {
           precomputedScore?.subscores
         ),
         temperature,
-        maxTokens: 4000,
+        maxTokens: 5200,
       })
     )
 

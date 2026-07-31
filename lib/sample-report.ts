@@ -126,22 +126,38 @@ export const SAMPLE_REPORT: ApiResponse = {
     takeaways: [
       {
         title: "Write the cut memo",
-        body: "Draft a one-page memo on the product line you may need to let go of: why it stays or goes, revenue reality, team cost, and what attachment has kept you from saying out loud. Do not share it yet; use it to remove vagueness.",
+        body: "The decision about the product line is the thing everything else is waiting on.",
+        when: "Monday morning, before you open email.",
+        action:
+          "Write one page on the product line: why it stays or goes, what it earns, what it costs the team, and what has kept you from saying it out loud. Do not send it to anyone.",
+        done: "One page exists and it names a direction, even a provisional one.",
         urgency: "now",
       },
       {
         title: "Freeze new initiatives",
-        body: "For the next two weeks, start nothing new unless it directly supports the product line decision or a current revenue driver. This will show how much motion has been substituting for choice.",
+        body: "New work has been standing in for the decision you have not made.",
+        when: "Any time someone proposes something new, for the next two weeks.",
+        action:
+          "Say yes only if it directly serves the product line decision or an existing revenue driver. Everything else goes on a list with a date after the two weeks.",
+        done: "Two weeks pass and the list has items on it that you did not start.",
         urgency: "week",
       },
       {
         title: "Track false productivity",
-        body: "At the end of each day for seven days, mark which tasks actually moved revenue, the team, or the product line decision. Circle the low-value work you used when pressure rose.",
+        body: "You will not trust the pattern until you have seen it in your own handwriting.",
+        when: "At the end of each working day, for seven days.",
+        action:
+          "Write the three things you spent the most time on, then circle the ones that moved revenue, the team, or the decision. Two minutes, no more.",
+        done: "Seven days are logged and the circled work is visibly a minority.",
         urgency: "week",
       },
       {
-        title: "Reset one boundary home",
-        body: "Pick one evening this week to leave by 5 and keep the office closed after that. You are testing whether guilt is being used to justify overextension that is no longer helping.",
+        title: "Reset one evening",
+        body: "This tests whether the long hours are still buying anything.",
+        when: "One evening this week - pick the day now and write it down.",
+        action:
+          "Leave at five and do not reopen the laptop. If something breaks, note what it was rather than fixing it that night.",
+        done: "The evening happened and you can name what actually broke, if anything.",
         urgency: "month",
       },
     ],

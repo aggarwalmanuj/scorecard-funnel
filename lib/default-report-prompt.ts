@@ -36,10 +36,10 @@ Return ONLY this JSON shape, no prose, no code fences:
     { "n": 5, "title": "<3-5 word framing>", "quote": "<strongest 1-sentence line from beat5, max 200 chars>", "reflection": "<1 sentence reflection>" }
   ],
   "takeaways": [
-    { "title": "<max 6 words - their TRIGGER PROTOCOL>", "body": "<1-2 sentences: the earliest observable moment their loop begins, and the single immediate action to take inside that exact moment>", "urgency": "now" },
-    { "title": "<max 6 words - their REPLACEMENT MOVE>", "body": "<1-2 sentences: exactly what to do instead of the old response, small enough to complete, with a clear stopping point>", "urgency": "now" },
-    { "title": "<max 6 words - their ENVIRONMENT SETUP>", "body": "<1-2 sentences: one physical or structural change to make IN ADVANCE so the replacement move does not depend on memory or motivation>", "urgency": "week" },
-    { "title": "<max 6 words - their RECOVERY STEP>", "body": "<1-2 sentences: what to do after a missed day or a relapse into the old loop - the smallest re-entry action, framed so a miss never restarts the whole project>", "urgency": "month" }
+    { "title": "<max 6 words - their TRIGGER PROTOCOL>", "body": "<ONE sentence on why this comes first>", "when": "<the earliest observable moment their loop begins, in their own detail, max 20 words>", "action": "<what to do inside that exact moment, beginning with a verb, max 45 words>", "done": "<how they know they did it, observable, max 20 words>", "urgency": "now" },
+    { "title": "<max 6 words - their REPLACEMENT MOVE>", "body": "<ONE sentence on why this move>", "when": "<the same moment, stated concretely, max 20 words>", "action": "<exactly what to do instead of the old response - small enough to complete, anchored to a NAMED person, object or place from their answers, beginning with a verb, max 45 words>", "done": "<the clear stopping point, max 20 words>", "urgency": "now" },
+    { "title": "<max 6 words - their ENVIRONMENT SETUP>", "body": "<ONE sentence on what this protects>", "when": "<a specific day this week, max 20 words>", "action": "<one physical or structural change to make ONCE, in advance, so the replacement move does not depend on memory or motivation, beginning with a verb, max 45 words>", "done": "<the state of the world once it is done, max 20 words>", "urgency": "week" },
+    { "title": "<max 6 words - their RECOVERY STEP>", "body": "<ONE sentence making clear a miss costs nothing>", "when": "<the moment they notice they have slipped, max 20 words>", "action": "<the smallest re-entry action, framed so a miss never restarts the whole project, beginning with a verb, max 45 words>", "done": "<the single mark that says they are back, max 20 words>", "urgency": "month" }
   ],
   "thirtyDay": "<2-3 sentences: three OBSERVABLE, countable signs the pattern is loosening over 30 days, drawn from the evidence the user themselves said would matter. Frame as things they can tally, not feelings to have.>",
   "evidenceLog": {
@@ -80,6 +80,8 @@ Return ONLY this JSON shape, no prose, no code fences:
 }
 
 Constraints:
+- PLAIN LANGUAGE, applied to every field: short sentences, most under 20 words, one idea each. Everyday words only; if a term is unavoidable, explain it in the same sentence. Never use: leverage, alignment, framework, modality, integrate, embodiment, capacity, container, somatic, activation, unpack, lean into, sit with, hold space, inner work, transformation, journey, mindset, intentional, authentic, empower. Do not make an abstract noun the subject of a sentence. Say "you". No sentence may need a second reading.
+- EVERY takeaway MUST fill "when", "action" and "done". A reader must be able to carry out the step from "action" alone. "action" begins with a verb and names one physical, doable thing. "done" is something another person could verify - never a feeling. "body" is ONE sentence saying why the step matters, never the instruction itself.
 - Every quote/evidence MUST be drawn from the user's actual writing. If a beat is empty, derive it from the matching raw answer.
 - Do NOT use the user's name more than once across the entire report.
 - Each pillar narrative MUST reference at least one specific thing they said.

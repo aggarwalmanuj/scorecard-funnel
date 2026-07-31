@@ -35,6 +35,15 @@ export type ReportData = {
     title: string
     body: string
     urgency: "now" | "week" | "month"
+    /** ── Instruction shape (optional; older reports only have `body`) ──
+     *  The three questions a reader has to answer before they can actually
+     *  do a step: when does this happen, what exactly do I do, and how do I
+     *  know I did it. Rendered as labelled lines so the action page reads as
+     *  instructions rather than as observations. `body` stays the fallback
+     *  and the "why" line when these are present. */
+    when?: string
+    action?: string
+    done?: string
   }[]
   thirtyDay: string
   // ── Action Plan extension (all optional so reports generated before the
@@ -107,10 +116,11 @@ function pillarColorTone(value: number): "purple" | "green" | "amber" | "coral" 
 }
 
 function urgencyLabel(u: "now" | "week" | "month"): string {
-  if (u === "now") return "This week"
-  if (u === "week") return "Next 14 days"
+  if (u === "now") return "Start today"
+  if (u === "week") return "This week"
   return "Within 30 days"
 }
+
 
 function urgencyTone(u: "now" | "week" | "month"): "purple" | "amber" | "green" {
   if (u === "now") return "amber"
@@ -134,6 +144,81 @@ function reportId(seed: string): string {
   }
   const stamp = new Date().toISOString().slice(0, 10).replace(/-/g, "")
   return `CR-${stamp}-${(Math.abs(h) % 0xfff).toString(16).toUpperCase().padStart(3, "0")}`
+}
+
+/** Lower bound on the fit-to-sheet scale. Below this, shrinking text is worse
+ *  than the alternative, so the page is left slightly over and the section is
+ *  a candidate for splitting at the layout level instead. Nothing in the
+ *  report currently reaches it. */
+const MIN_FIT_SCALE = 0.72
+
+/**
+ * Shrink any page whose content is taller than the printable area so it fits
+ * on its sheet.
+ *
+ * Without this, tall pages were silently CROPPED: `.page` grew past A4,
+ * `downloadReportPdf` clipped every page at exactly 297mm, and whatever hung
+ * below that line simply never appeared in the delivered PDF - measured at
+ * 328px (roughly a third of a pillar block) on the deep-dive page of a
+ * typical report. Page length varies with how much the model writes, so the
+ * fix has to be measured at render time rather than tuned per section.
+ *
+ * The content is scaled about its top-left corner and its width is
+ * pre-inflated by the same factor, so the shrunk block still spans the full
+ * measure instead of leaving a gutter. Re-measuring after each step converges
+ * (reflowing at a wider width changes the height), which is why this loops.
+ */
+export function fitPagesToSheet(root: HTMLElement): void {
+  root.querySelectorAll<HTMLElement>(".page").forEach((page) => {
+    const inner = page.querySelector<HTMLElement>(".page-inner")
+    if (!inner) return
+    // Always start from unscaled geometry - this runs again on resize and
+    // before capture, and compounding the previous scale would spiral.
+    inner.style.transform = ""
+    inner.style.width = ""
+    const cs = getComputedStyle(page)
+    const available =
+      page.clientHeight -
+      parseFloat(cs.paddingTop || "0") -
+      parseFloat(cs.paddingBottom || "0")
+    if (available <= 0) return
+
+    /** Lay the content out at the width that scale implies and return the
+     *  height it takes there. `scrollHeight` reports layout height and
+     *  ignores the transform, so the printed height is scale * this. */
+    const layoutAt = (k: number): number => {
+      if (k >= 1) {
+        inner.style.width = ""
+        inner.style.transform = ""
+      } else {
+        inner.style.width = `${(100 / k).toFixed(3)}%`
+        inner.style.transform = `scale(${k.toFixed(4)})`
+      }
+      return inner.scrollHeight
+    }
+
+    const natural = layoutAt(1)
+    if (natural <= available + 0.5) return
+
+    // First estimate is measured at the narrower (unscaled) width, so the
+    // reflow at the inflated width can only make it shorter - it fits on the
+    // first try in practice. The loop is the guard for when it does not.
+    let scale = Math.max(MIN_FIT_SCALE, available / natural)
+    for (let pass = 0; pass < 4; pass++) {
+      if (scale * layoutAt(scale) <= available + 0.5) break
+      if (scale <= MIN_FIT_SCALE) break
+      scale = Math.max(MIN_FIT_SCALE, scale * 0.97)
+    }
+    // Give the type back as much size as still fits: the conservative first
+    // estimate otherwise leaves a visible band of white and text smaller than
+    // it needed to be.
+    for (let pass = 0; pass < 6 && scale < 1; pass++) {
+      const candidate = Math.min(1, scale * 1.02)
+      if (candidate * layoutAt(candidate) > available + 0.5) break
+      scale = candidate
+    }
+    layoutAt(scale)
+  })
 }
 
 /**
@@ -165,6 +250,9 @@ export async function downloadReportPdf(
   // Force a synchronous reflow so the un-zoomed geometry is in effect before
   // html2canvas / getBoundingClientRect read it.
   void root.getBoundingClientRect()
+  // Re-fit at capture geometry: the mobile zoom that was just removed changes
+  // layout, so a scale computed while zoomed would be wrong for the PDF.
+  fitPagesToSheet(root)
 
   try {
     const pdf = new jsPDF({ format: "a4", unit: "mm", orientation: "portrait" })
@@ -253,9 +341,11 @@ export function ReportView({
 }) {
   const today = dateISO ? new Date(dateISO) : new Date()
   const rid = useMemo(() => reportId(name || "report"), [name])
+  const rootRef = useRef<HTMLDivElement>(null)
+  useFitPages(rootRef)
   return (
     <ReportDisplayContext.Provider value={displayFor(vertical)}>
-      <div className="report-root" data-palette="marine">
+      <div className="report-root" data-palette="marine" ref={rootRef}>
         <ReportStyles />
         <ReportPages
           name={name}
@@ -275,6 +365,7 @@ export function ReportView({
 export function ClarityReport({ preview = false }: { preview?: boolean } = {}) {
   const { state, isHydrated } = useChallenge()
   const reportRootRef = useRef<HTMLDivElement>(null)
+  useFitPages(reportRootRef)
 
   // The "go deeper" offers page is for Diagnostic-only buyers. Session /
   // Transformation buyers already bought the deeper tiers, so suppress it
@@ -559,6 +650,50 @@ export function ClarityReport({ preview = false }: { preview?: boolean } = {}) {
 
 // ─────────────────────────── pages ───────────────────────────
 
+/**
+ * One printed A4 sheet.
+ *
+ * Everything except the footer lives inside `.page-inner`, which is what
+ * `fitPagesToSheet` scales. The footer stays outside it because it is
+ * absolutely positioned against the sheet, and a transformed `.page-inner`
+ * would become its containing block and drag it up the page.
+ */
+function Sheet({
+  footer,
+  children,
+}: {
+  footer: React.ReactNode
+  children: React.ReactNode
+}) {
+  return (
+    <section className="page">
+      <div className="page-inner">{children}</div>
+      {footer}
+    </section>
+  )
+}
+
+/** Keep every sheet fitted after mount, on resize, and once webfonts land
+ *  (font swap changes text height, which changes the required scale). */
+function useFitPages(ref: React.RefObject<HTMLDivElement | null>): void {
+  useEffect(() => {
+    const root = ref.current
+    if (!root) return
+    const run = () => fitPagesToSheet(root)
+    run()
+    // A second pass on the next frame catches late layout (images, the donut
+    // SVG) that changes height after the first paint.
+    const raf = requestAnimationFrame(run)
+    window.addEventListener("resize", run)
+    const fonts = (document as Document & { fonts?: FontFaceSet }).fonts
+    fonts?.ready?.then(run).catch(() => {})
+    return () => {
+      cancelAnimationFrame(raf)
+      window.removeEventListener("resize", run)
+    }
+  })
+}
+
 function ReportPages({
   name,
   today,
@@ -614,7 +749,12 @@ function ReportPages({
   const hasPassagePage = !!report.openingPassage?.trim()
   const hasCompanionsPage = !!report.companions
   const board = boardConfigFor(display.id)
-  let nextPage = 4
+  // Fixed pages: 1 cover, 2 how to read this, 3-4 the four measures in
+  // detail (two per sheet), 5 benchmark + themes + reflections, 6 the action
+  // steps. Everything after is conditional on the generator having produced
+  // the data for it.
+  const ACTION_PAGE = 6
+  let nextPage = ACTION_PAGE
   const logPageNum = hasLogPage ? ++nextPage : 0
   // The board always renders - it is scaffolding plus (optionally) their
   // first move, so it can never come out empty.
@@ -627,7 +767,7 @@ function ReportPages({
   return (
     <>
       {/* Page 1 - Cover + scores */}
-      <section className="page">
+      <Sheet footer={<ReportFooter page={1} of={totalPages} name={name} />}>
         <ReportHeader name={name} today={today} rid={rid} />
 
         <div className="eyebrow">Your Journey, Reflected</div>
@@ -643,9 +783,12 @@ function ReportPages({
             <ScoreDonut value={clarity.overall} />
           </div>
           <div className="hero-info">
+            {/* Band label only. `nsState` is an internal scoring code
+                (REGULATED / IDENTITY-ROOT / ...) and printing it raw put an
+                unexplained all-caps classifier beside the reader's score. It
+                stays available to the admin panel, out of the deliverable. */}
             <span className="band-pill">
               <span className="led" /> {clarity.bandLabel}
-              {nsState && nsState !== "UNKNOWN" ? ` · ${nsState}` : ""}
             </span>
             <div className="hero-title">{clarity.bandMessage}</div>
             {/* scoreFraming (model, leverage-toned) preferred; fall back to
@@ -660,7 +803,20 @@ function ReportPages({
           </div>
         </div>
 
-        <h2>The four pillars</h2>
+        <h2>The four {display.measureNounPlural}</h2>
+        <p
+          style={{
+            margin: "0 0 10px",
+            fontSize: 12.5,
+            lineHeight: 1.6,
+            color: "var(--ink-soft)",
+          }}
+        >
+          Your score above is made of these four parts. They are listed
+          lowest first, because the lowest one is where the most movement is
+          available - not because it is the worst. Page 2 explains how to read
+          all of this.
+        </p>
         {report.startHere?.trim() && (
           <p
             style={{
@@ -682,57 +838,166 @@ function ReportPages({
           {clarity.subscoreDetails
             .slice()
             .sort((a, b) => a.value - b.value)
-            .map((s) => (
-              <SubscoreCard
-                key={s.key}
-                label={s.label}
-                pillar={s.pillar}
-                value={s.value}
-                reason={reasons[s.key]}
-              />
-            ))}
+            .map((s) => {
+              // Vertical labels, not the scoring engine's built-in B2C names:
+              // healthcare and ADHD relabel these keys, and page 1 used to
+              // disagree with the deep-dive page about what the same number
+              // was called.
+              const meta = display.pillarLabels[s.key]
+              return (
+                <SubscoreCard
+                  key={s.key}
+                  label={meta.label}
+                  pillar={meta.pillar}
+                  plain={meta.plain}
+                  value={s.value}
+                  reason={reasons[s.key]}
+                />
+              )
+            })}
         </div>
+            </Sheet>
 
-        <ReportFooter page={1} of={totalPages} name={name} />
-      </section>
-
-      {/* Page 2 - Per-pillar deep dive */}
-      <section className="page">
+      {/* Page 2 - How to read this. Written for someone who opened the PDF
+          cold: what the document is, what the numbers do and do not say,
+          what the recurring words mean, and the one thing to do first. Every
+          later page can then stay in its own register without stranding the
+          reader. */}
+      <Sheet footer={<ReportFooter page={2} of={totalPages} name={name} />}>
         <ReportHeader name={name} today={today} rid={rid} compact />
 
-        <div className="eyebrow">Pillar deep-dive</div>
-        <h1 className="title small">What each score actually means for you</h1>
+        <div className="eyebrow">Start here</div>
+        <h1 className="title small">How to read this</h1>
 
-        <div className="pillar-stack">
-          {report.pillars
-            .slice()
-            .sort((a, b) => (subBy.get(a.key) ?? 0) - (subBy.get(b.key) ?? 0))
-            .map((p) => {
-            const value = subBy.get(p.key) ?? 0
-            const meta = display.pillarLabels[p.key]
-            return (
-              <PillarBlock
-                key={p.key}
-                title={meta.label}
-                pillar={meta.pillar}
-                value={value}
-                narrative={p.narrative}
-                evidence={p.evidence}
-                focus={p.focus}
-              />
-            )
-          })}
+        <div className="how-grid">
+          <div className="how-row">
+            <div className="how-q">What is this?</div>
+            <p className="how-a">{display.howToRead.what}</p>
+          </div>
+          <div className="how-row">
+            <div className="how-q">What does the number mean?</div>
+            <p className="how-a">{display.howToRead.scoreMeaning}</p>
+          </div>
+          <div className="how-row">
+            <div className="how-q">
+              And the four smaller ones?
+            </div>
+            <p className="how-a">{display.howToRead.measuresMeaning}</p>
+          </div>
         </div>
 
-        <ReportFooter page={2} of={totalPages} name={name} />
-      </section>
+        <div className="first-thing">
+          <div className="eyebrow">If you only do one thing</div>
+          <p>{display.howToRead.firstThing}</p>
+        </div>
 
-      {/* Page 3 - Benchmark + themes + beats */}
-      <section className="page">
+        <h2 style={{ marginTop: 20 }}>What is on each page</h2>
+        <ol className="contents">
+          <li>
+            <b>Page 1</b> - your score, and the four parts it is made of.
+          </li>
+          <li>
+            <b>Pages 3-4</b> - what each of those four parts means for you,
+            with a line from your own answers as evidence.
+          </li>
+          <li>
+            <b>Page 5</b> - how your score compares, the themes that came up
+            more than once, and the five reflections played back.
+          </li>
+          <li>
+            <b>Page {ACTION_PAGE}</b> - <b>the action steps.</b> This is the
+            page to work from. Each step says when it applies, exactly what to
+            do, and how you will know you did it.
+          </li>
+          {hasLogPage && (
+            <li>
+              <b>Page {logPageNum}</b> - the log and the week-by-week shape of
+              the next 30 days.
+            </li>
+          )}
+          <li>
+            <b>Page {boardPageNum}</b> - a printable page for recording what
+            you notice as you go.
+          </li>
+        </ol>
+
+        <h2 style={{ marginTop: 20 }}>Words used in this plan</h2>
+        <table className="glossary">
+          <tbody>
+            {display.howToRead.glossary.map((g) => (
+              <tr key={g.term}>
+                <td className="g-term">{g.term}</td>
+                <td className="g-meaning">{g.meaning}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+            </Sheet>
+
+      {/* Page 3 - Per-pillar deep dive, two per sheet. Four blocks on one
+          sheet ran ~30% over A4, which the PDF writer used to crop; two per
+          sheet leaves each narrative at full size with room to breathe. */}
+      {[0, 1].map((half) => {
+        const ordered = report.pillars
+          .slice()
+          .sort((a, b) => (subBy.get(a.key) ?? 0) - (subBy.get(b.key) ?? 0))
+        const slice = ordered.slice(half * 2, half * 2 + 2)
+        if (slice.length === 0) return null
+        return (
+          <Sheet
+            key={`pillars-${half}`}
+            footer={
+              <ReportFooter page={3 + half} of={totalPages} name={name} />
+            }
+          >
+            <ReportHeader name={name} today={today} rid={rid} compact />
+
+            <div className="eyebrow">
+              Your four {display.measureNounPlural}, one at a time
+              {half === 1 ? " (continued)" : ""}
+            </div>
+            <h1 className="title small">
+              {half === 0
+                ? "What each score actually means for you"
+                : "The other two, and what they mean"}
+            </h1>
+            {half === 0 && (
+              <p className="lede" style={{ marginBottom: 12 }}>
+                Lowest first. Under each one you get what it means for you, a
+                line from your own answers, and the one thing to do about it.
+              </p>
+            )}
+
+            <div className="pillar-stack">
+              {slice.map((p) => {
+                const value = subBy.get(p.key) ?? 0
+                const meta = display.pillarLabels[p.key]
+                return (
+                  <PillarBlock
+                    key={p.key}
+                    title={meta.label}
+                    pillar={meta.pillar}
+                    plain={meta.plain}
+                    value={value}
+                    narrative={p.narrative}
+                    evidence={p.evidence}
+                    focus={p.focus}
+                  />
+                )
+              })}
+            </div>
+          </Sheet>
+        )
+      })}
+
+      {/* Page 5 - Benchmark + themes + beats */}
+      <Sheet footer={<ReportFooter page={5} of={totalPages} name={name} />}>
         <ReportHeader name={name} today={today} rid={rid} compact />
 
         <div className="eyebrow">Where you stand</div>
-        <h1 className="title small">Peer benchmark &amp; the threads we found</h1>
+        <h1 className="title small">
+          How your score compares, and what came up more than once
+        </h1>
 
         <BenchmarkBlock overall={clarity.overall} mean={clarity.benchmarkMean} />
 
@@ -749,7 +1014,9 @@ function ReportPages({
           ))}
         </div>
 
-        <h2 style={{ marginTop: 22 }}>The five beats, reflected back</h2>
+        <h2 style={{ marginTop: 22 }}>
+          The five reflections, played back
+        </h2>
         <div className="beats">
           {report.beats
             .slice()
@@ -765,19 +1032,21 @@ function ReportPages({
               </div>
             ))}
         </div>
+            </Sheet>
 
-        <ReportFooter page={3} of={totalPages} name={name} />
-      </section>
-
-      {/* Page 4 - Takeaways + 30-day */}
-      <section className="page">
+      {/* Page 5 - The action steps. The page the whole document is for, so it
+          is written as instructions: each step says when it applies, what to
+          do, and what "done" looks like. Nothing on this page should need a
+          second reading to act on. */}
+      <Sheet footer={<ReportFooter page={ACTION_PAGE} of={totalPages} name={name} />}>
         <ReportHeader name={name} today={today} rid={rid} compact />
 
-        <div className="eyebrow">What now</div>
-        <h1 className="title small">Concrete moves, ordered by urgency</h1>
-        <p className="lede" style={{ marginBottom: 14 }}>
-          Each move is specific to what you wrote - not generic advice. Pick
-          one. Doing one well beats doing four halfway.
+        <div className="eyebrow">Your action steps</div>
+        <h1 className="title small">What to do, in order</h1>
+        <p className="lede" style={{ marginBottom: 12 }}>
+          These steps were written from your answers, not from a template. Do
+          them in order and start with Step 1 today. One step done properly is
+          worth more than four started.
         </p>
 
         <div className="take-stack">
@@ -787,28 +1056,29 @@ function ReportPages({
               n={i + 1}
               title={t.title}
               body={t.body}
+              when={t.when}
+              action={t.action}
+              done={t.done}
               urgency={t.urgency}
             />
           ))}
         </div>
 
         <div className="thirty">
-          <div className="eyebrow">30 days from now</div>
+          <div className="eyebrow">How to tell it is working, 30 days from now</div>
           <p>{report.thirtyDay}</p>
         </div>
-
-        <ReportFooter page={4} of={totalPages} name={name} />
-      </section>
+            </Sheet>
 
       {/* Tools page (Funnel v2): first move, Evidence Log table, daily /
           shareable / lock-screen lines, plus the 30-day rhythm. This is
           the part that makes $47 feel worth it. */}
       {hasLogPage && (
-        <section className="page">
+        <Sheet footer={<ReportFooter page={logPageNum} of={totalPages} name={name} />}>
           <ReportHeader name={name} today={today} rid={rid} compact />
 
-          <div className="eyebrow">Your tools</div>
-          <h1 className="title small">Not affirmations. Evidence.</h1>
+          <div className="eyebrow">Your log</div>
+          <h1 className="title small">Where to write things down</h1>
 
           {report.firstMove && (
             <div
@@ -819,7 +1089,7 @@ function ReportPages({
                 marginBottom: 16,
               }}
             >
-              <div className="eyebrow">Your first move</div>
+              <div className="eyebrow">The first thing to do</div>
               <p
                 style={{
                   fontFamily: "var(--font-serif)",
@@ -838,10 +1108,10 @@ function ReportPages({
 
           <p className="lede" style={{ marginBottom: 14 }}>
             {report.evidenceLog?.instruction ||
-              "Each time you catch the moment and run a move, log it here."}
+              "Each time you notice the moment and try a step, write one line here."}
             {report.evidenceLog?.seeded
-              ? " The first row is filled in from your own answers, as an example of the level of detail that works."
-              : ""}
+              ? " The first row is already filled in from your own answers, to show the level of detail that works. Copy that level, not more."
+              : " A few words per box is enough."}
           </p>
 
           {report.evidenceLog && (
@@ -997,30 +1267,27 @@ function ReportPages({
             $47. If it does not show you something you can act on this week,
             tell us within 30 days for a full refund.
           </p>
-
-          <ReportFooter page={logPageNum} of={totalPages} name={name} />
-        </section>
+                </Sheet>
       )}
 
       {/* The 30-Day Board - the gamified working surface. Analog by design
           (see lib/report-gamification.ts for the hard rules it obeys:
           no streaks, returns counted, unlocks are content, nothing
           expires). B2B renders the Evidence Loop variant instead. */}
-      <section className="page">
+      <Sheet footer={<ReportFooter page={boardPageNum} of={totalPages} name={name} />}>
         <ReportHeader name={name} today={today} rid={rid} compact />
         <BoardPage
           config={board}
           firstMove={report.firstMove?.line}
           rhythm={report.rhythm}
         />
-        <ReportFooter page={boardPageNum} of={totalPages} name={name} />
-      </section>
+            </Sheet>
 
       {/* Opening Passage - a first-person page assembled from their own
           transcript, meant to be read aloud once, slowly. The quiet preview
           of the voice modality the deeper work uses. */}
       {hasPassagePage && (
-        <section className="page">
+        <Sheet footer={<ReportFooter page={passagePageNum} of={totalPages} name={name} />}>
           <ReportHeader name={name} today={today} rid={rid} compact />
 
           <div className="eyebrow">Your Opening Passage</div>
@@ -1045,16 +1312,14 @@ function ReportPages({
           >
             {report.openingPassage}
           </blockquote>
-
-          <ReportFooter page={passagePageNum} of={totalPages} name={name} />
-        </section>
+                </Sheet>
       )}
 
       {/* Companions - the unannounced over-deliver layer: a note for their
           anchor person, a pocket line for the exact moment, and their own
           pattern vocabulary decoded. */}
       {hasCompanionsPage && report.companions && (
-        <section className="page">
+        <Sheet footer={<ReportFooter page={companionsPageNum} of={totalPages} name={name} />}>
           <ReportHeader name={name} today={today} rid={rid} compact />
 
           <div className="eyebrow">Three small extras</div>
@@ -1141,9 +1406,7 @@ function ReportPages({
               </table>
             </>
           )}
-
-          <ReportFooter page={companionsPageNum} of={totalPages} name={name} />
-        </section>
+                </Sheet>
       )}
 
       {/* Page 5 (Diagnostic buyers only) - the two "go deeper" offers. Each
@@ -1151,7 +1414,7 @@ function ReportPages({
           real clickable annotation over the rasterized page; the visible URL
           beneath is the fallback for viewers that ignore annotations. */}
       {includeOffers && (
-        <section className="page">
+        <Sheet footer={<ReportFooter page={offersPageNum} of={totalPages} name={name} />}>
           <ReportHeader name={name} today={today} rid={rid} compact />
 
           <div className="eyebrow">
@@ -1298,9 +1561,7 @@ function ReportPages({
               )
             })}
           </div>
-
-          <ReportFooter page={offersPageNum} of={totalPages} name={name} />
-        </section>
+                </Sheet>
       )}
     </>
   )
@@ -1608,11 +1869,15 @@ function ScoreDonut({ value }: { value: number }) {
 function SubscoreCard({
   label,
   pillar,
+  plain,
   value,
   reason,
 }: {
   label: string
   pillar: string
+  /** One-line everyday-words definition, printed under the label so the
+   *  number is never the first thing without an explanation. */
+  plain?: string
   value: number
   reason?: string
 }) {
@@ -1629,6 +1894,7 @@ function SubscoreCard({
       <div className="sub-bar">
         <div className={`b-${tone}`} style={{ width: `${value}%` }} />
       </div>
+      {plain ? <p className="sub-plain">{plain}</p> : null}
       {reason ? <p className="sub-reason">{reason}</p> : null}
     </div>
   )
@@ -1637,6 +1903,7 @@ function SubscoreCard({
 function PillarBlock({
   title,
   pillar,
+  plain,
   value,
   narrative,
   evidence,
@@ -1644,6 +1911,7 @@ function PillarBlock({
 }: {
   title: string
   pillar: string
+  plain?: string
   value: number
   narrative: string
   evidence: string
@@ -1655,7 +1923,7 @@ function PillarBlock({
       <div className="pillar-top">
         <div>
           <div className="pillar-label">{title}</div>
-          <div className="pillar-sub">{pillar}</div>
+          <div className="pillar-sub">{plain || pillar}</div>
         </div>
         <div className={`pillar-num c-${tone}`}>
           {value}
@@ -1673,7 +1941,7 @@ function PillarBlock({
         </div>
       ) : null}
       <div className="pillar-focus">
-        <span className="ev-tag focus-tag">Focus</span>
+        <span className="ev-tag focus-tag">What to do about it</span>
         <span>{focus}</span>
       </div>
     </div>
@@ -1720,27 +1988,67 @@ function BenchmarkBlock({ overall, mean }: { overall: number; mean: number }) {
   )
 }
 
+/**
+ * One action step. When the generator supplies the instruction fields, the
+ * step renders as three labelled lines - WHEN / DO THIS / DONE WHEN - which
+ * is the difference between a reader knowing what was observed about them
+ * and knowing what to do on Tuesday. `body` remains the fallback for reports
+ * generated before those fields existed, and the framing line when they are
+ * present.
+ */
 function TakeawayBlock({
   n,
   title,
   body,
+  when,
+  action,
+  done,
   urgency,
 }: {
   n: number
   title: string
   body: string
+  when?: string
+  action?: string
+  done?: string
   urgency: "now" | "week" | "month"
 }) {
   const tone = urgencyTone(urgency)
+  const hasSteps = !!(when?.trim() || action?.trim() || done?.trim())
   return (
     <div className="take">
-      <div className={`take-num c-${tone}`}>{String(n).padStart(2, "0")}</div>
+      <div className={`take-num c-${tone}`}>
+        <small>Step</small>
+        {n}
+      </div>
       <div className="take-body">
         <div className="take-head-row">
           <h4>{title}</h4>
           <span className={`urg-pill u-${tone}`}>{urgencyLabel(urgency)}</span>
         </div>
-        <p>{body}</p>
+        {body?.trim() && <p>{body}</p>}
+        {hasSteps && (
+          <dl className="step-lines">
+            {when?.trim() && (
+              <div className="step-line">
+                <dt>When</dt>
+                <dd>{when}</dd>
+              </div>
+            )}
+            {action?.trim() && (
+              <div className="step-line">
+                <dt>Do this</dt>
+                <dd>{action}</dd>
+              </div>
+            )}
+            {done?.trim() && (
+              <div className="step-line">
+                <dt>Done when</dt>
+                <dd>{done}</dd>
+              </div>
+            )}
+          </dl>
+        )}
       </div>
     </div>
   )
@@ -1936,9 +2244,13 @@ function ReportStyles() {
       }
 
       /* ───── Page ───── */
+      /* A fixed sheet, not a minimum. The PDF writer clips every page at
+         297mm, so a page that can grow is a page that can lose content
+         without saying so; fitPagesToSheet scales the content to this box
+         instead. */
       .report-root .page {
         width: 210mm;
-        min-height: 297mm;
+        height: 297mm;
         margin: 24px auto;
         padding: 22mm 20mm 20mm;
         background: var(--bg);
@@ -1946,6 +2258,12 @@ function ReportStyles() {
         position: relative;
         overflow: hidden;
         color: var(--ink);
+      }
+      /* The scaled content block. The transform and its compensating width
+         are set inline by fitPagesToSheet; the origin lives here so an
+         unfitted first paint still anchors correctly. */
+      .report-root .page-inner {
+        transform-origin: top left;
       }
 
       /* Mobile scale-to-fit. The A4 page is a fixed 210mm (~794px) - wider than
@@ -2244,11 +2562,92 @@ function ReportStyles() {
         height: 100%;
         border-radius: 999px;
       }
+      .report-root .sub-plain {
+        font-size: 11px;
+        color: var(--ink);
+        line-height: 1.5;
+        margin: 8px 0 0;
+      }
       .report-root .sub-reason {
         font-size: 11px;
         color: var(--ink-soft);
         line-height: 1.55;
-        margin: 8px 0 0;
+        margin: 6px 0 0;
+        font-style: italic;
+      }
+
+      /* ───── "How to read this" (page 2) ───── */
+      .report-root .how-grid {
+        display: grid;
+        gap: 10px;
+        margin: 4px 0 0;
+      }
+      .report-root .how-row {
+        border-left: 2px solid var(--brand-soft);
+        padding-left: 14px;
+      }
+      .report-root .how-q {
+        font-family: var(--font-serif);
+        font-size: 14px;
+        font-weight: 700;
+        color: var(--brand-dark);
+        margin-bottom: 2px;
+      }
+      .report-root .how-a {
+        margin: 0;
+        font-size: 12.5px;
+        line-height: 1.65;
+        color: var(--ink-soft);
+        max-width: 80ch;
+      }
+      .report-root .first-thing {
+        margin-top: 16px;
+        padding: 12px 16px;
+        border: 1px solid var(--brand-dark);
+        border-radius: 8px;
+        background: linear-gradient(180deg, var(--brand-soft) 0%, #ffffff 100%);
+      }
+      .report-root .first-thing p {
+        margin: 4px 0 0;
+        font-size: 13px;
+        line-height: 1.65;
+        color: var(--ink);
+      }
+      .report-root .contents {
+        margin: 0;
+        padding-left: 18px;
+        display: grid;
+        gap: 5px;
+      }
+      .report-root .contents li {
+        font-size: 12.5px;
+        line-height: 1.6;
+        color: var(--ink-soft);
+      }
+      .report-root .contents b {
+        color: var(--ink);
+      }
+      .report-root .glossary {
+        width: 100%;
+        border-collapse: collapse;
+      }
+      .report-root .glossary .g-term {
+        width: 30%;
+        vertical-align: top;
+        padding: 8px 12px 8px 0;
+        border-bottom: 1px solid rgba(15, 44, 59, 0.14);
+        font-family: var(--font-serif);
+        font-size: 12.5px;
+        font-weight: 700;
+        color: var(--brand-dark);
+      }
+      .report-root .glossary .g-meaning {
+        vertical-align: top;
+        padding: 8px 0 8px 12px;
+        border-bottom: 1px solid rgba(15, 44, 59, 0.14);
+        font-size: 12px;
+        line-height: 1.6;
+        color: var(--ink-soft);
       }
 
       /* ───── Pillar deep-dive ───── */
@@ -2502,6 +2901,42 @@ function ReportStyles() {
         font-weight: 800;
         line-height: 1;
         letter-spacing: -0.04em;
+      }
+      .report-root .take-num small {
+        display: block;
+        font-size: 8.5px;
+        font-weight: 800;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+        color: var(--muted);
+        margin-bottom: 2px;
+      }
+      /* The three instruction lines that turn an observation into a step. */
+      .report-root .step-lines {
+        margin: 8px 0 0;
+        display: grid;
+        gap: 4px;
+      }
+      .report-root .step-line {
+        display: grid;
+        /* Wide enough that "DONE WHEN" stays on one line at this tracking. */
+        grid-template-columns: 86px 1fr;
+        gap: 10px;
+        align-items: baseline;
+      }
+      .report-root .step-line dt {
+        font-size: 9px;
+        font-weight: 800;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--brand-dark);
+        padding-top: 1px;
+      }
+      .report-root .step-line dd {
+        margin: 0;
+        font-size: 12px;
+        line-height: 1.55;
+        color: var(--ink);
       }
       .report-root .take-head-row {
         display: flex;
