@@ -22,7 +22,43 @@
  * visit (e.g. a direct return) doesn't overwrite it.
  */
 
-const STORAGE_KEY = "ufa_attribution"
+import { normalizeVertical, verticalFromHost, type Vertical } from "@/lib/verticals"
+
+/**
+ * Attribution is namespaced PER VERTICAL.
+ *
+ * It used to be one global record, which meant the first campaign-grade
+ * touch on a browser was attached to every later signup no matter which
+ * funnel the person ran: someone who once visited the ADHD doorway and
+ * later arrived through healthcareops.aimerge.live was still reported as
+ * "utm_source=adhd, campaign=adhd-doorway". Marketing then reads a
+ * healthcare lead as ADHD spend.
+ *
+ * Arriving at a vertical's doorway is a distinct acquisition into a
+ * distinct product line, so first-touch is scoped to the vertical: first
+ * touch WITHIN adhd, within healthcare, within main. Across verticals they
+ * never contaminate each other.
+ */
+const LEGACY_STORAGE_KEY = "ufa_attribution"
+const storageKeyFor = (v: Vertical) => `ufa_attribution:${v}`
+
+/**
+ * Which vertical this page view belongs to, using the same precedence the
+ * server entry page uses: explicit param → subdomain → main.
+ */
+function currentVertical(): Vertical {
+  if (typeof window === "undefined") return "main"
+  try {
+    const p = new URLSearchParams(window.location.search)
+    return (
+      normalizeVertical(p.get("vertical") ?? p.get("lp") ?? p.get("v")) ??
+      verticalFromHost(window.location.hostname) ??
+      "main"
+    )
+  } catch {
+    return "main"
+  }
+}
 
 // Standard UTM tags.
 const UTM_KEYS = [
@@ -81,6 +117,8 @@ function hasMeaningfulSignal(a: Attribution): boolean {
 export function captureAttribution(): void {
   if (typeof window === "undefined") return
   try {
+    const vertical = currentVertical()
+    const STORAGE_KEY = storageKeyFor(vertical)
     const existingRaw = window.localStorage.getItem(STORAGE_KEY)
     if (existingRaw) {
       let existing: Attribution | null = null
@@ -114,6 +152,19 @@ export function captureAttribution(): void {
       }
     }
 
+    // Always stamp the vertical this touch belongs to, so a stored record
+    // is self-describing and the admin's UTM block can never disagree with
+    // the funnel the person actually ran.
+    captured.vertical = vertical
+
+    // A subdomain arrival with no ad params is still a real acquisition
+    // through that doorway - record it as such rather than leaving the slot
+    // empty (which used to let another vertical's record answer for it).
+    if (!hasCampaignSignal(captured) && vertical !== "main") {
+      captured.utm_source = captured.utm_source ?? vertical
+      captured.utm_medium = captured.utm_medium ?? "direct"
+    }
+
     if (!hasMeaningfulSignal(captured)) return
     // Don't downgrade a stored referrer-only record with another
     // referrer-only one - the first referrer still wins among equals.
@@ -128,14 +179,44 @@ export function captureAttribution(): void {
   }
 }
 
-/** Read the stored first-touch attribution (empty object if none). */
-export function getAttribution(): Attribution {
+function readRecord(key: string): Attribution | null {
+  try {
+    const raw = window.localStorage.getItem(key)
+    if (!raw) return null
+    const parsed = JSON.parse(raw) as Attribution
+    return parsed && typeof parsed === "object" ? parsed : null
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Read the first-touch attribution for the vertical being submitted.
+ *
+ * Pass the signup's vertical so a healthcare lead can never be credited to
+ * an ADHD campaign the same browser saw weeks ago. The legacy single-key
+ * record (written before attribution was namespaced) is honoured ONLY when
+ * it belongs to the vertical being asked for - otherwise it is ignored,
+ * which is exactly the contamination this replaced.
+ */
+export function getAttribution(vertical?: string | null): Attribution {
   if (typeof window === "undefined") return {}
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY)
-    if (!raw) return {}
-    const parsed = JSON.parse(raw) as Attribution
-    return parsed && typeof parsed === "object" ? parsed : {}
+    const v = normalizeVertical(vertical) ?? currentVertical()
+
+    const scoped = readRecord(storageKeyFor(v))
+    if (scoped) return scoped
+
+    const legacy = readRecord(LEGACY_STORAGE_KEY)
+    if (legacy) {
+      const legacyVertical =
+        normalizeVertical(legacy.vertical) ?? normalizeVertical(legacy.lp)
+      // Unlabelled legacy records are only safe to claim for main.
+      if (legacyVertical === v || (!legacyVertical && v === "main")) {
+        return legacy
+      }
+    }
+    return {}
   } catch {
     return {}
   }

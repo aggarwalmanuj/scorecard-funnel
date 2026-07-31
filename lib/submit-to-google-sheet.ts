@@ -68,7 +68,9 @@ export async function submitSignup(
   try {
     // First-touch attribution (utm_* / referrer) captured at the landing,
     // plus the headline A/B variant this visitor was assigned (if any).
-    const attribution = { ...getAttribution(), ...getHeadlineAttribution() }
+    // Scoped to THIS signup's vertical - otherwise a browser that once saw
+    // another vertical's doorway credits this lead to that campaign.
+    const attribution = { ...getAttribution(audience), ...getHeadlineAttribution() }
     const res = await fetch("/api/sheets/append", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
