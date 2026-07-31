@@ -92,22 +92,85 @@ export async function buildSystemPrompt(
 ): Promise<string> {
   const name = sanitizeForPrompt(firstName.trim()) || "This person"
   const template = await getPrompt("system_prompt", audience)
-  return template
+  const filled = template
     .replace(/\{\{NAME\}\}/g, name)
     .replace(/\{\{Q1\}\}/g, sanitizeForPrompt(responses.question1))
     .replace(/\{\{Q2\}\}/g, sanitizeForPrompt(responses.question2))
     .replace(/\{\{Q3\}\}/g, sanitizeForPrompt(responses.question3))
     .replace(/\{\{Q4\}\}/g, sanitizeForPrompt(responses.question4))
     .replace(/\{\{Q5\}\}/g, sanitizeForPrompt(responses.question5))
+
+  // Safety net. The respondent's answers reach the model through this template
+  // alone, so a system prompt saved without {{Q1}}-{{Q5}} leaves the model with
+  // nothing to reflect - it then prints the raw "[VAR_Q1]" token to the
+  // respondent. That shipped to production on healthcare and reverted a second
+  // time when an admin save overwrote the fix from a stale page. Prompt copy is
+  // editable by anyone with the admin password; delivery of the answers must
+  // not depend on it. If the template carried no answer slot, append one.
+  if (!/\{\{Q[1-5]\}\}/.test(template)) {
+    const blank = "(left blank)"
+    const a = (v: string) => sanitizeForPrompt((v || "").trim()) || blank
+    return `${filled}
+
+THE RESPONDENT'S ACTUAL ANSWERS (authoritative - reflect these words, and never print a bracketed [VAR_Qn] token):
+
+[VAR_Q1] - Question 1:
+${a(responses.question1)}
+
+[VAR_Q2] - Question 2:
+${a(responses.question2)}
+
+[VAR_Q3] - Question 3:
+${a(responses.question3)}
+
+[VAR_Q4] - Question 4:
+${a(responses.question4)}
+
+[VAR_Q5] - Question 5:
+${a(responses.question5)}`
+  }
+  return filled
+}
+
+/**
+ * Resolve the `[VAR_Qn]` tokens every vertical's beat prompts are written
+ * against.
+ *
+ * These were only ever substituted implicitly: the answers were injected into
+ * the system prompt via {{Qn}}, and the model was left to infer that
+ * "[VAR_Q1]" meant the text it had seen there. That inference is not reliable.
+ * When a vertical's system prompt described the tokens instead of injecting
+ * the answers, healthcare's did, the model had nothing to infer from and
+ * printed "[VAR_Q1]" straight into the reflection the respondent reads -
+ * measured at 12/12 runs in production.
+ *
+ * Substituting here makes the funnel immune to that class of prompt defect:
+ * whatever the prompt store holds, the model receives the respondent's actual
+ * words and never sees a placeholder to echo.
+ */
+function resolveVarTokens(text: string, responses: ChallengeResponses): string {
+  const blank = "(left blank)"
+  const answers: Record<string, string> = {
+    VAR_Q1: responses.question1,
+    VAR_Q2: responses.question2,
+    VAR_Q3: responses.question3,
+    VAR_Q4: responses.question4,
+    VAR_Q5: responses.question5,
+  }
+  return text.replace(/\[(VAR_Q[1-5])\]/g, (_m, key: string) =>
+    sanitizeForPrompt((answers[key] || "").trim()) || blank
+  )
 }
 
 /** Get the beat-specific system context (role/instructions for this beat). */
 export async function getBeatSystemContext(
   audience: Audience,
-  beatNumber: 1 | 2 | 3 | 4 | 5
+  beatNumber: 1 | 2 | 3 | 4 | 5,
+  responses?: ChallengeResponses
 ): Promise<string> {
   try {
-    return await getPrompt(`beat${beatNumber}_systemContext`, audience)
+    const raw = await getPrompt(`beat${beatNumber}_systemContext`, audience)
+    return responses ? resolveVarTokens(raw, responses) : raw
   } catch {
     return ""
   }
@@ -117,12 +180,14 @@ export async function buildUserPromptForBeat(
   audience: Audience,
   beatNumber: 1 | 2 | 3 | 4 | 5,
   gate2Resonance: Gate2Resonance,
-  gate4Tone: Gate4Tone
+  gate4Tone: Gate4Tone,
+  responses?: ChallengeResponses
 ): Promise<string> {
   const template = await getPrompt(`beat${beatNumber}_prompt`, audience)
-  return template
+  const withGates = template
     .replace(/\{\{GATE2\}\}/g, gate2Resonance)
     .replace(/\{\{GATE4\}\}/g, gate4Tone)
+  return responses ? resolveVarTokens(withGates, responses) : withGates
 }
 
 /**

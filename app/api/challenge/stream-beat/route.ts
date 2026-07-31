@@ -77,8 +77,10 @@ export async function POST(request: Request) {
   let beatContext: string
   try {
     system = await buildSystemPrompt(audience, firstName, resPayload)
-    user = await buildUserPromptForBeat(audience, beatNumber as 1 | 2 | 3 | 4 | 5, g2, g4)
-    beatContext = await getBeatSystemContext(audience, beatNumber as 1 | 2 | 3 | 4 | 5)
+    // resPayload is passed to both so any [VAR_Qn] token in admin-authored beat
+    // copy is resolved server-side rather than left for the model to infer.
+    user = await buildUserPromptForBeat(audience, beatNumber as 1 | 2 | 3 | 4 | 5, g2, g4, resPayload)
+    beatContext = await getBeatSystemContext(audience, beatNumber as 1 | 2 | 3 | 4 | 5, resPayload)
   } catch (e) {
     console.error("[stream-beat] prompt build", redactError(e))
     const message = e instanceof Error ? e.message : "Prompt configuration error"
