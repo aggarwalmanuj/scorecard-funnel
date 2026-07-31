@@ -398,7 +398,12 @@ export async function POST(request: Request) {
       precomputedScore?.subscores,
     ),
     temperature: 0.55,
-    maxTokens: 2400,
+    // The report is the PAID deliverable and the longest JSON the funnel
+    // generates. At 2400 a richer per-vertical prompt (healthcare's, for
+    // one) overruns the budget, the JSON is truncated mid-string, parsing
+    // fails and the buyer receives NOTHING. Headroom is far cheaper than a
+    // failed delivery.
+    maxTokens: 4000,
   })
 
   const scorePromise: Promise<string | null> = precomputedScore
@@ -459,24 +464,58 @@ export async function POST(request: Request) {
   }
 
   // ── parse narrative (this one is required - if missing, return 502) ──
-  if (!reportRaw) {
-    return new Response(
-      JSON.stringify({ error: "Report generation failed" }),
-      { status: 502, headers: { "Content-Type": "application/json" } }
-    )
+  //
+  // One retry before failing. This is the paid deliverable: a single
+  // malformed or truncated response used to mean the buyer received no
+  // report at all (observed in production on the healthcare vertical,
+  // whose longer prompt overran the old token ceiling). A retry costs one
+  // extra model call; a failed delivery costs the sale and the trust.
+  const parseReport = (raw: string | null): unknown | null => {
+    if (!raw) return null
+    const jsonStr = extractJsonObject(raw)
+    if (!jsonStr) return null
+    try {
+      return JSON.parse(jsonStr)
+    } catch {
+      return null
+    }
   }
-  const reportJsonStr = extractJsonObject(reportRaw)
-  if (!reportJsonStr) {
-    return new Response(
-      JSON.stringify({ error: "Report model returned no JSON" }),
-      { status: 502, headers: { "Content-Type": "application/json" } }
-    )
+
+  let reportObj = parseReport(reportRaw)
+  if (reportObj === null) {
+    console.warn("[report] first attempt unparseable - retrying once")
+    const retryRaw = await callOpenRouter({
+      apiKey,
+      model,
+      referer,
+      title: "Belief Score - Report Narrative (retry)",
+      system: reportSystem,
+      user: applyReportUserTemplate(
+        reportUserTemplate,
+        firstName,
+        responses,
+        beats,
+        precomputedScore?.subscores,
+      ),
+      // Lower temperature on the retry: the first pass already failed to
+      // hold the format, so favour determinism over voice.
+      temperature: 0.3,
+      maxTokens: 4000,
+    })
+    reportObj = parseReport(retryRaw)
   }
-  let reportObj: unknown
-  try {
-    reportObj = JSON.parse(reportJsonStr)
-  } catch (e) {
-    console.error("[report] JSON.parse failed", redactError(e))
+
+  if (reportObj === null) {
+    // Log the shape of the failure, not the content. A raw length at/near
+    // the token ceiling with no closing brace means TRUNCATION (raise
+    // maxTokens or shorten that vertical's report prompt) - the single most
+    // likely cause, since the call already pins response_format to
+    // json_object, which otherwise guarantees syntactically valid JSON.
+    const len = reportRaw?.length ?? 0
+    const endsClosed = (reportRaw ?? "").trimEnd().endsWith("}")
+    console.error(
+      `[report] unparseable after retry | audience=${audience} rawChars=${len} endsWithBrace=${endsClosed} (false => truncated)`
+    )
     return new Response(
       JSON.stringify({ error: "Report model returned invalid JSON" }),
       { status: 502, headers: { "Content-Type": "application/json" } }

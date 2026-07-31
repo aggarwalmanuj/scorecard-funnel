@@ -3029,26 +3029,13 @@ export default function AdminPage() {
                                     page was involved, which mislabelled e.g. a
                                     retargeting-subdomain visitor as "MAIN". No
                                     doorway now reads as "direct". */}
-                                {(() => {
-                                  const doorway = r.lp || r.vertical
-                                  return (
-                                    <Badge
-                                      variant="outline"
-                                      className={`hidden rounded-full text-[10px] uppercase tracking-[0.2em] shrink-0 sm:inline-flex ${
-                                        doorway
-                                          ? "border-signal/30 bg-signal/10 text-signal"
-                                          : "border-border bg-transparent text-foreground/45"
-                                      }`}
-                                      title={
-                                        doorway
-                                          ? `Doorway: arrived via the "${doorway}" landing page`
-                                          : "Direct: no landing page handed this visitor off (subdomain, typed URL, or internal link)"
-                                      }
-                                    >
-                                      {doorway || "direct"}
-                                    </Badge>
-                                  )
-                                })()}
+                                {/* Exactly ONE vertical indicator here: the
+                                    funnel they actually went through (the
+                                    audience badge above). The doorway/lp slug
+                                    used to sit beside it and read as a second,
+                                    contradictory vertical - it lives in the
+                                    expanded "Source / Session" block as
+                                    "Funnel", where it belongs. */}
                                 <div className="flex-1 min-w-0">
                                   <p className="eyebrow text-foreground/70">{r.firstName || "-"}</p>
                                   <p className="text-sm text-foreground truncate mt-0.5">{r.email || "-"}</p>
