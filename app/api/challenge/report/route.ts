@@ -481,60 +481,98 @@ export async function POST(request: Request) {
     }
   }
 
-  let reportObj = parseReport(reportRaw)
-  if (reportObj === null) {
-    console.warn("[report] first attempt unparseable - retrying once")
-    const retryRaw = await callOpenRouter({
-      apiKey,
-      model,
-      referer,
-      title: "Belief Score - Report Narrative (retry)",
-      system: reportSystem,
-      user: applyReportUserTemplate(
-        reportUserTemplate,
-        firstName,
-        responses,
-        beats,
-        precomputedScore?.subscores,
-      ),
-      // Lower temperature on the retry: the first pass already failed to
-      // hold the format, so favour determinism over voice.
-      temperature: 0.3,
-      maxTokens: 4000,
-    })
-    reportObj = parseReport(retryRaw)
+  // Run one generation attempt end-to-end: model → JSON → schema. Returns the
+  // validated report, or a short reason describing how it failed.
+  const validate = (
+    raw: string | null
+  ): { ok: true; data: z.infer<typeof reportSchema> } | { ok: false; why: string } => {
+    const obj = parseReport(raw)
+    if (obj === null) {
+      // response_format is pinned to json_object, so syntactically invalid
+      // JSON here almost always means TRUNCATION - the model hit maxTokens
+      // mid-string. A raw length near the ceiling with no closing brace
+      // confirms it (raise maxTokens or shorten that vertical's prompt).
+      const len = raw?.length ?? 0
+      const closed = (raw ?? "").trimEnd().endsWith("}")
+      return { ok: false, why: `unparseable rawChars=${len} endsWithBrace=${closed}` }
+    }
+    const v = reportSchema.safeParse(obj)
+    if (!v.success) {
+      const bad = Object.keys(v.error.flatten().fieldErrors).join(",")
+      return { ok: false, why: `schema-mismatch fields=[${bad}]` }
+    }
+    return { ok: true, data: v.data }
   }
 
-  if (reportObj === null) {
-    // Log the shape of the failure, not the content. A raw length at/near
-    // the token ceiling with no closing brace means TRUNCATION (raise
-    // maxTokens or shorten that vertical's report prompt) - the single most
-    // likely cause, since the call already pins response_format to
-    // json_object, which otherwise guarantees syntactically valid JSON.
-    const len = reportRaw?.length ?? 0
-    const endsClosed = (reportRaw ?? "").trimEnd().endsWith("}")
+  const generate = async (
+    system: string,
+    template: string,
+    temperature: number,
+    title: string
+  ) =>
+    validate(
+      await callOpenRouter({
+        apiKey,
+        model,
+        referer,
+        title,
+        system,
+        user: applyReportUserTemplate(
+          template,
+          firstName,
+          responses,
+          beats,
+          precomputedScore?.subscores
+        ),
+        temperature,
+        maxTokens: 4000,
+      })
+    )
+
+  // Attempt 1 already fired in parallel with scoring, above.
+  let result = validate(reportRaw)
+
+  // Attempt 2 - same prompt, lower temperature. Covers the transient case:
+  // the model simply failed to hold the format this once.
+  if (!result.ok) {
+    console.warn(`[report] attempt 1 failed (${result.why}) - retrying`)
+    result = await generate(
+      reportSystem,
+      reportUserTemplate,
+      0.3,
+      "Belief Score - Report Narrative (retry)"
+    )
+  }
+
+  // Attempt 3 - the BUILT-IN prompt, which is guaranteed to describe the
+  // schema this route enforces. This covers the non-transient case: an
+  // admin-edited prompt in Cosmos that asks the model for a different JSON
+  // contract than the renderer reads. That happened in production on the
+  // healthcare vertical - every report 502'd and every buyer received
+  // nothing. A generic-but-valid report is a far better failure mode than
+  // an empty one, so degrade rather than deny.
+  if (!result.ok) {
     console.error(
-      `[report] unparseable after retry | audience=${audience} rawChars=${len} endsWithBrace=${endsClosed} (false => truncated)`
+      `[report] configured prompt failed twice (${result.why}) | audience=${audience} - falling back to built-in prompt. Check the Report tab in /admin for this vertical: its prompt must ask for headline/thread/pillars/themes/beats/takeaways/thirtyDay.`
+    )
+    result = await generate(
+      DEFAULT_REPORT_SYSTEM_PROMPT,
+      DEFAULT_REPORT_USER_PROMPT,
+      0.3,
+      "Belief Score - Report Narrative (default-prompt fallback)"
+    )
+  }
+
+  if (!result.ok) {
+    console.error(
+      `[report] unrecoverable (${result.why}) | audience=${audience}`
     )
     return new Response(
-      JSON.stringify({ error: "Report model returned invalid JSON" }),
+      JSON.stringify({ error: "Report response did not match schema" }),
       { status: 502, headers: { "Content-Type": "application/json" } }
     )
   }
-  const reportValidated = reportSchema.safeParse(reportObj)
-  if (!reportValidated.success) {
-    console.error(
-      "[report] schema validation failed",
-      reportValidated.error.flatten()
-    )
-    return new Response(
-      JSON.stringify({
-        error: "Report response did not match schema",
-        details: reportValidated.error.flatten(),
-      }),
-      { status: 502, headers: { "Content-Type": "application/json" } }
-    )
-  }
+  const reportValidated = { data: result.data }
 
   return new Response(
     JSON.stringify({
