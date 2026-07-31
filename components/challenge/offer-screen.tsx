@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import Link from "next/link"
 import { ArrowRight, ArrowLeft, BadgeCheck, CalendarCheck, Footprints, Lock, Map, NotebookPen, Shield } from "lucide-react"
 import { useChallenge, type Audience } from "@/context/challenge-context"
@@ -11,6 +11,7 @@ import posthog from "posthog-js"
 import { track } from "@/lib/fbpixel"
 import { STRIPE_PAYMENT_LINKS } from "@/lib/offers"
 import { displayFor } from "@/lib/vertical-display"
+import { persistOfferView } from "@/lib/persist-outputs"
 import { MacWindow } from "@/components/visuals/mac-window"
 import { ReportPreviewCard, overallOf } from "@/components/visuals/report-preview"
 import { PlanTimeline } from "@/components/visuals/plan-timeline"
@@ -107,6 +108,21 @@ export function OfferScreen({ audience }: { audience: Audience }) {
   // Vertical vocabulary (One-Name Law): "ADHD Belief Score" for the ADHD
   // track, plus the vertical's optional reassurance line.
   const display = displayFor(audience)
+
+  // Funnel visibility: record that this lead reached the offer page, so
+  // /techadmin can separate "saw the offer" from "purchased". Fires once
+  // per mount and never blocks render.
+  const offerViewSentRef = useRef(false)
+  useEffect(() => {
+    if (offerViewSentRef.current) return
+    if (!state.serialNumber || !state.email) return
+    offerViewSentRef.current = true
+    persistOfferView({
+      serialNumber: state.serialNumber,
+      firstName: state.firstName,
+      email: state.email,
+    })
+  }, [state.serialNumber, state.email, state.firstName])
 
   // Payment handoff to the Stripe Payment Link (single source of truth in
   // lib/offers.ts). Stripe collects payment + email, then redirects to the

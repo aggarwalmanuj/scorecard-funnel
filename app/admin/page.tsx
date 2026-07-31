@@ -1089,6 +1089,7 @@ function ResponseTechDetails({
     score_json?: string
     report_json?: string
     summary_text?: string
+    offer_viewed_at?: string
     paid_tier?: string
     paid_amount?: string
     paid_at?: string
@@ -1102,6 +1103,9 @@ function ResponseTechDetails({
     { label: "Score", done: cellFilled(r.score_json) },
     { label: "Report", done: cellFilled(r.report_json) },
     { label: "Summary", done: cellFilled(r.summary_text) },
+    // The funnel's biggest drop-off sits between these two - showing them
+    // separately makes "saw the price and left" visible instead of implied.
+    { label: "Offer page", done: cellFilled(r.offer_viewed_at) },
     { label: "Purchased", done: cellFilled(r.paid_tier) },
   ]
 
@@ -1217,6 +1221,7 @@ export default function AdminPage() {
     beat1_output: string; beat2_output: string; beat3_output: string; beat4_output: string; beat5_output: string
     // Final outputs persisted at generation time (optional - older docs lack them).
     score_json?: string; report_json?: string; summary_text?: string; summary_audio_url?: string
+    offer_viewed_at?: string
     // Tech-analytics telemetry + purchase (/techadmin only).
     ph_session_id?: string; ph_distinct_id?: string
     paid_tier?: string; paid_amount?: string; paid_at?: string

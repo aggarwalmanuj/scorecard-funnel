@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import Link from "next/link"
 import { ArrowRight, ArrowLeft, Check, Shield } from "lucide-react"
 import { useChallenge, type Audience } from "@/context/challenge-context"
@@ -11,6 +11,7 @@ import posthog from "posthog-js"
 import { track } from "@/lib/fbpixel"
 import { B2B_ACTION_PLAN_PRICE, STRIPE_PAYMENT_LINKS } from "@/lib/offers"
 import { displayFor } from "@/lib/vertical-display"
+import { persistOfferView } from "@/lib/persist-outputs"
 
 /**
  * The B2B ($197) offer page, used by the healthcare vertical. Built from
@@ -78,6 +79,21 @@ export function B2BOfferScreen({ audience }: { audience: Audience }) {
   const [isProcessing, setIsProcessing] = useState(false)
   const quotedMoment = extractQuotedMoment(state.responses.question1 ?? "")
   const display = displayFor(audience)
+
+  // Funnel visibility: record that this lead reached the offer page, so
+  // /techadmin can separate "saw the offer" from "purchased". Fires once
+  // per mount and never blocks render.
+  const offerViewSentRef = useRef(false)
+  useEffect(() => {
+    if (offerViewSentRef.current) return
+    if (!state.serialNumber || !state.email) return
+    offerViewSentRef.current = true
+    persistOfferView({
+      serialNumber: state.serialNumber,
+      firstName: state.firstName,
+      email: state.email,
+    })
+  }, [state.serialNumber, state.email, state.firstName])
   const link = STRIPE_PAYMENT_LINKS.b2b_actionplan
   const checkoutReady = link !== ""
 

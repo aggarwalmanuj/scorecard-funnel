@@ -54,6 +54,17 @@ export function persistReport(id: Identity, payload: unknown): void {
   })
 }
 
+/** Mark that this lead reached the offer page (funnel visibility only). */
+export function persistOfferView(id: Identity): void {
+  if (!id.serialNumber || !id.email) return
+  void postAppend({
+    action: "offer_view",
+    serialNumber: id.serialNumber,
+    firstName: id.firstName,
+    email: id.email,
+  })
+}
+
 /** Persist the closing summary prose. */
 export function persistSummaryText(id: Identity, text: string): void {
   if (!id.serialNumber || !id.email || !text.trim()) return

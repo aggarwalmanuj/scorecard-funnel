@@ -175,6 +175,8 @@ export type UserDocument = {
   paid_tier?: string
   paid_amount?: string
   paid_at?: string
+  /** Set when the lead reached the offer page (see UserOutputField). */
+  offer_viewed_at?: string
   /**
    * Sort key for the admin list. Set at row creation AND bumped on every
    * re-signup, so a returning lead surfaces at the top where the team looks
@@ -251,6 +253,9 @@ export type UserOutputField =
   | "report_json"
   | "summary_text"
   | "summary_audio_url"
+  /** ISO timestamp: this lead reached the offer page. Funnel visibility
+   *  only - lets the journey separate "saw the offer" from "purchased". */
+  | "offer_viewed_at"
 
 // Maximum bytes we accept for the prompt-text snapshot. Guards against an
 // abusive client inflating documents past the 2 MB Cosmos item limit.
@@ -848,6 +853,7 @@ export async function updateUserOutputs(
   outputs: Partial<Record<UserOutputField, string>>
 ): Promise<void> {
   const allowed: UserOutputField[] = [
+    "offer_viewed_at",
     "score_json",
     "report_json",
     "summary_text",

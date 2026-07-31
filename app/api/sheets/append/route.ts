@@ -13,7 +13,7 @@ function readCookie(header: string | null, name: string): string | undefined {
 }
 
 const bodySchema = z.object({
-  action: z.enum(["signup", "answer", "feedback", "beat_output", "score", "report", "summary", "telemetry", "purchase"]),
+  action: z.enum(["signup", "answer", "feedback", "beat_output", "score", "report", "summary", "telemetry", "purchase", "offer_view"]),
   firstName: z.preprocess(
     (v) => (v == null ? "" : String(v).trim().slice(0, 200)),
     z.string().max(200)
@@ -190,6 +190,20 @@ export async function POST(request: Request) {
         )
       }
       await updateUserOutputs(serialNumber, firstName, email, outputs)
+    } else if (action === "offer_view") {
+      // Funnel-visibility only: stamps when this lead reached the offer
+      // page, so the journey can show reached-the-offer separately from
+      // purchased - the funnel's single biggest drop-off. Repeat visits
+      // refresh the timestamp; presence is what the journey reads.
+      if (!serialNumber) {
+        return NextResponse.json(
+          { ok: false, error: "Missing serialNumber for offer_view action" },
+          { status: 400 }
+        )
+      }
+      await updateUserOutputs(serialNumber, firstName, email, {
+        offer_viewed_at: new Date().toISOString(),
+      })
     } else if (action === "telemetry") {
       if (!serialNumber) {
         return NextResponse.json(
