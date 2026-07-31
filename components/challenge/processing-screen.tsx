@@ -146,24 +146,40 @@ async function fetchReportInBackground(args: {
     nsState?: string
   } | null
 }): Promise<unknown | null> {
-  try {
-    const res = await fetch("/api/challenge/report", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        firstName: args.firstName,
-        email: args.email,
-        audience: args.audience,
-        responses: args.responses,
-        beats: args.beats,
-        precomputedScore: args.precomputedScore ?? undefined,
-      }),
-    })
-    if (!res.ok) return null
-    return await res.json()
-  } catch {
-    return null
+  const body = JSON.stringify({
+    firstName: args.firstName,
+    email: args.email,
+    audience: args.audience,
+    responses: args.responses,
+    beats: args.beats,
+    precomputedScore: args.precomputedScore ?? undefined,
+  })
+
+  // The report is what the whole assessment exists to deliver, and a single
+  // failed call used to end the journey silently: the caller ignores null, so
+  // the respondent walked on to the offer page having been shown nothing.
+  // Observed in production on the healthcare vertical. Three spaced attempts
+  // cover a cold function, a model blip, or a transient upstream 5xx; the
+  // funnel has minutes of beat choreography to spend, so the wait is free.
+  const BACKOFF_MS = [1500, 4000]
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const res = await fetch("/api/challenge/report", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body,
+      })
+      if (res.ok) return await res.json()
+      console.warn(`[report] attempt ${attempt + 1} failed with ${res.status}`)
+    } catch {
+      console.warn(`[report] attempt ${attempt + 1} threw`)
+    }
+    if (attempt < BACKOFF_MS.length) {
+      await new Promise((r) => setTimeout(r, BACKOFF_MS[attempt]))
+    }
   }
+  console.error("[report] all attempts failed - respondent will see no report")
+  return null
 }
 
 /**
