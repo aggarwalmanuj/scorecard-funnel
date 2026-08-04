@@ -1,6 +1,6 @@
 # Vertical Config Guide — what every field means
 
-This guide explains the JSON config files in this folder (`belief-score-config-adhd.json`, `belief-score-config-healthcare.json`, `belief-score-config-retargeting.json`, and the main export). Each file is the complete "content brain" of one vertical: everything a visitor reads, and every instruction the AI follows, from the name-gathering page through the paid report.
+This guide explains the JSON config files in this folder (`belief-score-config-adhd.json`, `belief-score-config-healthcare.json`, `belief-score-config-coaches.json`, `belief-score-config-retargeting.json`, and the main export). Each file is the complete "content brain" of one vertical: everything a visitor reads, and every instruction the AI follows, from the name-gathering page through the paid report.
 
 **Who edits what:** the copy-like fields (questions, hints, titles, entry-page text) are safe for anyone to edit. The AI-instruction fields (prompts) are editable too, but they contain structural rules the funnel depends on — the guide marks what to change freely and what to leave alone.
 
@@ -23,7 +23,7 @@ This guide explains the JSON config files in this folder (`belief-score-config-a
 |---|---|
 | `exportedAt` | Timestamp of the export. Informational only. |
 | `version` | Config format version. Leave as `3`. |
-| `audience` | The vertical this file belongs to: `main`, `adhd`, `healthcare`, or `retargeting`. **Do not change** — it decides which audience receives this content. |
+| `audience` | The vertical this file belongs to: `main`, `adhd`, `healthcare`, `coaches`, or `retargeting`. **Do not change** — it decides which audience receives this content. |
 
 ---
 
@@ -133,4 +133,5 @@ The 3–4 paragraph closing reflection on the summary page (also read aloud by t
 - **main** — the live tuned baseline; every other vertical inherits from it. Edit last, carefully.
 - **adhd** — consumer register with hard guarantees: pattern-is-protection framing, zero shame, zero systems/streaks/discipline language, no medical claims. ICP-tune the question examples and detection cues; never loosen the register.
 - **healthcare** (served at business.aimerge.live) — B2B register: operational vocabulary only, roles not people, the operating-assumption definition, the "one leader's account, built to be tested" concession, the no-PHI instruction. No consumer warmth, no psychology words, no invented numbers.
+- **coaches** (served at coaches.aimerge.live, and via `lp=coaches-consultants` from the Coaches and Consultants landing page) — a commercial register for coaches, consultants, advisors, facilitators and fractional executives. Hard rules, all from the source docs: belief is NEVER the sole cause of a business outcome; real business conditions (demand, positioning, pricing, distribution, sales skill, client fit, the economy) stay real and naming one is precision, not resistance; care, depth and customization are strengths doing a second job, never faults; no invented numbers, no revenue/client/scale guarantees; never "self-sabotage", "money blocks", "scarcity mindset", "imposter syndrome", "afraid of success", or "your mindset is blocking clients". The public mechanism is the **Pattern-to-Belief Map** with exactly five stages in order — the repeated moment, the possible belief, the reinforcing loop, the moment to watch, the next evidence — and the five beats are named after them, so a visitor who watched the VSL finds all five inside their result. Every recommended move must fit inside a conversation or document they already have; never a rebuilt offer, new funnel, or new tool. The entry copy states the question count (five, which the funnel enforces) but deliberately **never** a completion time — the spec forbids publishing a duration until it has been measured.
 - **retargeting** — intentionally entry-page-only. Returning visitors must meet the *same* product (no retake, no variant), with a no-pressure welcome-back voice. Resist the urge to fill this file in.

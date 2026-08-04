@@ -17,7 +17,13 @@
  * users, stored localStorage state, and old deep links keep working.
  */
 
-export const VERTICALS = ["main", "retargeting", "adhd", "healthcare"] as const
+export const VERTICALS = [
+  "main",
+  "retargeting",
+  "adhd",
+  "healthcare",
+  "coaches",
+] as const
 
 export type Vertical = (typeof VERTICALS)[number]
 
@@ -29,6 +35,7 @@ export const VERTICAL_LABELS: Record<Vertical, string> = {
   retargeting: "Retargeting",
   adhd: "ADHD",
   healthcare: "Healthcare",
+  coaches: "Coaches",
 }
 
 export function isVertical(v: unknown): v is Vertical {
@@ -55,6 +62,17 @@ const VERTICAL_ALIASES: Record<string, Vertical> = {
   "b2b-healthcare-ops": "healthcare",
   "healthcare-ops": "healthcare",
   healthcareops: "healthcare",
+  // The Coaches and Consultants vertical. `coaches-consultants` is the slug
+  // the coaches landing page actually sends as `lp=` (LP_SLUG in its
+  // lib/scorecard.ts); `coaches` is its deployed subdomain and the canonical
+  // id. Both MUST stay mapped or that paid traffic falls through to main and
+  // runs the consumer funnel with consumer copy.
+  "coaches-consultants": "coaches",
+  "coaches-and-consultants": "coaches",
+  "coach-consultant": "coaches",
+  coach: "coaches",
+  consultants: "coaches",
+  consultant: "coaches",
 }
 
 /**
@@ -76,6 +94,7 @@ export function normalizeVertical(v: string | null | undefined): Vertical | null
  *   adhd.aimerge.live      -> adhd
  *   retarget.aimerge.live  -> retargeting
  *   business.aimerge.live  -> healthcare (the B2B lane)
+ *   coaches.aimerge.live   -> coaches
  * The first host label is normalized through the alias table, so
  * retargeting./b2b. variants also work. Unknown or missing hosts (and
  * localhost, previews, www) resolve to null - callers fall back to other

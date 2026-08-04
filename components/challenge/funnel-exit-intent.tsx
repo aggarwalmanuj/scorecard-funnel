@@ -150,6 +150,32 @@ const EXIT_COPY: Record<Vertical, ExitCopy> = {
       "Your Belief Profile is complete. The Action Plan that turns it into a governed next step is one page away - a deliverable, not a doorway to a pitch.",
     ctaScored: `Review the Action Plan · $${B2B_ACTION_PLAN_PRICE}`,
   },
+  // No numeric "facts" here on purpose. The coaches source docs ban invented
+  // statistics outright, and there is no published figure that honestly
+  // covers "coaches who build instead of selling" - so both rows carry a
+  // non-numeric figure, the same shape the retargeting entry uses.
+  coaches: {
+    eyebrow: "Before you go",
+    title: "The work is ready.",
+    accent: "The invitation is what waits.",
+    facts: [
+      {
+        figure: "Saved",
+        label:
+          "Everything you've written so far stays exactly where you left it. Nothing here expires and nothing has to be redone.",
+      },
+      {
+        figure: "One moment",
+        label:
+          "This isn't a review of your offer, your pricing, or your methodology. It's one repeated commercial moment, mapped from your own words.",
+      },
+    ],
+    lineStarted:
+      "Your answers so far are saved. The score they add up to is minutes away, and it is built from what you already wrote.",
+    lineScored:
+      "Your score is done. The plan that reads it - the moment to watch, the next evidence, and what to say instead of adding more - is one page away.",
+    ctaScored: "See my Action Plan · $47",
+  },
 }
 
 /** Paths where the modal must never appear. */

@@ -149,6 +149,49 @@ export const BOARD_CONFIG: Record<Vertical, BoardConfig> = {
     closingLine:
       "This is a deliverable, not a doorway. What you do with the result stays entirely yours, and nobody calls you.",
   },
+  // Coaches and consultants keep the B2C board's anti-shame mechanics (no
+  // streaks, no dates, nothing expires) but the SECOND row is repurposed from
+  // "returns" to "evidence". The whole public mechanism for this vertical ends
+  // at "the next evidence" - one observable commercial action - so the thing
+  // most worth counting is completed invitations, not comebacks. The
+  // no-shame guarantee still lives in catchesRule and closingLine, which is
+  // where it does its work; nothing here can be broken or fallen behind on.
+  coaches: {
+    ...B2C_BOARD,
+    title: "One moment. One completed invitation.",
+    lede:
+      "This is the working surface of your plan. It is not a pipeline tracker and not another system to maintain - it is a place to record two things: when you caught the moment, and when you completed the commercial action anyway. One page, thirty days, no maintenance.",
+    catchesLabel: "Catches",
+    catchesRule:
+      "Ink one circle each time you notice the pull to add more - another explanation, another resource, another revision - before naming the next step. Noticing counts on its own. There are no dates on these, so a quiet week is not a miss.",
+    catchCount: 12,
+    returnsLabel: "Evidence",
+    returnsRule:
+      "Mark one every time you complete the commercial action anyway: a recommendation named, a proposal sent, a follow-up closed, a price stated without qualifying it. This row is the only proof that matters, and it does not reset.",
+    returnCount: 6,
+    milestones: [
+      {
+        at: 1,
+        label: "First catch",
+        unlocks: "Your pocket line - the sentence to use in the moment before you add more.",
+      },
+      {
+        at: 3,
+        label: "Three catches",
+        unlocks: "The week-two note: what to do when a direct recommendation gets a slow answer.",
+      },
+      {
+        at: 7,
+        label: "Seven catches",
+        unlocks: "Your day-30 re-score - see which of the four pillars actually moved.",
+      },
+    ],
+    notesLabel: "What you noticed, and what the client did next",
+    finishBody:
+      "Read your log back, then re-take the score. Count the entries in the Evidence row against the month before this one. That count is a market answer in your own handwriting - which is the only kind that settles the question.",
+    closingLine:
+      "There is no streak here to break and nothing on this page expires. A blank fortnight costs you nothing, and the next mark picks up exactly where the last one left off.",
+  },
 }
 
 export function boardConfigFor(vertical: Vertical | null | undefined): BoardConfig {

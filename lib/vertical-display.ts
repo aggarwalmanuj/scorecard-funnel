@@ -297,6 +297,93 @@ export const VERTICAL_DISPLAY: Record<Vertical, VerticalDisplay> = {
     },
     offerVariant: "b2b",
   },
+  coaches: {
+    id: "coaches",
+    // MESSAGE MATCH with the coaches landing page, whose every CTA reads
+    // "Get Your Free Coaches and Consultants Belief Score" and whose spec
+    // fixes "Coaches and Consultants" as the public vertical name. The
+    // funnel's own CTA renders "Get Your Free {productName}", so this string
+    // has to be the landing page's string verbatim - the healthcare vertical
+    // shipped with two names for one thing and it cost conversions at the
+    // exact moment of highest doubt.
+    productName: "Coaches and Consultants Belief Score",
+    // The paid artifact. The source docs name the paid step the "Belief
+    // Action Plan" and forbid the VSL/landing page from mentioning it at all,
+    // so there is no external string to match - only internal consistency,
+    // and a name short enough for the PDF header and page footers.
+    reportName: "Belief Action Plan",
+    // Same four fixed keys, re-meant for a commercial pattern: what recurs in
+    // the business, how far the professional identity sits from it, whether a
+    // real market answer is allowed, and what the loop actually costs.
+    // Mirrors the coaches score rubric in
+    // belief-score-config/belief-score-config-coaches.json - keep in sync.
+    pillarLabels: {
+      directionClarity: {
+        label: "Pattern Precision",
+        pillar: "Pillar I · The Repeated Moment",
+        plain: "How exactly you can name the business moment that keeps repeating.",
+      },
+      identityAlignment: {
+        label: "Identity Distance",
+        pillar: "Pillar II · Professional Identity",
+        plain: "How much you see this as something the work does, not who you are as a professional.",
+      },
+      decisionReadiness: {
+        label: "Evidence Readiness",
+        pillar: "Pillar III · The Next Evidence",
+        plain: "How ready you are to let one real commercial action get a real answer.",
+      },
+      energyAlignment: {
+        label: "Cost Realism",
+        pillar: "Pillar IV · The Cost",
+        plain: "How clearly you can see what this loop is costing you in time, pipeline, and energy.",
+      },
+    },
+    measureNoun: "pillar",
+    measureNounPlural: "pillars",
+    howToRead: {
+      what: "This is a plan, not an evaluation of your business. It was written from the five answers you typed in your own words about one recurring commercial moment, so it should sound like your practice and not like general business advice.",
+      scoreMeaning:
+        "The big number is a starting point, not a grade. It says how much room there is to move on this one pattern right now. It does not rate your expertise, your methodology, your pricing, or your professional judgment.",
+      measuresMeaning:
+        "The four smaller numbers break that starting point into four parts, so you can see which one is holding the most back. Each one is explained in plain words next to its score.",
+      firstThing:
+        "Go to the action page and do Step 1. It happens inside one conversation you already have coming up - no new offer, no rebuilt funnel, nothing to launch.",
+      glossary: [
+        {
+          term: "The repeated moment",
+          meaning:
+            "The point in the work that keeps coming back the same way - the situation you described in your first answer. Not your whole business.",
+        },
+        {
+          term: "The possible belief",
+          meaning:
+            "What that moment, repeated often enough, may have taught you to conclude about helping, selling, value, or your own expertise. A reading to check, never a verdict.",
+        },
+        {
+          term: "The reinforcing loop",
+          meaning:
+            "How the way you resolve the moment quietly makes the same moment happen again. Blame sits with the loop's shape, not with you.",
+        },
+        {
+          term: "The moment to watch",
+          meaning:
+            "The earliest point where you can tell the pattern is starting - usually the first pull to add more before naming the next step.",
+        },
+        {
+          term: "The next evidence",
+          meaning:
+            "One observable commercial action that would show another response is available. Something a client could actually receive, not a feeling.",
+        },
+      ],
+    },
+    offerVariant: "b2c",
+    // Answers the dominant purchase fear in this vertical (source docs, Block
+    // 08): that the plan will ask them to become a harder seller, standardize
+    // work that needs judgment, or stop caring.
+    offerAccent:
+      "Nothing here asks you to sell harder, drop your standards, or turn a client conversation into a pitch.",
+  },
 }
 
 export function displayFor(vertical: Vertical | null | undefined): VerticalDisplay {
