@@ -93,10 +93,29 @@ export type Attribution = Partial<
 const MAX_LEN = 500
 const clamp = (v: string) => v.slice(0, MAX_LEN)
 
+/**
+ * The subset of CAPTURE_KEYS that is actual evidence of a campaign.
+ *
+ * `vertical` is deliberately EXCLUDED even though it is captured and stored.
+ * It is self-stamped on every single capture below, so counting it as campaign
+ * evidence made *every* record campaign-grade - including the record written
+ * by a bare, param-less visit to the homepage. That record then satisfied the
+ * "first touch is final" guard forever, so the real ad click a visitor made
+ * days later was read and thrown away.
+ *
+ * Shipped in ee5ce9b (the vertical-namespacing change), which added the
+ * unconditional `captured.vertical = vertical` stamp below without noticing
+ * that `vertical` was already inside the campaign test. Observed live on
+ * production rows #133 and #140: both stored exactly
+ * `{ vertical: "main", landing_page: "/" }` and nothing else.
+ */
+const CAMPAIGN_KEYS = [...UTM_KEYS, ...CLICK_KEYS, "ref", "lp"] as const
+
 /** Campaign-grade signal: explicit UTM tags, an ad click id, or a landing-page
- *  hand-off (ref/lp/vertical). A bare referrer is NOT campaign-grade. */
+ *  hand-off (ref/lp). A bare referrer is NOT campaign-grade, and neither is
+ *  the self-stamped `vertical` - see CAMPAIGN_KEYS. */
 function hasCampaignSignal(a: Attribution): boolean {
-  return CAPTURE_KEYS.some((k) => a[k])
+  return CAMPAIGN_KEYS.some((k) => a[k])
 }
 
 function hasMeaningfulSignal(a: Attribution): boolean {
@@ -154,17 +173,18 @@ export function captureAttribution(): void {
 
     // Always stamp the vertical this touch belongs to, so a stored record
     // is self-describing and the admin's UTM block can never disagree with
-    // the funnel the person actually ran.
+    // the funnel the person actually ran. NOTE: this is why `vertical` must
+    // stay out of CAMPAIGN_KEYS - see the comment there.
     captured.vertical = vertical
 
-    // A subdomain arrival with no ad params is still a real acquisition
-    // through that doorway - record it as such rather than leaving the slot
-    // empty (which used to let another vertical's record answer for it).
-    if (!hasCampaignSignal(captured) && vertical !== "main") {
-      captured.utm_source = captured.utm_source ?? vertical
-      captured.utm_medium = captured.utm_medium ?? "direct"
-    }
-
+    // A param-less arrival is NOT recorded as an acquisition. There used to be
+    // a block here that synthesised `utm_source: <vertical>, utm_medium:
+    // "direct"` for non-main verticals, to stop another vertical's record
+    // answering for this one - but namespacing the storage key per vertical
+    // (storageKeyFor, above) already solves that, and the row itself carries
+    // an `audience` column recording the doorway. All the synthetic marker did
+    // was make a direct visit look campaign-grade, which re-created the exact
+    // lock-out this file exists to avoid, one vertical at a time.
     if (!hasMeaningfulSignal(captured)) return
     // Don't downgrade a stored referrer-only record with another
     // referrer-only one - the first referrer still wins among equals.
