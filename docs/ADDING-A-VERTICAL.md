@@ -3,42 +3,108 @@
 A complete, repeatable playbook for wiring a new audience (its own landing page,
 its own copy, its own AI prompts, its own PDF) into this funnel.
 
-Written after shipping **coaches** (2026-08-04), which is the reference
+Written after shipping **coaches** (2026-08-04) and extended on 2026-08-07 with
+the two things that shipping it missed: the landing page's analytics
+environment (§2.3) and attribution correctness (§2.4). Coaches is the reference
 implementation — every step below points at a real diff you can copy.
 
 Existing verticals: `main`, `retargeting`, `adhd`, `healthcare`, `coaches`.
+
+**Read §8.1 first if you read nothing else.** Every failure this playbook exists
+to prevent is silent: it prints success and produces a broken funnel.
 
 ---
 
 ## 0 · The paste-ready prompt
 
-Copy this into a fresh session, fill the four slots, and let it run. Everything
-after this section is the detail it needs.
+Fill the two required slots and paste into a fresh session in the funnel repo.
+Everything after this section is the detail the agent will need; the prompt is
+written so it does not need you to answer questions mid-run.
 
-> We are adding a new vertical to the scorecard funnel.
+---
+
+> Add a new vertical to the scorecard funnel, end to end.
 >
-> - **Vertical id:** `<short-lowercase-id, e.g. traders>`
-> - **Public name:** `<the exact product name the landing page's CTA says>`
 > - **Landing page repo:** `<local path>`
-> - **Source docs:** `<local path to the Landing-Page / VSL / ICP / Ad matrix docs>`
+> - **Source docs:** `<local path, or "none">`
+> - Vertical id, public product name, and paid artifact name: derive them
+>   yourself in Phase 1 and tell me what you chose. Do not stop to ask.
 >
-> Follow `docs/ADDING-A-VERTICAL.md` end to end. Specifically:
+> Follow `docs/ADDING-A-VERTICAL.md`. Work in phases and **report at the end of
+> each phase before continuing**. Do not ask me to make a decision you can make
+> from the source docs or from an existing vertical's precedent — make it,
+> state it, and flag it as reversible.
 >
-> 1. Audit the landing page against the parity checklist in §2 and report any
->    gaps before touching the funnel. Do not fix its repo without asking.
-> 2. Read the source docs and extract the register rules, the public mechanism,
->    the naming law, and every forbidden claim for this audience. Quote them
->    back to me before writing copy.
-> 3. Register the vertical (§3) — the alias for the landing page's `lp=` slug is
->    the single most important line; without it, paid traffic silently runs the
->    main funnel.
-> 4. Author the content pack (§4) and seed it (§5). **Use `--db=scorecard`** —
->    `.env.local` points at a non-live database.
-> 5. Verify locally (§6), then run the live end-to-end check (§7) and report
->    the results.
+> **Context that will not be obvious from the code:**
+> This is a live paid product with real ad spend. Every failure mode that has
+> actually bitten us was *silent* — it printed success and produced a broken
+> funnel. Assume anything you have not observed working is broken.
 >
-> This is a paid product with live ad spend. No invented statistics, no
-> guarantees, no urgency, and no em dashes in any rendered copy.
+> **Phase 1 — Read before you touch anything.**
+> Read the source docs in full and the landing page repo. Report back:
+> the vertical id you chose; the exact public product name (must be verbatim
+> the landing page's primary CTA string); the paid artifact name; the public
+> mechanism and its stages; the register rules; every forbidden claim
+> (invented statistics, guarantees, question counts, completion times,
+> vertical-specific banned vocabulary); and which of the four subscore keys
+> means what for this audience. Quote the docs. If there are no source docs,
+> derive all of it from the landing page copy and say so.
+>
+> **Phase 2 — Audit the landing page (§2). Report gaps; do not fix its repo
+> without asking.** Cover all four:
+> a. Hand-off parity — diff its `lib/scorecard.ts` against adhd / B2B /
+>    retargeting. Every utm, every click id, `fbp`/`fbc`, a stable `ref`, and
+>    `lp`. **Write down the `lp=` slug.**
+> b. Live pages — every route, a deliberate 404, six breakpoints for
+>    horizontal overflow, every CTA's href carrying the full param set, and a
+>    banned-claims sweep against this vertical's own spec.
+> c. **Analytics env (§2.3) — check the deployed site actually fires the Meta
+>    Pixel and PostHog.** The coaches page shipped with neither because its env
+>    vars were never set in Vercel, and nothing errored. Compare against a
+>    sibling; the pixel id must match the other properties.
+> d. Attribution correctness (§2.4) — run the first-touch cases against the
+>    deployed funnel. A bare visit followed by an ad click must capture the ad.
+>
+> **Phase 3 — Register the vertical (§3).** Add the id to `VERTICALS`, then let
+> `npx tsc --noEmit` drive you through every `Record<Vertical, …>` map it
+> breaks. The alias for the `lp=` slug from Phase 2a is the single most
+> important line in the change: without it, every paid click silently runs the
+> main funnel with main's copy.
+>
+> **Phase 4 — Author the content pack (§4)** and seed it (§5). Author it with a
+> generator script, not by hand. **Seed with `--db=scorecard`** — `.env.local`
+> points at a database nothing serves, and seeding the wrong one prints
+> "Done. Wrote 39 keys." Confirm 39 keys landed, matching every other vertical.
+>
+> **Phase 5 — Verify locally (§6):** typecheck, build, entry page serving the
+> vertical's copy server-side, the question/beat API returning this vertical's
+> content, main unchanged, and attribution landing under
+> `ufa_attribution:<id>`.
+>
+> **Phase 6 — Verify live (§7).** Drive a real browser from the landing page
+> through an ad click, the hand-off, signup, all five questions, all five
+> beats, processing, summary/score, and the offer page. Then audit the AI
+> output against the Phase 1 register rules, and confirm every field persisted
+> on the row. Finish by creating one **signup-only** lead (no questions, no AI
+> spend) so I have a clean row to open in admin, and give me its email.
+>
+> **Report format:** for each phase, what you verified and how you know —
+> commands run and their output, not assurances. State explicitly what you did
+> NOT verify. If something is blocked, finish everything else and say what you
+> left out.
+
+---
+
+**Optional slots** — add any of these only if you already know the answer;
+otherwise the agent decides and reports:
+
+```
+Vertical id:            <short lowercase, e.g. traders>
+Public product name:    <verbatim the LP's primary CTA>
+Paid artifact name:     <short - it goes in the PDF header and every footer>
+Offer variant:          b2c ($47 page) | b2b (structurally different page)
+Deployed LP domain:     <e.g. traders.aimerge.live>
+```
 
 ---
 
@@ -117,6 +183,82 @@ Then drive a browser over it (see `§7` for the harness shape) and check:
   statistic.
 - **Zero em dashes** in rendered copy (site rule).
 - No wrong-vertical VSL or testimonial left over from a copied repo.
+
+### 2.3 Analytics env — the check that was missed on coaches
+
+The coaches landing page shipped to production with **no Meta Pixel and no
+PostHog**. The components were present and correct; the environment variables
+were simply never set, in the repo or in Vercel. Nothing errored, nothing
+logged, and the page looked perfect. It was found only because someone asked.
+
+Do all three:
+
+```bash
+# 1. What does the code actually read?
+cd <lp-repo>
+grep -rhoE "process\.env\.[A-Z_0-9]+" app components lib *.ts | sort -u
+
+# 2. Do env files even exist? (coaches had NONE, not even .env.example,
+#    despite its own README telling you to copy one)
+ls -a | grep -iE "^\.env"
+```
+
+3. **Check the deployed site, not the repo.** Load it in a browser, accept the
+   cookie banner (both sinks are consent-gated), wait, then assert:
+
+   - `fbq('init', '<id>')` appears in the HTML, `typeof window.fbq === "function"`,
+     and a request went to `connect.facebook.net`;
+   - requests are reaching `/ingest/...` and a `ph_<token>_posthog` key with a
+     `distinct_id` exists in localStorage.
+
+   Always run a **known-good sibling as a control** in the same script.
+   Both PostHog and the pixel are easy to mis-measure — the capture endpoint
+   moves between posthog-js versions, so "no capture requests" on the new page
+   means nothing unless the control shows them too.
+
+The pixel id **must match the other properties**. As of 2026-08-07,
+adhd.aimerge.live, healthcareops.aimerge.live and the funnel at
+www.aimerge.live all initialise the same id. A different id on a new landing
+page splits the ad click and the Lead that follows it into two datasets.
+
+If env files are missing, create `.env.example` (documented) and `.env.local`
+(real values), matching the sibling convention — both are gitignored via
+`.env*` and are not tracked. Then say plainly:
+
+> **`.env.local` does not affect production.** `NEXT_PUBLIC_*` values are
+> inlined at build time from the Vercel project's Environment Variables. They
+> must be set there and the project **redeployed** — saving them is not enough.
+
+What is lost while this is broken, so you can describe the damage accurately:
+all landing-page pixel events (so Meta has no on-page engagement signal to
+optimise on, and no retargeting pool) and all PostHog funnel events
+(`landing_page_view`, `scroll_depth_*`, `vsl_*`, `cta_click`). What is **not**
+lost: the ad-to-lead chain, because `fbclid` is captured from the URL by the
+landing page's attribution module regardless of the pixel, forwarded on the
+CTA, and turned into `_fbc` by the funnel's own pixel.
+
+### 2.4 Attribution correctness
+
+Adding a vertical is a good moment to re-run these, because the failure mode is
+invisible in the UI and only shows up as unattributed ad spend weeks later.
+See `lib/client/attribution.ts` and the `CAMPAIGN_KEYS` comment for the bug
+this guards against — a field that is set on *every* capture must never be
+counted as campaign evidence, or the first bare visit locks the record forever.
+
+Drive a browser against the deployed funnel with a fresh context per case:
+
+| # | Steps | Expected |
+|---|---|---|
+| 1 | `/` only | nothing stored |
+| 2 | `/` then `/?utm_source=…&fbclid=…` | **ad data captured** |
+| 3 | ad URL on a clean browser | captured (control) |
+| 4 | ad A then ad B | A survives, B ignored |
+| 5 | `/` three times | still nothing stored |
+| 6 | `/challenge/audience?lp=<slug>&utm…` | stored under `ufa_attribution:<id>` |
+| 7 | `/` then the vertical hand-off | separate key, vertical captured |
+
+Case 2 is the one that regressed in production. Cases 6 and 7 confirm the new
+vertical did not contaminate, or get contaminated by, another one.
 
 Report gaps. Do not edit another team's repo without asking.
 
@@ -397,6 +539,31 @@ Any `*** MISSING ***` is a failed write worth chasing. And check `/admin`:
 the new tab renders, its content tabs load the seeded copy, and the row is
 searchable and tagged with the vertical.
 
+### 7.1 Leave a clean row behind
+
+The full run above produces a row cluttered with test answers. Finish with one
+more pass that stops at signup — bare visit, then an ad click, then name and
+email, then stop. No questions answered means no AI spend, and it gives whoever
+asked for this a single unambiguous row to open in admin with the whole campaign
+set on it. Hand them the email address.
+
+### 7.2 Decisions worth raising, not asking
+
+These came up on coaches and are better reported than blocked on:
+
+- **CTA length.** `Get Your Free {productName}` is rendered on buttons. Once
+  the product name passes ~35 characters it reads badly in uppercase with
+  letter-spacing. Check whether the vertical's spec sanctions a short CTA form
+  (coaches' did: a full primary CTA and a short sticky CTA). The entry button
+  is `ctaLabel` in Cosmos and is admin-editable without a deploy; the
+  exit-intent button is hardcoded and shared by every vertical.
+- **Score calibration.** Run the numbers on the first real respondents. A
+  vertical whose audience writes well for a living can score high on a rubric
+  meant to be conservative, which weakens the reason to buy.
+- **Upsell ladder.** Every non-healthcare vertical inherits the consumer
+  ladder from `lib/offers.ts`. Check the register fits; do not invent new
+  price points or Stripe links.
+
 ---
 
 ## 8 · Shared surfaces a new vertical inherits
@@ -411,6 +578,29 @@ or not — check them against your register and raise them rather than assuming:
 | `components/challenge/offer-screen.tsx` FAQ | "Is this therapy or a diagnosis?" — off-register for a B2B or professional audience |
 | `app/admin/page.tsx:144` | Renders the scoring engine's built-in labels ("Direction Clarity / Purpose"), not the vertical's. Internal only; the buyer-facing report and summary both override correctly |
 | `lib/offers.ts` upsell ladder | Consumer narrative offers ($497 Story Session / $1,997 Deep Work) for every non-healthcare vertical |
+| The funnel's own cookie banner | Fixed to the bottom; it overlaps the entry-page CTA at desktop heights and intercepts the click until dismissed |
+
+---
+
+## 8.1 · The silent failure modes, in one list
+
+Every one of these printed success and produced a broken funnel. If you verify
+nothing else, verify these:
+
+1. **Missing `lp=` alias** → `normalizeVertical()` returns null, paid traffic
+   runs the main funnel with main's copy. Nothing errors.
+2. **Seeding the wrong Cosmos database** → `.env.local` says `test`, the live
+   site reads `scorecard`. Prints `Done. Wrote 39 keys.` either way.
+3. **A `prompt` field the seeder ignores** → only `beats[].userPrompt` maps to
+   `beatN_prompt`. Healthcare's config still carries a dead `prompt` key.
+4. **Analytics env never set** → pixel and PostHog silently absent in
+   production; the page looks perfect (§2.3).
+5. **A self-stamped field inside the campaign-signal test** → the first bare
+   visit permanently locks out every later ad click (§2.4).
+6. **A report prompt that overruns `maxTokens: 5200`** → JSON truncates
+   mid-string, parsing fails, and the buyer receives nothing.
+7. **`grep $'—'` in Git Bash** → returns zero matches on a file full of em
+   dashes. Use the Node one-liner in §4.2.
 
 ---
 

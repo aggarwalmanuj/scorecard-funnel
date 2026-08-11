@@ -1,7 +1,6 @@
-import { NextResponse, type NextFetchEvent, type NextRequest } from "next/server"
+import { NextResponse, type NextRequest } from "next/server"
 import { Ratelimit } from "@upstash/ratelimit"
 import { Redis } from "@upstash/redis"
-import { HEADLINE_COOKIE } from "@/lib/headline-shared"
 import { verticalFromHost } from "@/lib/verticals"
 
 /* ─────────────────────────────────────────────
@@ -68,48 +67,12 @@ function generateNonce(): string {
   return base64UrlEncode(bytes)
 }
 
-/* ─────────────────────────────────────────────
-   Headline A/B — server-side assignment.
-   Middleware picks (or recalls) the visitor's variant and rewrites `/` to
-   the pre-rendered /hl/[id] page, so the first byte of HTML already carries
-   the assigned headline: no skeleton, no client-side swap, CDN-static TTFB.
-   ───────────────────────────────────────────── */
-
-// Per-instance cache of active variant ids. Misses cost one same-origin
-// API round-trip (the route is CDN-cached for 5 min and instance-cached in
-// cosmos-db); within the TTL the pick is pure in-memory work.
-let hlIdsCache: { ids: string[]; at: number } | null = null
-const HL_IDS_TTL_MS = 60_000
-
-async function getActiveHeadlineIds(origin: string): Promise<string[]> {
-  if (hlIdsCache && Date.now() - hlIdsCache.at < HL_IDS_TTL_MS) {
-    return hlIdsCache.ids
-  }
-  try {
-    const res = await fetch(`${origin}/api/headlines`)
-    const json = (await res.json()) as {
-      headlines?: Array<{ id?: unknown }>
-    }
-    const ids = Array.isArray(json.headlines)
-      ? json.headlines
-          .map((h) => (typeof h.id === "string" ? h.id : ""))
-          .filter(Boolean)
-      : []
-    hlIdsCache = { ids, at: Date.now() }
-    return ids
-  } catch {
-    // Fetch failed: fall back to the stale cache (a coherent experiment
-    // state), else serve the default landing (empty list).
-    return hlIdsCache?.ids ?? []
-  }
-}
-
 // Legacy audience segments → canonical vertical. Mid-funnel users and old
 // deep links from before the verticals migration (2026-07-22) land on the
 // same step under /challenge/main/*. Query strings are preserved.
 const LEGACY_AUDIENCE_RE = /^\/challenge\/(?:individual|team)(\/.*)?$/
 
-export async function middleware(request: NextRequest, event: NextFetchEvent) {
+export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
   const legacyMatch = pathname.match(LEGACY_AUDIENCE_RE)
@@ -202,47 +165,9 @@ export async function middleware(request: NextRequest, event: NextFetchEvent) {
   requestHeaders.set("content-security-policy", csp)
   if (hostVertical) requestHeaders.set("x-vertical", hostVertical)
 
-  // Headline A/B: rewrite `/` to the visitor's assigned variant page.
-  // Skipped entirely when the experiment is off (no active variants).
-  let response: NextResponse | null = null
-  if (pathname === "/") {
-    const ids = await getActiveHeadlineIds(request.nextUrl.origin)
-    if (ids.length > 0) {
-      const cookie = request.cookies.get(HEADLINE_COOKIE)?.value
-      const sticky = cookie && ids.includes(cookie) ? cookie : null
-      const id = sticky ?? ids[Math.floor(Math.random() * ids.length)]
-
-      const url = request.nextUrl.clone()
-      url.pathname = `/hl/${id}`
-      response = NextResponse.rewrite(url, {
-        request: { headers: requestHeaders },
-      })
-
-      if (!sticky) {
-        // New assignment: persist it and count the unique visitor. The
-        // impression POST is server-side (ad blockers can't drop it) and
-        // rides waitUntil so it never delays the page.
-        response.cookies.set(HEADLINE_COOKIE, id, {
-          maxAge: 60 * 60 * 24 * 180,
-          path: "/",
-          sameSite: "lax",
-        })
-        event.waitUntil(
-          fetch(`${request.nextUrl.origin}/api/headlines`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ id }),
-          }).catch(() => {}),
-        )
-      }
-    }
-  }
-
-  if (!response) {
-    response = NextResponse.next({
-      request: { headers: requestHeaders },
-    })
-  }
+  const response = NextResponse.next({
+    request: { headers: requestHeaders },
+  })
 
   response.headers.set("Content-Security-Policy", csp)
   response.headers.set("X-Content-Type-Options", "nosniff")

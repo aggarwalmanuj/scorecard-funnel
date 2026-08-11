@@ -13,18 +13,15 @@ import { NotesSection } from "@/components/landing-minimal/notes"
 import { ClosingSection } from "@/components/landing-minimal/closing"
 import { MinimalFooter } from "@/components/landing-minimal/footer"
 import { FunnelExitIntent } from "@/components/challenge/funnel-exit-intent"
-import type { HeadlineVariant } from "@/lib/headline-shared"
 
 /**
- * The full landing composition, shared by `/` (default headline) and the
- * `/hl/[id]` A/B variant pages (headline baked into the SSR HTML by the
- * server — no skeleton, no client-side swap).
+ * The full landing composition, served at `/`.
  *
  * Locked to the Marine palette to match the rest of the funnel. The previous
  * PaletteProvider + floating switcher widget live in git history if a future
  * moodboard pass needs them again.
  */
-export function LandingPage({ headline }: { headline?: HeadlineVariant }) {
+export function LandingPage() {
   return (
     <div
       data-palette="marine"
@@ -35,7 +32,7 @@ export function LandingPage({ headline }: { headline?: HeadlineVariant }) {
       <FunnelExitIntent />
       <MinimalHeader />
       <main>
-        <MinimalHero headline={headline} />
+        <MinimalHero />
         {/* Block 01B (Doorway System): the artifact demonstrated immediately
             after the hero - what you physically get, shown, not described. */}
         <ProductShowcaseSection />

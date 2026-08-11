@@ -1,5 +1,4 @@
 import { getAttribution } from "@/lib/client/attribution"
-import { getHeadlineAttribution } from "@/lib/client/headline"
 import type { Vertical } from "@/lib/verticals"
 
 export type Audience = Vertical
@@ -66,11 +65,10 @@ export async function submitSignup(
   leadEventId?: string
 ): Promise<number | null> {
   try {
-    // First-touch attribution (utm_* / referrer) captured at the landing,
-    // plus the headline A/B variant this visitor was assigned (if any).
+    // First-touch attribution (utm_* / referrer) captured at the landing.
     // Scoped to THIS signup's vertical - otherwise a browser that once saw
     // another vertical's doorway credits this lead to that campaign.
-    const attribution = { ...getAttribution(audience), ...getHeadlineAttribution() }
+    const attribution = getAttribution(audience)
     const res = await fetch("/api/sheets/append", {
       method: "POST",
       headers: { "Content-Type": "application/json" },

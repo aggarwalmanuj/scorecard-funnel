@@ -565,351 +565,6 @@ function AnalyticsPanel() {
   )
 }
 
-// ── Headline A/B testing ─────────────────────────────────────────────
-
-type HeadlineRow = {
-  id: string
-  line1: string
-  line2: string
-  active: boolean
-  impressions: number
-  createdAt: string
-}
-
-type HeadlineStats = {
-  signedUp: number
-  answeredQ1: number
-  answeredAll: number
-  reachedBeats: number
-  scored: number
-  reported: number
-  summarized: number
-  purchased: number
-  revenue: number
-}
-
-const HEADLINE_STAGE_COLS: Array<{ key: keyof Omit<HeadlineStats, "revenue">; label: string }> = [
-  { key: "signedUp", label: "Signed up" },
-  { key: "answeredQ1", label: "Q1" },
-  { key: "answeredAll", label: "All Qs" },
-  { key: "reachedBeats", label: "Reflections" },
-  { key: "scored", label: "Scored" },
-  { key: "reported", label: "Report" },
-  { key: "summarized", label: "Summary" },
-  { key: "purchased", label: "Purchased" },
-]
-
-const EMPTY_HEADLINE_STATS: HeadlineStats = {
-  signedUp: 0, answeredQ1: 0, answeredAll: 0, reachedBeats: 0,
-  scored: 0, reported: 0, summarized: 0, purchased: 0, revenue: 0,
-}
-
-/** One variant card: editable copy, active toggle, and its funnel results. */
-function HeadlineCard({
-  h,
-  stats,
-  onSave,
-  onDelete,
-  busy,
-}: {
-  h: HeadlineRow
-  stats: HeadlineStats
-  onSave: (id: string, updates: { line1: string; line2: string; active: boolean }) => Promise<unknown>
-  onDelete: (id: string) => Promise<unknown>
-  busy: boolean
-}) {
-  const [line1, setLine1] = useState(h.line1)
-  const [line2, setLine2] = useState(h.line2)
-  const dirty = line1 !== h.line1 || line2 !== h.line2
-  const visitors = h.impressions
-
-  return (
-    <div className="rounded-md border border-border bg-card p-4 space-y-3">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0 flex-1 space-y-2">
-          <Input
-            value={line1}
-            onChange={(e) => setLine1(e.target.value)}
-            placeholder="Headline line 1"
-            maxLength={200}
-            className="s-input h-10 font-serif"
-          />
-          <Input
-            value={line2}
-            onChange={(e) => setLine2(e.target.value)}
-            placeholder="Line 2 (italic) - optional"
-            maxLength={200}
-            className="s-input h-10 font-serif italic"
-          />
-        </div>
-        <div className="flex shrink-0 items-center gap-2">
-          <Badge
-            variant="outline"
-            className={`rounded-full text-[10px] uppercase tracking-[0.18em] ${
-              h.active ? "border-green-500/30 text-green-600" : "border-border text-foreground/50"
-            }`}
-          >
-            {h.active ? "Live" : "Paused"}
-          </Badge>
-          <Button
-            type="button" variant="outline" size="sm" disabled={busy}
-            onClick={() => void onSave(h.id, { line1: h.line1, line2: h.line2, active: !h.active })}
-            className="h-8 rounded-full border-foreground/35 px-3 text-[10px] uppercase tracking-[0.18em] hover:border-ink hover:text-ink"
-          >
-            {h.active ? "Pause" : "Activate"}
-          </Button>
-          {dirty && (
-            <Button
-              type="button" size="sm" disabled={busy || !line1.trim()}
-              onClick={() => void onSave(h.id, { line1, line2, active: h.active })}
-              className="h-8 rounded-full bg-ink px-3 text-[10px] uppercase tracking-[0.18em] text-background hover:bg-ink/90"
-            >
-              Save
-            </Button>
-          )}
-          <Button
-            type="button" variant="outline" size="sm" disabled={busy}
-            onClick={() => {
-              if (window.confirm("Delete this headline variant? Visitors already assigned to it fall back to another active variant; its per-user history stays on the responses.")) {
-                void onDelete(h.id)
-              }
-            }}
-            className="h-8 rounded-full border-destructive/40 px-3 text-[10px] uppercase tracking-[0.18em] text-destructive hover:border-destructive"
-          >
-            <X className="h-3.5 w-3.5" />
-          </Button>
-        </div>
-      </div>
-
-      {/* Results strip: visitors → each funnel stage (count + % of visitors). */}
-      <div className="overflow-x-auto">
-        <table className="w-full min-w-[720px] text-[12px]">
-          <thead>
-            <tr className="border-b border-border text-left text-foreground/55">
-              <th className="py-1.5 pr-3 font-normal">Visitors</th>
-              {HEADLINE_STAGE_COLS.map((c) => (
-                <th key={c.key} className="py-1.5 pr-3 font-normal">{c.label}</th>
-              ))}
-              <th className="py-1.5 font-normal">Revenue</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td className="py-1.5 pr-3 tabular-nums font-semibold text-ink">{visitors}</td>
-              {HEADLINE_STAGE_COLS.map((c) => {
-                const n = stats[c.key]
-                return (
-                  <td key={c.key} className="py-1.5 pr-3 tabular-nums text-foreground/85">
-                    <strong className="text-ink">{n}</strong>
-                    <span className="text-foreground/50"> · {pctOf(n, visitors)}</span>
-                  </td>
-                )
-              })}
-              <td className="py-1.5 tabular-nums text-ink">${stats.revenue.toLocaleString()}</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-      <p className="text-[11px] text-foreground/45">
-        Visitors = unique visitors assigned this headline on the landing page. Stage
-        percentages are of those visitors. Created {new Date(h.createdAt).toLocaleDateString()}.
-      </p>
-    </div>
-  )
-}
-
-/** Headlines tab: CRUD over A/B headline variants + per-variant funnel results. */
-function HeadlinesPanel() {
-  const [headlines, setHeadlines] = useState<HeadlineRow[]>([])
-  const [stats, setStats] = useState<Record<string, HeadlineStats>>({})
-  const [loading, setLoading] = useState(false)
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState("")
-  const [newLine1, setNewLine1] = useState("")
-  const [newLine2, setNewLine2] = useState("")
-
-  const authHeaders = (): Record<string, string> => {
-    const headers: Record<string, string> = { "Content-Type": "application/json" }
-    const pw = sessionStorage.getItem("admin-api-password")
-    if (pw) headers["X-Admin-Password"] = pw
-    return headers
-  }
-
-  const load = useCallback(async () => {
-    setLoading(true)
-    setError("")
-    try {
-      const res = await fetch("/api/admin/headlines", { headers: authHeaders() })
-      if (res.status === 401) throw new Error("Unauthorized")
-      if (!res.ok) throw new Error("HTTP " + res.status)
-      const json = await res.json()
-      if (!json.ok) throw new Error(json.error || "Failed to load headlines")
-      setHeadlines(json.headlines as HeadlineRow[])
-      setStats((json.stats ?? {}) as Record<string, HeadlineStats>)
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e))
-    } finally {
-      setLoading(false)
-    }
-  }, [])
-
-  useEffect(() => {
-    void load()
-  }, [load])
-
-  const mutate = async (fn: () => Promise<Response>): Promise<boolean> => {
-    setBusy(true)
-    setError("")
-    try {
-      const res = await fn()
-      if (!res.ok) {
-        const body = await res.json().catch(() => null)
-        throw new Error(body?.error || "HTTP " + res.status)
-      }
-      await load()
-      return true
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e))
-      return false
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  const create = async () => {
-    const ok = await mutate(() =>
-      fetch("/api/admin/headlines", {
-        method: "POST",
-        headers: authHeaders(),
-        body: JSON.stringify({ line1: newLine1.trim(), line2: newLine2.trim(), active: true }),
-      })
-    )
-    if (ok) {
-      setNewLine1("")
-      setNewLine2("")
-    }
-  }
-
-  const save = (id: string, updates: { line1: string; line2: string; active: boolean }) =>
-    mutate(() =>
-      fetch("/api/admin/headlines", {
-        method: "PUT",
-        headers: authHeaders(),
-        body: JSON.stringify({ id, ...updates }),
-      })
-    )
-
-  const remove = (id: string) =>
-    mutate(() =>
-      fetch(`/api/admin/headlines?id=${encodeURIComponent(id)}`, {
-        method: "DELETE",
-        headers: authHeaders(),
-      })
-    )
-
-  const activeCount = headlines.filter((h) => h.active).length
-
-  return (
-    <div className="space-y-4">
-      <div className="rounded-md border border-border bg-secondary/40 p-4">
-        <div className="flex items-center justify-between gap-3">
-          <p className="font-medium text-foreground">Headline A/B testing</p>
-          <Button
-            type="button" variant="outline" size="sm" onClick={() => void load()} disabled={loading}
-            className="h-8 rounded-full border-foreground/35 px-3 text-[10px] uppercase tracking-[0.18em] hover:border-ink hover:text-ink"
-          >
-            {loading ? "Refreshing…" : "Refresh"}
-          </Button>
-        </div>
-        <p className="mt-1 text-[14px] leading-[1.65] text-foreground/70">
-          Landing-page visitors are split equally across the <strong>Live</strong> variants
-          below (sticky per visitor). Each card shows how far that variant&apos;s visitors got
-          through the funnel. With zero live variants the page shows the built-in default
-          headline and nothing is tracked. Each response (User responses tab) also shows
-          which headline that person saw.
-        </p>
-      </div>
-
-      {error && (
-        <div className="rounded-xl border border-destructive/20 bg-destructive/5 p-3 text-sm text-destructive">
-          {error}
-        </div>
-      )}
-
-      {/* Add new variant */}
-      <div className="rounded-md border border-border bg-card p-4 space-y-2">
-        <p className="eyebrow text-foreground/65">New headline</p>
-        <Input
-          value={newLine1}
-          onChange={(e) => setNewLine1(e.target.value)}
-          placeholder='Line 1, e.g. "You already know"'
-          maxLength={200}
-          className="s-input h-10 font-serif"
-        />
-        <Input
-          value={newLine2}
-          onChange={(e) => setNewLine2(e.target.value)}
-          placeholder='Line 2 (italic), e.g. "there is more in you." (optional)'
-          maxLength={200}
-          className="s-input h-10 font-serif italic"
-        />
-        <Button
-          type="button" disabled={busy || !newLine1.trim()}
-          onClick={() => void create()}
-          className="h-9 rounded-full bg-ink px-5 text-[10px] uppercase tracking-[0.2em] text-background hover:bg-ink/90"
-        >
-          Add &amp; go live
-        </Button>
-      </div>
-
-      {loading && headlines.length === 0 && (
-        // Skeleton mirrors a variant card: two copy lines + the stats strip.
-        <>
-          {Array.from({ length: 2 }, (_, i) => (
-            <div key={i} className="rounded-md border border-border bg-card p-4 space-y-3">
-              <div className="space-y-2">
-                <Skeleton className="h-10 w-full" />
-                <Skeleton className="h-10 w-4/5" />
-              </div>
-              <div className="flex gap-3">
-                {Array.from({ length: 6 }, (_, j) => (
-                  <Skeleton key={j} className="h-8 flex-1" />
-                ))}
-              </div>
-            </div>
-          ))}
-        </>
-      )}
-
-      {!loading && headlines.length === 0 && !error && (
-        <div className="rounded-md border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
-          No headline variants yet - the landing page is showing the built-in default.
-          Add two or more variants above to start the test.
-        </div>
-      )}
-
-      {headlines.length > 0 && (
-        <p className="text-[12px] text-foreground/55">
-          {activeCount} live variant{activeCount === 1 ? "" : "s"} - traffic splits{" "}
-          {activeCount > 0 ? `1/${activeCount}` : "-"} each.
-          {activeCount === 1 && " Add a second live variant to actually A/B test."}
-        </p>
-      )}
-
-      {headlines.map((h) => (
-        <HeadlineCard
-          key={h.id + h.line1 + h.line2 + String(h.active)}
-          h={h}
-          stats={stats[h.id] ?? EMPTY_HEADLINE_STATS}
-          onSave={save}
-          onDelete={remove}
-          busy={busy}
-        />
-      ))}
-    </div>
-  )
-}
-
 /** PostHog session link (distinct/session id + replay). Shown on BOTH /admin
  *  and /techadmin so any admin can jump to a tester's session recording. */
 function PostHogSessionBlock({
@@ -969,7 +624,6 @@ function ResponseSourceDetails({
     lp?: string
     referrer?: string
     landing_page?: string
-    headline_text?: string
   }
 }) {
   const utmRows: Array<{ label: string; value?: string }> = [
@@ -979,7 +633,6 @@ function ResponseSourceDetails({
     { label: "Term", value: r.utm_term },
     { label: "Content", value: r.utm_content },
     { label: "Funnel", value: r.lp },
-    { label: "Headline", value: r.headline_text },
   ].filter((row) => cellFilled(row.value))
 
   // Ad-platform click IDs — presence identifies the platform that drove the click.
@@ -1164,7 +817,7 @@ export default function AdminPage() {
   // User responses is the default landing tab - it's what the team opens the
   // console for day to day (the prompt editors are occasional-use). The
   // responses loader auto-fires for this tab, so data is on screen at login.
-  const [tab, setTab] = useState<"system" | "entry" | "questions" | "beats" | "score" | "report" | "summary" | "responses" | "headlines" | "analytics">("responses")
+  const [tab, setTab] = useState<"system" | "entry" | "questions" | "beats" | "score" | "report" | "summary" | "responses" | "analytics">("responses")
   // The same console powers /admin and /techadmin. On /techadmin we unlock the
   // Analytics tab + per-user telemetry (PostHog session, purchase, journey).
   const pathname = usePathname()
@@ -1231,8 +884,6 @@ export default function AdminPage() {
     fbclid?: string; gclid?: string; ttclid?: string; msclkid?: string
     ref?: string; lp?: string; vertical?: string
     referrer?: string; landing_page?: string
-    // Headline A/B test assignment (id + text snapshot at signup).
-    headline_id?: string; headline_text?: string
   }
   const [responses, setResponses] = useState<UserResponse[]>([])
   const [responsesLoading, setResponsesLoading] = useState(false)
@@ -1471,8 +1122,6 @@ export default function AdminPage() {
       vertical: r.vertical ?? "",
       referrer: r.referrer ?? "",
       landing_page: r.landing_page ?? "",
-      headline_id: r.headline_id ?? "",
-      headline_text: r.headline_text ?? "",
     }))
     const blob = new Blob([JSON.stringify(clean, null, 2)], { type: "application/json" })
     const url = URL.createObjectURL(blob)
@@ -1966,7 +1615,6 @@ export default function AdminPage() {
     { value: "report" as const, label: "PDF report", activeClass: "bg-ink text-background" },
     { value: "summary" as const, label: "Closing summary", activeClass: "bg-ink text-background" },
     { value: "responses" as const, label: "User responses", activeClass: "bg-ink text-background" },
-    { value: "headlines" as const, label: "Headlines (A/B)", activeClass: "bg-ink text-background" },
     ...(isTech
       ? [{ value: "analytics" as const, label: "Analytics", activeClass: "bg-ink text-background" }]
       : []),
@@ -3248,7 +2896,6 @@ export default function AdminPage() {
               </div>
             )}
 
-            {tab === "headlines" && <HeadlinesPanel />}
 
             {tab === "analytics" && isTech && <AnalyticsPanel />}
           </div>

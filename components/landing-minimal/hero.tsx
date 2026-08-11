@@ -1,10 +1,6 @@
 "use client"
 
 import Image from "next/image"
-import {
-  DEFAULT_HEADLINE,
-  type HeadlineVariant,
-} from "@/lib/headline-shared"
 import { ReservationForm } from "./reservation-form"
 import {
   CursorHalo,
@@ -14,16 +10,23 @@ import {
 } from "./motion"
 
 /**
- * Hero. The headline arrives as a PROP, already resolved on the server
- * (middleware assigns a variant and rewrites `/` to the matching
- * `/hl/[id]` page). There is no skeleton and no client-side resolution:
- * the first byte of HTML contains the exact copy this visitor will read,
- * and it never changes underneath them. The word-by-word compose is pure
- * CSS, so it runs on first paint without waiting for hydration.
+ * The landing headline. Previously this arrived as a prop resolved by a
+ * server-side A/B assignment; that experiment was removed on 2026-08-07
+ * having never run a single variant, so the copy is stated here directly.
+ * If headline testing is ever wanted again, prefer a client-side experiment
+ * on this constant over reinstating a middleware rewrite - the old one put a
+ * blocking same-origin fetch on the homepage's critical path.
  */
-export function MinimalHero({ headline }: { headline?: HeadlineVariant }) {
-  const resolved = headline ?? DEFAULT_HEADLINE
+const HEADLINE_LINE_1 = "You already know"
+const HEADLINE_LINE_2 = "there is more in you."
 
+/**
+ * Hero. The headline is in the first byte of HTML and never changes
+ * underneath the visitor - no skeleton, no client-side swap. The
+ * word-by-word compose is pure CSS, so it runs on first paint without
+ * waiting for hydration.
+ */
+export function MinimalHero() {
   return (
     <section className="relative" id="hero">
       <div className="mx-auto max-w-7xl px-5 pt-8 pb-16 sm:px-10 sm:pt-14 sm:pb-24 lg:px-16 lg:pt-16">
@@ -41,13 +44,9 @@ export function MinimalHero({ headline }: { headline?: HeadlineVariant }) {
             <h1 className="wrap-break-word font-serif text-[2.15rem] leading-[1.06] text-ink sm:text-6xl sm:leading-[1.02] lg:text-7xl xl:text-[5.6rem]">
               <WordReveal
                 segments={[
-                  { kind: "text", text: resolved.line1 },
-                  ...(resolved.line2
-                    ? ([
-                        { kind: "br" },
-                        { kind: "italic", text: resolved.line2 },
-                      ] as const)
-                    : []),
+                  { kind: "text", text: HEADLINE_LINE_1 },
+                  { kind: "br" },
+                  { kind: "italic", text: HEADLINE_LINE_2 },
                 ]}
               />
             </h1>
