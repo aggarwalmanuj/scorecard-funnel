@@ -1183,7 +1183,8 @@ function ClarityScoreCard({
         <div className="mb-4 flex items-center justify-between gap-3">
           <span className="eyebrow text-foreground/65">Peer benchmark</span>
           <span className="hidden font-serif-italic text-[13px] text-foreground/65 sm:block">
-            Among professionals who take this assessment
+            {display.benchmarkPeerLabel ??
+              "Among professionals who take this assessment"}
           </span>
         </div>
         {unlocked ? (

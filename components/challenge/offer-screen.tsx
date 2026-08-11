@@ -306,11 +306,34 @@ export function OfferScreen({ audience }: { audience: Audience }) {
               ${PRICE}
             </span>
           </div>
+          {/* The paid artifact's name, per vertical. This used to be the
+              hardcoded pair "Personalized 30-Day" / "Belief Action Plan",
+              which was only ever correct for coaches: main and retargeting
+              sell a "Personalized 30-Day Action Plan", adhd an "ADHD 30-Day
+              Action Plan", parents a "Parenting Action Plan". A buyer read
+              one name here and found a different one on the PDF header and
+              every page footer - the same two-names-for-one-thing mistake
+              healthcare shipped, at the moment of highest doubt. Split on the
+              trailing "Action Plan" so the second line keeps its italic
+              treatment and the layout is unchanged. */}
           <h2 className="font-serif text-[26px] leading-[1.12] text-ink sm:text-[32px]">
-            Personalized 30-Day
-            <span className="block font-serif-italic text-foreground">
-              Belief Action Plan
-            </span>
+            {(() => {
+              const name = display.reportName
+              const i = name.lastIndexOf("Action Plan")
+              if (i > 0) {
+                return (
+                  <>
+                    {name.slice(0, i).trim()}
+                    <span className="block font-serif-italic text-foreground">
+                      {name.slice(i)}
+                    </span>
+                  </>
+                )
+              }
+              return (
+                <span className="font-serif-italic text-foreground">{name}</span>
+              )
+            })()}
           </h2>
 
           {/* Free vs paid distinction, stated plainly */}
@@ -454,7 +477,8 @@ export function OfferScreen({ audience }: { audience: Audience }) {
                 </span>
               </div>
               <div className="pb-1.5 text-[13.5px] leading-[1.6] text-foreground/75">
-                Less than a single coaching session.
+                {display.offerPriceAnchor ??
+                  "Less than a single coaching session."}
                 <span className="block text-foreground/60">
                   Not a subscription. Nothing recurring. Built from the answers
                   you just gave.

@@ -74,6 +74,25 @@ export interface VerticalDisplay {
   /** Optional vertical-specific reassurance line on the B2C offer page
    *  (e.g. the ADHD anti-system line from the B2C conversion strategy). */
   offerAccent?: string
+  /**
+   * Who the summary page's peer benchmark compares them against. Defaults to
+   * "Among professionals who take this assessment", which is right for the
+   * commercial and operational verticals and wrong for a consumer one - a
+   * parent answering five questions about a moment at their own dinner table
+   * is not taking a professional assessment, and being called a professional
+   * at the point of highest doubt reads as copy written for someone else.
+   * Override per vertical; leave unset to keep the shared default.
+   */
+  benchmarkPeerLabel?: string
+  /**
+   * The price-anchor line under the $47 on the B2C offer page. Defaults to
+   * "Less than a single coaching session.", which fits the commercial
+   * verticals. A parent is not buying coaching, and anchoring against a
+   * professional service they may also genuinely need is both off-register
+   * and a claim this vertical should not make. Override per vertical; leave
+   * unset to keep the shared default.
+   */
+  offerPriceAnchor?: string
 }
 
 const B2C_PILLARS: Record<PillarKey, PillarLabel> = {
@@ -488,6 +507,8 @@ export const VERTICAL_DISPLAY: Record<Vertical, VerticalDisplay> = {
     // from a genuine concern, or accept something they should not.
     offerAccent:
       "Nothing here asks you to care less, ignore a real risk, or lower a standard. It never assesses your child, and you decide what fits.",
+    benchmarkPeerLabel: "Among parents who take this assessment",
+    offerPriceAnchor: "A one-time cost, for one pattern you keep running.",
   },
 }
 
