@@ -192,6 +192,56 @@ export const BOARD_CONFIG: Record<Vertical, BoardConfig> = {
     closingLine:
       "There is no streak here to break and nothing on this page expires. A blank fortnight costs you nothing, and the next mark picks up exactly where the last one left off.",
   },
+  // Parents keep the B2C board's anti-shame mechanics (no streaks, no dates,
+  // nothing expires) with the SECOND row repurposed from "returns" to
+  // "noticed". That is this vertical's own documented mechanism rather than a
+  // borrowed one: its lead ICP records a parent whose behavioural evidence
+  // consistently outweighs the anxious narrative, and the VSL's central line
+  // is that the response meant to help "can make it harder to see the evidence
+  // already in front of you". So the second unit worth counting is the parent
+  // letting a piece of what is already there land, without discounting it.
+  //
+  // CRITICAL: this row counts the PARENT registering something, never the
+  // child doing something. "I noticed and let it land" is in scope; "he texted
+  // me back" as a tallied win would make the child the scored subject and
+  // would tie the plan's progress to another person's behaviour - which every
+  // ad in this vertical is explicitly prohibited from promising.
+  parents: {
+    ...B2C_BOARD,
+    title: "One moment at a time.",
+    lede:
+      "This is the working surface of your plan. It is not a parenting tracker and not a record of how your child is doing - it is a place to note two things: when you caught the moment, and when you let something you already had in front of you actually land. One page, thirty days, no maintenance.",
+    catchesLabel: "Catches",
+    catchesRule:
+      "Ink one circle each time you catch the moment - the point where the situation starts meaning something larger, before the familiar response takes over. Noticing counts whether or not you did anything differently. There are no dates on these, so a quiet week is not a miss.",
+    catchCount: 12,
+    returnsLabel: "Noticed",
+    returnsRule:
+      "Mark one every time you register something that was already there and let it stand without discounting it - a message, a moment together, a thing they handled on their own. This row is about what you allowed yourself to see, not about anything your child had to do differently.",
+    returnCount: 6,
+    milestones: [
+      {
+        at: 1,
+        label: "First catch",
+        unlocks: "Your pocket line - the sentence to use in the moment before the familiar response arrives.",
+      },
+      {
+        at: 3,
+        label: "Three catches",
+        unlocks: "The week-two note: what to do when the practical concern is genuinely real.",
+      },
+      {
+        at: 7,
+        label: "Seven catches",
+        unlocks: "Your day-30 re-score - see which of the four pillars actually moved.",
+      },
+    ],
+    notesLabel: "What you noticed",
+    finishBody:
+      "Read your log back, then re-take the score. The number matters less than the entries - those are your own record of what was actually happening, in your handwriting, next to the story you were telling about it.",
+    closingLine:
+      "There is no streak here to break and nothing on this page expires. A blank fortnight costs you nothing, and this page never becomes one more thing you are behind on.",
+  },
 }
 
 export function boardConfigFor(vertical: Vertical | null | undefined): BoardConfig {

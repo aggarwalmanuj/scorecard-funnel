@@ -384,6 +384,111 @@ export const VERTICAL_DISPLAY: Record<Vertical, VerticalDisplay> = {
     offerAccent:
       "Nothing here asks you to sell harder, drop your standards, or turn a client conversation into a pitch.",
   },
+  // The Parenting vertical. THE governing rule for every string below, stated
+  // three times in its ICP Matrix and once more on the landing page: the score
+  // examines the PARENT, never the child. Nothing here may assess, describe,
+  // infer, or promise anything about a child - not their motivation, capability,
+  // readiness, state, or choices. That is a compliance boundary, not a tone
+  // preference; the paid report is the surface most likely to breach it,
+  // because it is the one that gets specific.
+  parents: {
+    id: "parents",
+    // MESSAGE MATCH. The source docs fix the approved CTA as "Get Your Free
+    // Parenting Belief Score" (VSL Inputs, verified against LP.txt Blocks 01
+    // and 13), and the funnel renders `Get Your Free {productName}` - so this
+    // string reproduces the approved CTA exactly. The product was renamed
+    // twice upstream ("Parent's Path Belief Score", "Child's Path"); neither
+    // old name may appear anywhere.
+    productName: "Parenting Belief Score",
+    // The paid artifact. The landing page's only reference to it is Block 12's
+    // "an optional detailed breakdown and personalized Action Plan", so there
+    // is no external string to match verbatim - only internal consistency and
+    // a length the PDF footer can hold.
+    reportName: "Parenting Action Plan",
+    // Same four fixed keys, re-meant for a parent. These are lifted VERBATIM
+    // from the parents landing page's own lib/pillars.ts, which marks them as
+    // read off the live product captures - so the page a visitor arrives from
+    // and the report they buy cannot describe the same four numbers
+    // differently. Every line describes something the PARENT does, interprets,
+    // or carries: "how clearly you can say what you want" is in scope, "how
+    // well your child responds" would not be. Mirrors the parents score rubric
+    // in belief-score-config/belief-score-config-parents.json - keep in sync.
+    pillarLabels: {
+      directionClarity: {
+        label: "Direction Clarity",
+        pillar: "Pillar I · Purpose",
+        plain:
+          "How clearly you can say what you actually want in this moment, in your own words.",
+      },
+      identityAlignment: {
+        label: "Identity Alignment",
+        pillar: "Pillar II · Identity",
+        plain: "How closely the way you respond matches the parent you feel you are.",
+      },
+      decisionReadiness: {
+        label: "Decision Readiness",
+        pillar: "Pillar III · Peace of Mind",
+        plain:
+          "How ready you are to make the call instead of going round the same loop again.",
+      },
+      energyAlignment: {
+        label: "Energy Alignment",
+        pillar: "Pillar IV · Embodiment",
+        plain: "How much of your energy this pattern is quietly using up.",
+      },
+    },
+    measureNoun: "pillar",
+    measureNounPlural: "pillars",
+    howToRead: {
+      what: "This is a plan, not a verdict on your parenting - and not an assessment of your child. It was written from the five answers you typed in your own words about one recurring parenting moment, so it should sound like your situation and not like general parenting advice.",
+      scoreMeaning:
+        "The big number is a starting point, not a grade. It says how much room there is to move on this one pattern right now. It does not rate you as a parent, and it says nothing at all about your child.",
+      measuresMeaning:
+        "The four smaller numbers break that starting point into four parts, so you can see which one is holding the most back. Each one is explained in plain words next to its score.",
+      firstThing:
+        "Go to the action page and do Step 1. It happens inside one ordinary interaction you already have coming up - nothing to announce, nothing to ask of your child, nothing to buy.",
+      // The glossary defines this vertical's public mechanism, stage by stage,
+      // in the order the landing page names them (LP.txt Block 06). The
+      // mechanism itself is deliberately UNNAMED in public copy per the VSL's
+      // own decision, so these read as plain descriptions, not as a branded
+      // method.
+      glossary: [
+        {
+          term: "The repeated moment",
+          meaning:
+            "The interaction, request, or decision where this keeps happening the same way - the one you described in your first answer. Not your whole history as a parent.",
+        },
+        {
+          term: "The meaning entering the moment",
+          meaning:
+            "What the situation starts to represent to you before you have consciously decided what it means. Usually something much larger than the moment itself.",
+        },
+        {
+          term: "Your familiar response",
+          meaning:
+            "The question, the reminder, the explanation, or the automatic yes that feels necessary once the meaning arrives.",
+        },
+        {
+          term: "The possible belief",
+          meaning:
+            "What that moment, repeated often enough, may have taught you to conclude about your own responsibility as a parent. A hypothesis to examine, refine, or reject - never a verdict, and never a claim about your child.",
+        },
+        {
+          term: "The moment to notice",
+          meaning:
+            "The earliest point where you can tell the pattern is starting, and where more choice is still available than it feels like. Catching it there is what makes anything else possible.",
+        },
+      ],
+    },
+    offerVariant: "b2c",
+    // Answers the dominant purchase fear this vertical's source docs name
+    // directly (LP.txt Block 08, "The goal is not to become a detached
+    // parent", and Block 03's first objection, "But the situation with my
+    // child is real"): that the plan will ask them to care less, stand down
+    // from a genuine concern, or accept something they should not.
+    offerAccent:
+      "Nothing here asks you to care less, ignore a real risk, or lower a standard. It never assesses your child, and you decide what fits.",
+  },
 }
 
 export function displayFor(vertical: Vertical | null | undefined): VerticalDisplay {

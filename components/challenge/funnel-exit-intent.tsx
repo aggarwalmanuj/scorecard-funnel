@@ -176,6 +176,36 @@ const EXIT_COPY: Record<Vertical, ExitCopy> = {
       "Your score is done. The plan that reads it - the moment to watch, the next evidence, and what to say instead of adding more - is one page away.",
     ctaScored: "See my Action Plan · $47",
   },
+  // No numeric "facts" here on purpose, and not only because the parents
+  // source docs ban invented statistics. There IS one verified published
+  // figure available for this audience (the APA parental-stress numbers cited
+  // in its ICP Matrix), and it is deliberately NOT used: this vertical's whole
+  // argument is that care arriving as alarm is the problem, so quoting a
+  // stress statistic at a hesitating parent would commit the exact error the
+  // funnel is examining. Both rows carry a non-numeric figure, the same shape
+  // retargeting and coaches use.
+  parents: {
+    eyebrow: "Before you go",
+    title: "This looks at you,",
+    accent: "never at your child.",
+    facts: [
+      {
+        figure: "Saved",
+        label:
+          "Everything you've written so far stays exactly where you left it. Nothing here expires and nothing has to be redone.",
+      },
+      {
+        figure: "One moment",
+        label:
+          "Not your whole history as a parent, and not an assessment of your child. One recurring moment, in your own words.",
+      },
+    ],
+    lineStarted:
+      "Your answers so far are saved. The score they add up to is minutes away, and it is built from what you already wrote.",
+    lineScored:
+      "Your score is done. The plan that reads it - what may be entering your response, and the moment where more choice is still available - is one page away.",
+    ctaScored: "See my Action Plan · $47",
+  },
 }
 
 /** Paths where the modal must never appear. */

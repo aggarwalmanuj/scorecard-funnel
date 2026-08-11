@@ -23,6 +23,7 @@ export const VERTICALS = [
   "adhd",
   "healthcare",
   "coaches",
+  "parents",
 ] as const
 
 export type Vertical = (typeof VERTICALS)[number]
@@ -36,6 +37,7 @@ export const VERTICAL_LABELS: Record<Vertical, string> = {
   adhd: "ADHD",
   healthcare: "Healthcare",
   coaches: "Coaches",
+  parents: "Parents",
 }
 
 export function isVertical(v: unknown): v is Vertical {
@@ -73,6 +75,16 @@ const VERTICAL_ALIASES: Record<string, Vertical> = {
   coach: "coaches",
   consultants: "coaches",
   consultant: "coaches",
+  // The Parenting vertical. The parents landing page sends `lp=parents`
+  // (LP_SLUG in its lib/scorecard.ts), which already matches the canonical id
+  // exactly - so unlike coaches and healthcare there is no slug that WOULD
+  // fall through to main today. The spellings below are defensive: the
+  // landing page is still in active development, and the product's public
+  // name is "Parenting Belief Score", so `parenting` is the single most
+  // likely slug for it to switch to. Keep them.
+  parent: "parents",
+  parenting: "parents",
+  "parenting-belief-score": "parents",
 }
 
 /**
@@ -95,6 +107,7 @@ export function normalizeVertical(v: string | null | undefined): Vertical | null
  *   retarget.aimerge.live  -> retargeting
  *   business.aimerge.live  -> healthcare (the B2B lane)
  *   coaches.aimerge.live   -> coaches
+ *   parents.aimerge.live   -> parents
  * The first host label is normalized through the alias table, so
  * retargeting./b2b. variants also work. Unknown or missing hosts (and
  * localhost, previews, www) resolve to null - callers fall back to other
