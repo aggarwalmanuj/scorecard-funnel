@@ -4,9 +4,12 @@ import { use } from "react"
 import { QuestionScreen } from "@/components/challenge/question-screen"
 import { useQuestionPrompt } from "@/hooks/use-question-prompts"
 import type { Audience } from "@/context/challenge-context"
+import { questionImage } from "@/lib/vertical-imagery"
 
 export default function Question1Page({ params }: { params: Promise<{ audience: Audience }> }) {
   const { audience } = use(params)
+
+  const image = questionImage(audience, 1)
   const prompt = useQuestionPrompt(audience, 1)
   const isLoading = prompt === undefined
   const isMissing = prompt === null
@@ -21,8 +24,8 @@ export default function Question1Page({ params }: { params: Promise<{ audience: 
       hintBox={prompt?.hintBox ?? ""}
       placeholder={prompt?.placeholder ?? ""}
       quoteZone={prompt?.quoteZone ?? ""}
-      backgroundImage="/images/q1-conversation.jpg"
-      imageAlt="Two figures in quiet conversation across a low table - question 1 of the AIMerge clarity diagnostic asks what isn't moving the way it should."
+      backgroundImage={image.src}
+      imageAlt={image.alt}
       nextRoute={`/challenge/${audience}/question-2`}
       prevRoute={`/challenge/audience?vertical=${audience}`}
       isMissing={isMissing}

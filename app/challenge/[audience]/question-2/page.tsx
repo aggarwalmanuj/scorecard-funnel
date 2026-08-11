@@ -4,9 +4,12 @@ import { use } from "react"
 import { QuestionScreen } from "@/components/challenge/question-screen"
 import { useQuestionPrompt } from "@/hooks/use-question-prompts"
 import type { Audience } from "@/context/challenge-context"
+import { questionImage } from "@/lib/vertical-imagery"
 
 export default function Question2Page({ params }: { params: Promise<{ audience: Audience }> }) {
   const { audience } = use(params)
+
+  const image = questionImage(audience, 2)
   const prompt = useQuestionPrompt(audience, 2)
   const isLoading = prompt === undefined
   const isMissing = prompt === null
@@ -21,8 +24,8 @@ export default function Question2Page({ params }: { params: Promise<{ audience: 
       hintBox={prompt?.hintBox ?? ""}
       placeholder={prompt?.placeholder ?? ""}
       quoteZone={prompt?.quoteZone ?? ""}
-      backgroundImage="/images/q2-horizon.jpg"
-      imageAlt="A wide horizon opening across calm water - question 2 of the AIMerge clarity diagnostic asks what twelve months from now actually looks like."
+      backgroundImage={image.src}
+      imageAlt={image.alt}
       nextRoute={`/challenge/${audience}/question-3`}
       prevRoute={`/challenge/${audience}/question-1`}
       isMissing={isMissing}

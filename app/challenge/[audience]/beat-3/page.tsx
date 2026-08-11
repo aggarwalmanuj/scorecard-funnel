@@ -4,9 +4,12 @@ import { use } from "react"
 import { BeatRevealScreen } from "@/components/challenge/beat-reveal-screen"
 import { useBeatPrompt } from "@/hooks/use-beat-prompts"
 import type { Audience } from "@/context/challenge-context"
+import { beatImage } from "@/lib/vertical-imagery"
 
 export default function Beat3Page({ params }: { params: Promise<{ audience: Audience }> }) {
   const { audience } = use(params)
+
+  const image = beatImage(audience, 3)
   const beat = useBeatPrompt(audience, 3)
   const isLoading = beat === undefined
   return (
@@ -17,8 +20,8 @@ export default function Beat3Page({ params }: { params: Promise<{ audience: Audi
       subtitle={beat?.subtitle ?? ""}
       dynamicLabel={beat?.label ?? ""}
       feedbackQuestion={beat?.feedbackQuestion ?? ""}
-      backgroundImage="/images/beat-3-noise.jpg"
-      imageAlt="Quiet water disturbed by ripples - reflection 3 of the AIMerge clarity diagnostic names the structural noise pulling at a leader's attention."
+      backgroundImage={image.src}
+      imageAlt={image.alt}
       nextRoute={`/challenge/${audience}/beat-4`}
       prevRoute={`/challenge/${audience}/beat-2`}
       isLoading={isLoading}
