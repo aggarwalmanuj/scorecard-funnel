@@ -1252,10 +1252,15 @@ function ClarityScoreCard({
               "linear-gradient(160deg, color-mix(in srgb, var(--signal) 10%, var(--card)) 0%, var(--card) 70%)",
           }}
         >
+          {/* Per-vertical argument, shared default preserved verbatim. This is
+              the last thing read before a price is seen at all, so a vertical
+              whose audience did not arrive to fix a "sequence" has to be able
+              to say something else here. */}
           <p className="mx-auto max-w-md font-serif text-[16px] leading-[1.5] text-ink sm:text-[17px]">
-            You can now see the loop.
+            {display.summaryUnlock?.line ?? "You can now see the loop."}
             <span className="block font-serif-italic text-foreground">
-              You do not yet have the sequence for interrupting it.
+              {display.summaryUnlock?.lineAccent ??
+                "You do not yet have the sequence for interrupting it."}
             </span>
           </p>
           <button

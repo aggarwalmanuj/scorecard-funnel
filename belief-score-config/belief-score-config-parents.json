@@ -19,42 +19,42 @@
   "summaryUserPrompt": "{{NAME}} just completed the Parenting Belief Score. Here is what surfaced across the five reflections:\n\nBeat 1 - The Repeated Moment:\n{{BEAT1}}\n\nBeat 2 - The Meaning:\n{{BEAT2}}\n\nBeat 3 - The Reinforcing Loop:\n{{BEAT3}}\n\nBeat 4 - The Moment to Notice:\n{{BEAT4}}\n\nBeat 5 - What Is Already There:\n{{BEAT5}}\n\nNow write the closing reflection. Find the one thread that runs through all five and name it quietly. Do not summarize each beat in turn. Do not use their name more than once.",
   "questions": [
     {
-      "stageFraming": "Stage 1 · The Repeated Moment",
-      "question": "Pick one parenting moment that keeps repeating. Tell me about the last real time it happened - not the tidy version.",
-      "prompt": "One moment, one recent time - often it is the moment where the distance shows itself. The reminder you sent after you had already sent two. The question you heard yourself ask again. The one-word answer you tried to open up. The door that closed before you finished the sentence. The advice that arrived before it was asked for. The quiet week you started reading as a trend. The yes you gave before working out what it would cost you. Walk through what actually happened, in order: what was going on, what you did, and what followed. Then say what you actually wanted in that moment. Messy answers welcome.",
-      "hintBox": "Tip: One specific evening or message beats a description of the whole year. Start with the most recent time it ran.",
-      "placeholder": "The last time this happened was...",
+      "stageFraming": "Stage 1 · The Moment",
+      "question": "Where do you feel the distance most? Take me to the last time it happened.",
+      "prompt": "One recent time, in order: what was going on, what you did, and what followed. Then say what you actually wanted from it. Messy answers welcome.",
+      "hintBox": "Tip: one specific evening or message beats a description of the whole year.",
+      "placeholder": "The last time I felt it was...",
       "quoteZone": "A pattern is easier to see in one ordinary moment than in a whole year of them."
     },
     {
-      "stageFraming": "Stage 2 · The Meaning",
-      "question": "In that moment, what did it start to mean to you - and what has the repetition quietly taught you to conclude about your own part in it?",
-      "prompt": "Not what you would say out loud. Not the reasonable explanation. What do you actually conclude, in the moment or just after it? It might sound like: if I am not on top of this, I am failing him. Or: the distance means I have already lost something. Or: if I do not say it now, it will be too late. Or: stepping back would mean I stopped caring. Say the sentence the way it actually sounds in your head.",
-      "hintBox": "Tip: Your second or third sentence is usually more honest than your first. Write past the reasonable explanation.",
-      "placeholder": "Somewhere along the way, I started operating as though...",
+      "stageFraming": "Stage 2 · What You Tell Yourself",
+      "question": "In that moment, what did you tell yourself it meant?",
+      "prompt": "Not the reasonable explanation - the sentence that actually runs in your head. It might sound like: if I stop staying on top of this, I lose him. Write it the way it sounds.",
+      "hintBox": "Tip: your second or third sentence is usually the honest one. Write past the reasonable explanation.",
+      "placeholder": "What I tell myself is...",
       "quoteZone": "A conclusion repeated often enough starts to feel like a fact about your child. It may only be a fact about the loop."
     },
     {
       "stageFraming": "Stage 3 · The Cost",
-      "question": "When this pattern runs, what does it actually use up - in your hours, your attention, and what the next conversation has to carry?",
-      "prompt": "Count what you can and describe what you cannot. How often does this happen in a normal month? What are you carrying between the moments, when nothing is even happening? What does the next conversation have to hold before anyone has said a word? And what does it take out of the rest of your life - the sleep, the attention that was meant for something else, the part of the evening that was supposed to be yours.",
-      "hintBox": "Tip: Include the cost nobody sees - the thinking between the moments, and what the next conversation inherits.",
-      "placeholder": "Each time this runs, what it actually uses up is...",
+      "question": "What is this costing you when nobody can see it?",
+      "prompt": "The hours, the sleep, the thinking between the moments. And what the next conversation has to carry before either of you has said a word.",
+      "hintBox": "Tip: include the cost nobody sees - the worrying that happens between the moments.",
+      "placeholder": "What it actually uses up is...",
       "quoteZone": "Worry is quiet work. It still takes the hours."
     },
     {
-      "stageFraming": "Stage 4 · The Hard No",
-      "question": "What have you already tried here - and what kind of parenting advice are you completely done with?",
-      "prompt": "You know your own immune system by now. The book that did not survive contact with a real Tuesday. The approach that felt like someone else talking. The conversation you planned and then abandoned halfway. The thing that worked once and never again. Name what has already failed and why each one died. Then name what would be dead on arrival - the kind of advice that makes you close the tab instantly. Being specific about the hard no makes the result more usable, not less.",
-      "hintBox": "Tip: What failed is as informative as what might work. Include why each attempt died.",
-      "placeholder": "I have already tried... and what I am completely done with is...",
-      "quoteZone": "Every abandoned approach taught you something. It is worth checking what it actually taught."
+      "stageFraming": "Stage 4 · What You Have Already Tried",
+      "question": "What have you already tried - and what parenting advice are you completely done with?",
+      "prompt": "The book that did not survive a real Tuesday. The conversation you planned and abandoned. Name what failed, why it died, and what makes you close the tab instantly.",
+      "hintBox": "Tip: what failed is as informative as what might work.",
+      "placeholder": "I have already tried... and I am done with...",
+      "quoteZone": "Every abandoned approach taught you something. It is worth checking what."
     },
     {
       "stageFraming": "Stage 5 · The Ordinary Week",
-      "question": "Describe an ordinary week, six months from now, with this one loop closed. Not a different family - just a normal week.",
-      "prompt": "Walk through it. The same kind of moment arrives. What do you do at the point where you used to reach, remind, or explain? What do you say instead, and what do you not say? What do you notice that you used to discount? Describe what YOU do differently, not what your child does differently - nothing in this depends on them changing anything. Keep it small and concrete: one loop closed, everything else the same. The more specific the detail, the more your score has to work with.",
-      "hintBox": "Tip: Keep it to what is yours. If the week only works when someone else acts differently, it is not the week to describe.",
+      "question": "Six months from now, this one loop is closed. What are YOU doing differently?",
+      "prompt": "The same moment arrives. What do you do instead of reaching, reminding, or explaining? What do you not say? Keep it to what is yours - none of it depends on them changing.",
+      "hintBox": "Tip: if the week only works when someone else acts differently, it is not the week to describe.",
       "placeholder": "That week, the same moment happens, and this time I...",
       "quoteZone": "The parent in that week is not a more distant version of you. It is you, with one loop closed."
     }

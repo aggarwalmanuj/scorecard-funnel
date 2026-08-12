@@ -93,6 +93,44 @@ export interface VerticalDisplay {
    * unset to keep the shared default.
    */
   offerPriceAnchor?: string
+  /**
+   * The offer page's ARGUMENT, per vertical. Everything else on that page is
+   * structure - the price, the deliverables, the artifact preview, the
+   * guarantee - and structure converts nobody on its own.
+   *
+   * The shared default is written for someone who came to fix a process:
+   * "You have identified the loop. Now turn it into a plan for the moment it
+   * returns." Correct, and completely flat to a parent who arrived because
+   * their child stopped talking to them. This lets a vertical replace the
+   * argument without forking the page; leave unset and the defaults render
+   * exactly as before.
+   *
+   * `stakes` renders only when set, so no other vertical gains an element.
+   * It must state a consequence that is TRUE BY DEFAULT (a recurring pattern
+   * recurs) rather than one manufactured for the sale - no countdown, no
+   * scarcity, no claim about what a child will do, no invented figure.
+   */
+  offerPitch?: {
+    /** First headline clause, upright. */
+    headline: string
+    /** Second clause, italic. */
+    headlineAccent: string
+    /** The gap: what they have after the free score, and what they do not. */
+    gap: string
+    /** One line separating the free product from the paid one. */
+    freeVsPaid: string
+    /** The cost of doing nothing. Rendered emphasised, under the gap. */
+    stakes?: string
+  }
+  /**
+   * The two-line argument in the summary page's locked CTA band - the last
+   * thing read before the price is seen at all. Same reasoning as
+   * `offerPitch`; leave unset to keep the shared default.
+   */
+  summaryUnlock?: {
+    line: string
+    lineAccent: string
+  }
 }
 
 const B2C_PILLARS: Record<PillarKey, PillarLabel> = {
@@ -508,7 +546,41 @@ export const VERTICAL_DISPLAY: Record<Vertical, VerticalDisplay> = {
     offerAccent:
       "Nothing here asks you to care less, ignore a real risk, or lower a standard. It never assesses your child, and you decide what fits.",
     benchmarkPeerLabel: "Among parents who take this assessment",
-    offerPriceAnchor: "A one-time cost, for one pattern you keep running.",
+    // Anchored against the thing they are actually weighing it against: not
+    // another product, but how long this has been going on.
+    offerPriceAnchor: "One payment, once. The pattern has been running for years.",
+    // The parents argument, and the reasoning behind each line, because every
+    // one of them is a claim this vertical is allowed to make and several
+    // near-misses are not.
+    //
+    // headline/accent: a recurring pattern recurs. That is the only urgency
+    // available here and it is real, so it needs no countdown, no expiring
+    // discount, and no invented figure. "This week" is honest for a moment
+    // the respondent has just described as repeating.
+    //
+    // gap: names what the free score genuinely did NOT give them. It stays
+    // on the parent's own side of the moment - the short answer, the closed
+    // door, the thing they were about to say again - and never claims what
+    // the child meant by any of it.
+    //
+    // stakes: the strongest line on the page, and the one most likely to be
+    // "improved" into something forbidden. It works precisely BECAUSE it
+    // refuses catastrophe: nothing bad happens, which is the actual mechanism
+    // the whole vertical describes - accumulation through ordinary evenings.
+    // It must never become a prediction about the child, a deadline, or a
+    // claim that the relationship will be lost.
+    offerPitch: {
+      headline: "You can see the moment now.",
+      headlineAccent: "It is going to arrive again this week.",
+      gap: "Seeing the moment and having something ready for it are not the same thing. When it arrives - the short answer, the closed door, the thing you were about to say again - there is no room to work out what to do instead. That part gets decided before it happens, or it does not get decided at all.",
+      stakes: "Nothing dramatic happens if you close this tab. That is the difficulty. The moment simply arrives again and runs the way it has always run - one more ordinary evening, teaching both of you the same thing.",
+      freeVsPaid:
+        "Your free Parenting Belief Score shows you the pattern. The Parenting Action Plan is what you do the next time it starts.",
+    },
+    summaryUnlock: {
+      line: "You can see the loop now.",
+      lineAccent: "You still have nothing ready for the moment it starts.",
+    },
   },
 }
 

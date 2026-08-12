@@ -213,13 +213,34 @@ export function OfferScreen({ audience }: { audience: Audience }) {
               VIII · From seeing it to acting on it
             </p>
 
-            <h1 className="mb-5 font-serif text-[1.7rem] leading-[1.1] text-ink sm:text-[2rem] sm:leading-[1.06] md:text-[2.4rem]">
-              {state.firstName ? `${state.firstName}, you` : "You"} have
-              identified the loop.
-              <span className="block font-serif-italic text-foreground">
-                Now turn it into a plan for the moment it returns.
-              </span>
-            </h1>
+            {/* The argument, per vertical (display.offerPitch), falling back
+                to the shared default. The name prefix only applies to the
+                default clause, which is written to accept it ("Sarah, you have
+                identified the loop"); a vertical's own headline is a complete
+                sentence and gets the name on its own line above instead, so a
+                pitch author never has to write copy that grammatically
+                swallows a variable. */}
+            {display.offerPitch ? (
+              <h1 className="mb-5 font-serif text-[1.7rem] leading-[1.1] text-ink sm:text-[2rem] sm:leading-[1.06] md:text-[2.4rem]">
+                {state.firstName && (
+                  <span className="mb-1 block text-foreground/70">
+                    {state.firstName},
+                  </span>
+                )}
+                {display.offerPitch.headline}
+                <span className="block font-serif-italic text-foreground">
+                  {display.offerPitch.headlineAccent}
+                </span>
+              </h1>
+            ) : (
+              <h1 className="mb-5 font-serif text-[1.7rem] leading-[1.1] text-ink sm:text-[2rem] sm:leading-[1.06] md:text-[2.4rem]">
+                {state.firstName ? `${state.firstName}, you` : "You"} have
+                identified the loop.
+                <span className="block font-serif-italic text-foreground">
+                  Now turn it into a plan for the moment it returns.
+                </span>
+              </h1>
+            )}
 
             {/* Their own words, reflected - the moment they named in Q1.
                 Grounds the page in their session instead of generic promise. */}
@@ -234,11 +255,25 @@ export function OfferScreen({ audience }: { audience: Audience }) {
 
             {/* 2. The gap */}
             <p className="max-w-xl text-[15.5px] leading-[1.8] text-foreground/80 sm:text-[16.5px]">
-              You now know what may be happening and where it begins. What you
-              do not yet have is the exact response: what to do inside that
-              moment, what to prepare beforehand, and how to tell whether it
-              is changing.
+              {display.offerPitch?.gap ??
+                "You now know what may be happening and where it begins. What you do not yet have is the exact response: what to do inside that moment, what to prepare beforehand, and how to tell whether it is changing."}
             </p>
+
+            {/* 2b. The cost of doing nothing. Renders ONLY for a vertical that
+                sets it, so every other offer page is byte-identical to before.
+                Given its own rule and italic treatment because it is the last
+                thing read before the price, and it should land as a separate
+                thought rather than as the tail of the paragraph above. */}
+            {display.offerPitch?.stakes && (
+              <p
+                className="mt-6 max-w-xl border-l-2 pl-5 font-serif-italic text-[16.5px] leading-[1.7] text-ink sm:text-[17.5px]"
+                style={{
+                  borderColor: "color-mix(in srgb, var(--signal) 55%, transparent)",
+                }}
+              >
+                {display.offerPitch.stakes}
+              </p>
+            )}
           </div>
 
           {/* Their earned score, carried onto this page */}
@@ -338,8 +373,12 @@ export function OfferScreen({ audience }: { audience: Audience }) {
 
           {/* Free vs paid distinction, stated plainly */}
           <p className="mt-5 max-w-xl text-[15px] leading-[1.75] text-foreground/75">
-            The free {display.productName} helps you see the pattern. The
-            Action Plan helps you act when it appears.
+            {display.offerPitch?.freeVsPaid ?? (
+              <>
+                The free {display.productName} helps you see the pattern. The
+                Action Plan helps you act when it appears.
+              </>
+            )}
           </p>
 
           {/* Deliverables as icon cards - the "what's inside" made scannable
