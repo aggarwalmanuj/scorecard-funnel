@@ -186,8 +186,15 @@ const EXIT_COPY: Record<Vertical, ExitCopy> = {
   // retargeting and coaches use.
   parents: {
     eyebrow: "Before you go",
-    title: "This looks at you,",
-    accent: "never at your child.",
+    // The title used to be the reassurance ("This looks at you, never at your
+    // child"). True, and still on the page - it is the second fact row below -
+    // but a reassurance is not a reason to stay. At the moment of exit the
+    // stronger line is the one that names what closing the tab costs, and for
+    // this audience that is time: the distance accumulated over years, and the
+    // thing being abandoned takes ten minutes. No countdown, no scarcity, no
+    // claim about the child - just the asymmetry, stated once.
+    title: "The distance took years.",
+    accent: "This takes about ten minutes.",
     facts: [
       {
         figure: "Saved",
@@ -197,7 +204,7 @@ const EXIT_COPY: Record<Vertical, ExitCopy> = {
       {
         figure: "One moment",
         label:
-          "Not your whole history as a parent, and not an assessment of your child. One recurring moment, in your own words.",
+          "It looks at you, never at your child. Not your whole history as a parent - one recurring moment, in your own words.",
       },
     ],
     lineStarted:
