@@ -21,7 +21,7 @@
     {
       "stageFraming": "Stage 1 · The Repeated Moment",
       "question": "Pick one parenting moment that keeps repeating. Tell me about the last real time it happened - not the tidy version.",
-      "prompt": "One moment, one recent time. The reminder you sent after you had already sent two. The question you heard yourself ask again. The advice that arrived before it was asked for. The quiet week you started reading as a trend. The yes you gave before working out what it would cost you. Walk through what actually happened, in order: what was going on, what you did, and what followed. Then say what you actually wanted in that moment. Messy answers welcome.",
+      "prompt": "One moment, one recent time - often it is the moment where the distance shows itself. The reminder you sent after you had already sent two. The question you heard yourself ask again. The one-word answer you tried to open up. The door that closed before you finished the sentence. The advice that arrived before it was asked for. The quiet week you started reading as a trend. The yes you gave before working out what it would cost you. Walk through what actually happened, in order: what was going on, what you did, and what followed. Then say what you actually wanted in that moment. Messy answers welcome.",
       "hintBox": "Tip: One specific evening or message beats a description of the whole year. Start with the most recent time it ran.",
       "placeholder": "The last time this happened was...",
       "quoteZone": "A pattern is easier to see in one ordinary moment than in a whole year of them."
