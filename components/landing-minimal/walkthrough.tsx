@@ -271,14 +271,18 @@ export function WalkthroughSection() {
                         : "pointer-events-none opacity-0"
                     }`}
                   >
+                    {/* No `priority` on slide 0. The walkthrough sits far below
+                        the fold, so preloading its first screenshot at
+                        fetchpriority=high only starves the hero image, the
+                        fonts, and the JS bundle of bandwidth on mobile. Every
+                        slide lazy-loads; the crossfade covers the swap. */}
                     <Image
                       src={s.img}
                       alt={i === active ? s.alt : ""}
                       fill
                       sizes="(max-width: 1024px) 100vw, 58vw"
                       className="object-cover object-top"
-                      priority={i === 0}
-                      loading={i === 0 ? undefined : "lazy"}
+                      loading="lazy"
                     />
                   </div>
                 ))}

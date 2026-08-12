@@ -1,21 +1,18 @@
 import type { Metadata, Viewport } from "next"
 import { Suspense } from "react"
 import { headers } from "next/headers"
-import { Geist, Geist_Mono, Inter, Fraunces } from "next/font/google"
+import { Inter, Fraunces } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
 import { ChallengeProvider } from "@/context/challenge-context"
 import FacebookPixelTracker from "@/components/facebook-pixel"
 import { CookieConsent } from "@/components/cookie-consent"
 import "./globals.css"
 
-const geist = Geist({
-  subsets: ["latin"],
-})
-
-const geistMono = Geist_Mono({
-  subsets: ["latin"],
-})
-
+// Only the two families the design actually renders are declared here.
+// Geist and Geist_Mono used to be declared alongside them and never applied
+// to a single element - next/font still self-hosted and <link rel=preload>ed
+// both, spending ~52 KB of critical-path bandwidth on fonts nothing used.
+//
 // Inter - clean modern sans for body copy on the minimal landing.
 const inter = Inter({
   subsets: ["latin"],
