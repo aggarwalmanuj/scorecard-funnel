@@ -35,28 +35,28 @@
       "quoteZone": "A conclusion repeated often enough starts to feel like a fact about your child. It may only be a fact about the loop."
     },
     {
-      "stageFraming": "Stage 3 · The Cost",
-      "question": "What is this costing you when nobody can see it?",
-      "prompt": "The hours, the sleep, the thinking between the moments. And what the next conversation has to carry before either of you has said a word.",
-      "hintBox": "Tip: include the cost nobody sees - the worrying that happens between the moments.",
-      "placeholder": "What it actually uses up is...",
+      "stageFraming": "Stage 3 · What It Costs",
+      "question": "What is this taking from you - and from the time you still have with them?",
+      "prompt": "The hours, the sleep, the thinking between the moments. And what the next conversation has to carry before either of you has said anything.",
+      "hintBox": "Tip: include the part nobody sees - the worrying that happens between the moments.",
+      "placeholder": "What it actually takes from me is...",
       "quoteZone": "Worry is quiet work. It still takes the hours."
     },
     {
       "stageFraming": "Stage 4 · What You Have Already Tried",
-      "question": "What have you already tried - and what parenting advice are you completely done with?",
-      "prompt": "The book that did not survive a real Tuesday. The conversation you planned and abandoned. Name what failed, why it died, and what makes you close the tab instantly.",
-      "hintBox": "Tip: what failed is as informative as what might work.",
-      "placeholder": "I have already tried... and I am done with...",
+      "question": "What have you already tried to close the gap?",
+      "prompt": "The conversation you planned and abandoned. The book that did not survive a real Tuesday. Name what failed, why it died, and the kind of advice that makes you close the tab instantly.",
+      "hintBox": "Tip: what failed is as useful here as what might work.",
+      "placeholder": "I have already tried... and it went...",
       "quoteZone": "Every abandoned approach taught you something. It is worth checking what."
     },
     {
-      "stageFraming": "Stage 5 · The Ordinary Week",
-      "question": "Six months from now, this one loop is closed. What are YOU doing differently?",
-      "prompt": "The same moment arrives. What do you do instead of reaching, reminding, or explaining? What do you not say? Keep it to what is yours - none of it depends on them changing.",
-      "hintBox": "Tip: if the week only works when someone else acts differently, it is not the week to describe.",
-      "placeholder": "That week, the same moment happens, and this time I...",
-      "quoteZone": "The parent in that week is not a more distant version of you. It is you, with one loop closed."
+      "stageFraming": "Stage 5 · The Same Moment, Later",
+      "question": "Six months from now, the same moment goes differently. What did you do?",
+      "prompt": "The moment arrives as usual. What do you do instead of reaching, reminding, or explaining? What do you not say? Keep it to what is yours - none of it depends on them changing.",
+      "hintBox": "Tip: if it only works when someone else acts differently, it is not the answer to describe.",
+      "placeholder": "The same moment happens, and this time I...",
+      "quoteZone": "The parent in that moment is not a more distant version of you. It is you, with one thing changed."
     }
   ],
   "beats": [

@@ -109,6 +109,20 @@ export function OfferScreen({ audience }: { audience: Audience }) {
   // track, plus the vertical's optional reassurance line.
   const display = displayFor(audience)
 
+  // A vertical may re-voice the four deliverable cards and the objections.
+  // Both are merged POSITIONALLY over the shared defaults rather than
+  // replacing them, so an override keeps the icon set and can supply fewer
+  // fields than the default without leaving a card half-empty.
+  const pitch = display.offerPitch
+  const deliverables = DELIVERABLES.map((d, i) => ({
+    ...d,
+    ...(pitch?.deliverables?.[i] ?? {}),
+  }))
+  const objections = OBJECTIONS.map((o, i) => ({
+    ...o,
+    ...(pitch?.objections?.[i] ?? {}),
+  }))
+
   // Funnel visibility: record that this lead reached the offer page, so
   // /techadmin can separate "saw the offer" from "purchased". Fires once
   // per mount and never blocks render.
@@ -385,7 +399,7 @@ export function OfferScreen({ audience }: { audience: Audience }) {
               on a phone: one card per artifact, icon chip carrying the
               signal accent, 2-up from sm. */}
           <ul className="mt-8 grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
-            {DELIVERABLES.map((d) => {
+            {deliverables.map((d) => {
               const Icon = d.icon
               return (
                 <li
@@ -447,18 +461,34 @@ export function OfferScreen({ audience }: { audience: Audience }) {
               <p className="mb-5 text-[13px] leading-[1.6] text-foreground/60">
                 Generated after purchase, from your completed {display.productName}.
               </p>
+
+              {/* CUT: a four-row locked list sat here restating the four
+                  deliverable cards a few hundred pixels above, in the same
+                  order, almost word for word ("Your Evidence Log, first entry
+                  filled in"). Between those cards, this list, and the 30-day
+                  timeline below, the page said the same four things three
+                  times - which is what made a long page read as a page that
+                  never got to the point.
+
+                  What replaces it is the information that was actually
+                  missing at this position: the terms. The buyer is looking at
+                  the artifact and deciding; the refund, the one-time payment
+                  and the delivery window are what the decision needs, and
+                  they were previously only reachable further down. */}
               <ul className="space-y-3">
                 {[
-                  "Your pattern loop and earliest intervention point",
-                  "Your first moves, in order",
-                  "Your Evidence Log, first entry filled in",
-                  "Your 30-day rhythm and day-30 check-in",
-                ].map((row) => (
+                  { Icon: Shield, row: "30-day rebuild or refund, one email" },
+                  { Icon: BadgeCheck, row: "One-time payment, not a subscription" },
+                  { Icon: Lock, row: "Yours to keep, six pages" },
+                ].map(({ Icon, row }) => (
                   <li
                     key={row}
                     className="flex items-center gap-3 rounded-md border border-border/60 bg-card/40 px-3.5 py-2.5 text-[14px] text-foreground/75"
                   >
-                    <Lock className="h-3.5 w-3.5 shrink-0 text-foreground/45" strokeWidth={1.6} />
+                    <Icon
+                      className="h-3.5 w-3.5 shrink-0 text-foreground/45"
+                      strokeWidth={1.6}
+                    />
                     {row}
                   </li>
                 ))}
@@ -470,11 +500,16 @@ export function OfferScreen({ audience }: { audience: Audience }) {
             </div>
           </div>
 
-          {/* The 30-day arc, mapped */}
-          <div className="mt-10 rounded-md border border-border bg-background/50 p-6 sm:p-8">
-            <p className="eyebrow mb-7 text-foreground/70">Your 30 days, mapped</p>
-            <PlanTimeline />
-          </div>
+          {/* The 30-day arc, mapped. Suppressible per vertical: it is a third
+              statement of the rhythm the fourth deliverable card already
+              carries, and on an already-long page a third statement of
+              anything reads as padding. */}
+          {!pitch?.hideTimeline && (
+            <div className="mt-10 rounded-md border border-border bg-background/50 p-6 sm:p-8">
+              <p className="eyebrow mb-7 text-foreground/70">Your 30 days, mapped</p>
+              <PlanTimeline />
+            </div>
+          )}
 
           {/* Honest value frame - carded with a signal rail so the page's
               one "why this is different" argument reads as a designed
@@ -484,10 +519,8 @@ export function OfferScreen({ audience }: { audience: Audience }) {
             style={{ borderLeft: "3px solid var(--signal)" }}
           >
             <p className="text-[15px] leading-[1.8] text-foreground/85">
-              A generic worksheet could tell you to set reminders, break the
-              task down, or be more consistent. Your Action Plan is built
-              around the exact moment you identified, the conclusion that may
-              be active inside it, and the evidence you said would matter.
+              {pitch?.versus ??
+                "A generic worksheet could tell you to set reminders, break the task down, or be more consistent. Your Action Plan is built around the exact moment you identified, the conclusion that may be active inside it, and the evidence you said would matter."}
             </p>
             {/* Vertical-specific reassurance (e.g. the ADHD anti-system line) */}
             {display.offerAccent && (
@@ -541,7 +574,7 @@ export function OfferScreen({ audience }: { audience: Audience }) {
             Asked plainly
           </p>
           <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5">
-            {OBJECTIONS.map((o) => (
+            {objections.map((o) => (
               <div
                 key={o.q}
                 className="rounded-md border border-border bg-card/60 p-5 sm:p-6"

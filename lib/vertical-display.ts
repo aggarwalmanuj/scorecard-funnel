@@ -121,6 +121,33 @@ export interface VerticalDisplay {
     freeVsPaid: string
     /** The cost of doing nothing. Rendered emphasised, under the gap. */
     stakes?: string
+    /**
+     * Replaces the four deliverable cards' TEXT. Exactly four, positional -
+     * they keep the shared icons and stay mapped 1:1 to the same four report
+     * sections, so this re-voices what the buyer gets without changing what
+     * the artifact contains.
+     *
+     * Write OUTCOMES, not artifact names. The shared default says "Your
+     * Evidence Log" and "A 30-day rhythm", which describe the document; a
+     * buyer is deciding whether their life changes, not whether they receive
+     * a document with good section headings.
+     */
+    deliverables?: { title: string; body: string }[]
+    /**
+     * Replaces the "a generic worksheet could tell you to…" paragraph - the
+     * page's one differentiation argument. It has to name the thing THIS
+     * audience has already tried and found insufficient, which is not a
+     * worksheet for every audience.
+     */
+    versus?: string
+    /** Replaces the four objection cards. */
+    objections?: { q: string; a: string }[]
+    /**
+     * Hide the 30-day timeline block. Defaults to shown. It is a third
+     * restatement of the same rhythm the fourth deliverable card already
+     * describes, so a vertical whose page is already dense can drop it.
+     */
+    hideTimeline?: boolean
   }
   /**
    * The two-line argument in the summary page's locked CTA band - the last
@@ -576,6 +603,60 @@ export const VERTICAL_DISPLAY: Record<Vertical, VerticalDisplay> = {
       stakes: "Nothing dramatic happens if you close this tab. That is the difficulty. The moment simply arrives again and runs the way it has always run - one more ordinary evening, teaching both of you the same thing.",
       freeVsPaid:
         "Your free Parenting Belief Score shows you the pattern. The Parenting Action Plan is what you do the next time it starts.",
+      // Outcome-led, in the order the report's own sections run. The third
+      // one is the card that matters most to THIS audience and the shared
+      // copy had no equivalent: a parent's honest fear about any plan is that
+      // they will do everything right for a month and still have no idea
+      // whether it worked, because the only feedback they want has to come
+      // from a person who is not talking to them. Naming a check that does
+      // not require the child to say anything answers that directly - and it
+      // is a real section of the artifact, not a promise bolted on.
+      deliverables: [
+        {
+          title: "Where it actually starts",
+          body: "The earliest point inside the moment you described, named from your own words - so you can see it coming instead of noticing it afterwards.",
+        },
+        {
+          title: "What to say instead",
+          body: "One line for the moment it starts, and what to do in the seconds after. Built for a conversation that is already coming this week.",
+        },
+        {
+          title: "A way to tell whether it is working",
+          body: "What to watch for that does not depend on your child saying anything - so you are not reading signs for thirty days and guessing.",
+        },
+        {
+          title: "Thirty days, then an honest check",
+          body: "Week by week, including the week you slip. Nothing to keep up with, no streak to break, and a real look at what moved on day 30.",
+        },
+      ],
+      versus:
+        "A parenting book can tell you to listen more, give them space, or pick your battles. None of it knows the moment you just described. Your Action Plan is built around that exact moment, the conclusion that may be running inside it, and the evidence you said would actually matter to you.",
+      // The first objection is the one this audience is really holding, and
+      // answering it honestly is worth more than any promise: no, and the
+      // refusal is the proof the rest is trustworthy. It also restates the
+      // vertical's hardest compliance boundary at the point of sale.
+      objections: [
+        {
+          q: "Will this make my child talk to me again?",
+          a: "No - and anything promising that is selling you something. This works on the only side of it you control, which is your own response in one moment. What your child does with that stays theirs.",
+        },
+        {
+          q: "I have already read the books.",
+          a: "Then you already know more advice is not the missing piece. This does not give you more advice. It gives you one moment, one response, and a way to check whether anything moved.",
+        },
+        {
+          q: "What if it misunderstood me?",
+          a: "The plan is built from your answers and is a personalized hypothesis, not a verdict. If it does not read as genuinely yours, one email within 30 days gets it rebuilt or refunded - no questions, no exit interview.",
+        },
+        {
+          q: "Is this therapy, or a diagnosis of my family?",
+          a: "No. It is a structured reflective and implementation tool. It is not medical, psychological, or clinical treatment, and it never assesses your child.",
+        },
+      ],
+      // The fourth deliverable card already carries the 30-day shape. On a
+      // page this long, saying it a third time is what makes it read as
+      // filler.
+      hideTimeline: true,
     },
     summaryUnlock: {
       line: "You can see the loop now.",
