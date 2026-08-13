@@ -345,8 +345,12 @@ export function QuestionScreen({
     }
   }, [])
 
-  const voiceLabelIdle =
-    questionNumber === 5 ? "Describe your day aloud" : "Tap to speak"
+  // One label for all five. The button does the same thing on every question -
+  // it starts dictation - and question 5 used to override this with "Describe
+  // your day aloud", which described neither the control nor the question: the
+  // prompts are admin-seeded per vertical, and the parents question 5 asks what
+  // a moment looks like six months from now, not about a day.
+  const voiceLabelIdle = "Tap to speak"
 
   const toggleVoice = () => {
     if (isListening) stopListening()
