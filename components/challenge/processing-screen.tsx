@@ -474,29 +474,6 @@ export function ProcessingScreen({ audience }: { audience: Audience }) {
         if (score) setClarityScore(score)
       })
 
-      void (async () => {
-        const score = scorePromise ? await scorePromise : null
-        const report = await fetchReportInBackground({
-          firstName: state.firstName,
-          email: saveParamsRef.current.email,
-          audience,
-          responses: state.responses,
-          beats: { beat1: "", beat2: "", beat3: "", beat4: "", beat5: "" },
-          precomputedScore: score,
-        })
-        if (report) {
-          setReportData(
-            report as {
-              clarity: unknown
-              reasons: unknown
-              nsState?: string
-              report: unknown
-              scoreSource: "llm" | "fallback"
-            },
-          )
-        }
-      })()
-
       // Nothing has streamed after 28s. That is a stalled generation, not a
       // configuration problem, so it gets the retryable error rather than the
       // "contact the admin" one.
@@ -563,6 +540,42 @@ export function ProcessingScreen({ audience }: { audience: Audience }) {
           })
         }
       })
+
+      // The report is generated from the SAME five reflections the participant
+      // just read. It used to start as soon as the score resolved, which is
+      // before any beat has finished streaming, so it was always handed
+      // `{ beat1: "", ... }` and the prompt's {{BEAT1}}..{{BEAT5}} slots each
+      // rendered "(left blank)". The cached report the Action Plan shows was
+      // therefore written without the reflections - while the Action Plan's own
+      // on-demand refetch passes the real ones, so the same participant could
+      // get two different plans depending on which path produced theirs.
+      //
+      // Waiting for the beats costs nothing now: since the free result stopped
+      // depending on reportData, nothing at all is gated on this call. If the
+      // participant reaches the Action Plan first, its existing fetch covers
+      // them exactly as it does today.
+      void (async () => {
+        const score = scorePromise ? await scorePromise : null
+        const report = await fetchReportInBackground({
+          firstName: state.firstName,
+          email: saveParamsRef.current.email,
+          audience,
+          responses: state.responses,
+          beats: finalBeats,
+          precomputedScore: score,
+        })
+        if (report) {
+          setReportData(
+            report as {
+              clarity: unknown
+              reasons: unknown
+              nsState?: string
+              report: unknown
+              scoreSource: "llm" | "fallback"
+            },
+          )
+        }
+      })()
 
       // Wait for all beat-output writes to settle (success OR final
       // failure after retries) before allowing navigation. Promise.race
