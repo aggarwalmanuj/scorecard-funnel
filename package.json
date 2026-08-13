@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
-    "test": "node --experimental-strip-types --test \"lib/**/*.test.ts\""
+    "test": "node --experimental-strip-types --import ./test-resolve.mjs --test \"lib/**/*.test.ts\""
   },
   "dependencies": {
     "@azure/cosmos": "^4.9.2",

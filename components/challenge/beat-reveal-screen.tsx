@@ -246,18 +246,27 @@ export function BeatRevealScreen({
     const minDelay = new Promise<void>((r) =>
       window.setTimeout(r, TRANSITION_DELAY_MS),
     )
-    const savePromise =
-      state.email?.trim() && state.serialNumber
-        ? submitToGoogleSheet({
-            action: "feedback",
-            firstName: state.firstName,
-            email: state.email.trim(),
-            audience,
-            serialNumber: state.serialNumber,
-            beatNumber,
-            feedback: reason?.trim() ? `${option} | ${reason.trim()}` : option,
-          }).catch(() => false)
-        : Promise.resolve(true)
+    const canSave = Boolean(state.email?.trim() && state.serialNumber)
+    if (!canSave) {
+      // Not fatal for the participant - they keep their reveal either way -
+      // but it is invisible in the data, and an empty feedback cell is
+      // indistinguishable from one they simply chose not to answer. Say it
+      // out loud so the session is diagnosable after the fact.
+      console.warn(
+        `[feedback] beat ${beatNumber} not recorded: ${state.serialNumber ? "missing email" : "missing serialNumber"}`,
+      )
+    }
+    const savePromise = canSave
+      ? submitToGoogleSheet({
+          action: "feedback",
+          firstName: state.firstName,
+          email: state.email.trim(),
+          audience,
+          serialNumber: state.serialNumber as number,
+          beatNumber,
+          feedback: reason?.trim() ? `${option} | ${reason.trim()}` : option,
+        }).catch(() => false)
+      : Promise.resolve(true)
     const saveWithCap = Promise.race<boolean>([
       savePromise,
       new Promise<boolean>((r) =>
