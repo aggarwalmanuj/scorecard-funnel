@@ -304,7 +304,13 @@ export function ProcessingScreen({ audience }: { audience: Audience }) {
   const [activeStep, setActiveStep] = useState(0)
   const [minElapsed, setMinElapsed] = useState(false)
   const [showClosingLine, setShowClosingLine] = useState(false)
+  // Two different dead ends, deliberately kept apart. `missingPrompts` means
+  // the vertical cannot generate at all (no AI key) and only an admin can fix
+  // it. `generationFailed` means the pipeline was configured but produced
+  // nothing this run - retrying is the right action, and telling that user to
+  // contact an admin sends them somewhere that cannot help.
   const [missingPrompts, setMissingPrompts] = useState(false)
+  const [generationFailed, setGenerationFailed] = useState(false)
   // Tracks whether the summary's TTS audio bytes have finished loading
   // (either from IndexedDB on a re-run or freshly from /api/tts).
   // Navigation to beat-1 is blocked until this is true so /summary's
@@ -491,10 +497,13 @@ export function ProcessingScreen({ audience }: { audience: Audience }) {
         }
       })()
 
+      // Nothing has streamed after 28s. That is a stalled generation, not a
+      // configuration problem, so it gets the retryable error rather than the
+      // "contact the admin" one.
       fallbackTimer = setTimeout(() => {
         if (!active) return
         if (beatsLenRef.current < 40) {
-          setMissingPrompts(true)
+          setGenerationFailed(true)
         }
       }, 28000)
 
@@ -525,13 +534,13 @@ export function ProcessingScreen({ audience }: { audience: Audience }) {
       if (fallbackTimer) clearTimeout(fallbackTimer)
       if (!active) return
 
-      // First beat failing is treated as a generation failure - surface the
-      // configuration-error UI so the user contacts the admin instead of
-      // seeing nothing or fake copy. Individual later-beat failures leave
-      // whatever streamed (possibly empty) - downstream code handles empty
-      // beats gracefully (`beat: ""`).
+      // Beat 1 failing means there is nothing to reveal, so the run stops here
+      // with a retryable error rather than fake copy. It is a generation
+      // failure, not a misconfiguration - the same request usually succeeds on
+      // a second attempt. Individual later-beat failures leave whatever
+      // streamed (possibly empty); downstream code handles `beat: ""`.
       if (!results[0]?.ok) {
-        setMissingPrompts(true)
+        setGenerationFailed(true)
         return
       }
 
@@ -655,7 +664,7 @@ export function ProcessingScreen({ audience }: { audience: Audience }) {
 
   useEffect(() => {
     if (!minElapsed) return
-    if (missingPrompts) return
+    if (missingPrompts || generationFailed) return
     if (!readyToAdvance) return
     const t = setTimeout(() => router.push(`/challenge/${audience}/beat-1`), 400)
     return () => clearTimeout(t)
@@ -665,6 +674,7 @@ export function ProcessingScreen({ audience }: { audience: Audience }) {
     router,
     audience,
     missingPrompts,
+    generationFailed,
   ])
 
   // The step ticker is choreography (one step per 2s), not real pipeline
@@ -677,7 +687,7 @@ export function ProcessingScreen({ audience }: { audience: Audience }) {
   // means "your result is ready" rather than "the extras also finished".
   const progressPercent = readyToAdvance ? 100 : Math.min(tickerPercent, 94)
 
-  if (coreIsUnavailable) {
+  if (coreIsUnavailable || generationFailed) {
     return (
       <div className="flex min-h-screen items-center justify-center px-5">
         <div className="s-card-static animate-fade-in-up w-full max-w-md p-8 text-center">
@@ -711,8 +721,9 @@ export function ProcessingScreen({ audience }: { audience: Audience }) {
             <span className="block font-serif-italic">configured.</span>
           </h2>
           <p className="mb-7 text-[15px] leading-[1.75] text-foreground/85">
-            The {audience} prompts haven&apos;t been seeded yet. Please contact the
-            admin so this audience can take the diagnostic.
+            This assessment isn&apos;t ready to run yet, so your answers can&apos;t be
+            read back. Your answers are saved. Please contact the team - this
+            needs fixing on our side, not yours.
           </p>
           <a href="/" className="s-btn">
             Back to home
