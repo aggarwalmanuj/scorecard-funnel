@@ -335,6 +335,14 @@ export function ProcessingScreen({ audience }: { audience: Audience }) {
     (beatNumber: 1 | 2 | 3 | 4 | 5, output: string): Promise<boolean> => {
       const { serialNumber, email, firstName } = saveParamsRef.current
       if (!serialNumber || !email?.trim() || !output.trim()) {
+        // Same silent-loss class as the feedback write: without a serial there
+        // is nothing to address the row to, so the generated beat is produced,
+        // shown, and never stored. Name the missing piece.
+        if (!serialNumber || !email?.trim()) {
+          console.warn(
+            `[beat_output] beat ${beatNumber} not recorded: ${serialNumber ? "missing email" : "missing serialNumber"}`,
+          )
+        }
         return Promise.resolve(false)
       }
       const p = submitToGoogleSheet({

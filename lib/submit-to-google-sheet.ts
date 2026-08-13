@@ -54,9 +54,23 @@ type SheetPayload = SignupPayload | AnswerPayload | FeedbackPayload | BeatOutput
 
 /**
  * Submits a signup to Google Sheets and returns the assigned serial number.
- * Each signup ALWAYS creates a new row, even for repeat emails.
- * Returns null if the request failed (UI should still proceed).
+ * Returns null only if every attempt failed (UI should still proceed).
+ *
+ * The serial number is the key EVERY later write is addressed by - answers,
+ * beat outputs, feedback, score, summary all refuse to send without it. One
+ * failed request here therefore does not cost one row, it costs the entire
+ * participant: they complete the assessment, see their result, and nothing
+ * after the signup is ever recorded. That made a single transient 5xx or a
+ * flaky first connection silently equivalent to losing the respondent.
+ *
+ * Retrying is safe because signup is idempotent for an unfinished session:
+ * the server reuses an existing INCOMPLETE row for the same email and returns
+ * its serial (see reuse rules in lib/server/cosmos-db.ts), so a second attempt
+ * cannot mint a duplicate row. A row that already carries answers is never
+ * reused, so a genuine retake still gets its own serial.
  */
+const SIGNUP_BACKOFF_MS = [400, 1200]
+
 export async function submitSignup(
   firstName: string,
   email: string,
@@ -64,38 +78,56 @@ export async function submitSignup(
   phone?: string,
   leadEventId?: string
 ): Promise<number | null> {
-  try {
-    // First-touch attribution (utm_* / referrer) captured at the landing.
-    // Scoped to THIS signup's vertical - otherwise a browser that once saw
-    // another vertical's doorway credits this lead to that campaign.
-    const attribution = getAttribution(audience)
-    const res = await fetch("/api/sheets/append", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        action: "signup",
-        firstName,
-        email,
-        audience,
-        ...(phone ? { phone } : {}),
-        ...(leadEventId ? { leadEventId } : {}),
-        ...(Object.keys(attribution).length > 0 ? { attribution } : {}),
-      }),
-      keepalive: true,
-    })
-    if (!res.ok) {
-      console.warn("[submitSignup] request failed with status", res.status)
-      return null
-    }
-    const json = await res.json()
-    const serialNumber =
-      typeof json.serialNumber === "number" ? json.serialNumber : null
+  // First-touch attribution (utm_* / referrer) captured at the landing.
+  // Scoped to THIS signup's vertical - otherwise a browser that once saw
+  // another vertical's doorway credits this lead to that campaign.
+  const attribution = getAttribution(audience)
+  const body = JSON.stringify({
+    action: "signup",
+    firstName,
+    email,
+    audience,
+    ...(phone ? { phone } : {}),
+    ...(leadEventId ? { leadEventId } : {}),
+    ...(Object.keys(attribution).length > 0 ? { attribution } : {}),
+  })
 
-    return serialNumber
-  } catch {
-    console.warn("[submitSignup] network error")
-    return null
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const res = await fetch("/api/sheets/append", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body,
+        keepalive: true,
+      })
+      if (res.ok) {
+        const json = await res.json()
+        if (typeof json.serialNumber === "number") return json.serialNumber
+        // A 200 that carries no serial used to return null in silence, which
+        // is the hardest version of this failure to notice afterwards: the
+        // request looks successful in the network panel and the row never
+        // appears. Say so, then retry like any other failure.
+        console.warn(
+          `[submitSignup] attempt ${attempt + 1} returned 200 with no serialNumber`,
+        )
+      } else {
+        console.warn(
+          `[submitSignup] attempt ${attempt + 1} failed with status`,
+          res.status,
+        )
+      }
+    } catch {
+      console.warn(`[submitSignup] attempt ${attempt + 1} threw (network)`)
+    }
+    if (attempt < SIGNUP_BACKOFF_MS.length) {
+      await new Promise((r) => setTimeout(r, SIGNUP_BACKOFF_MS[attempt]))
+    }
   }
+
+  console.error(
+    "[submitSignup] no serial number after 3 attempts - this session's answers, beats, feedback, score and summary will NOT be recorded",
+  )
+  return null
 }
 
 /**
