@@ -18,6 +18,13 @@ import {
   ScoreRing,
 } from "@/components/challenge/score-visuals"
 import { MacWindow } from "@/components/visuals/mac-window"
+import {
+  BEAT_READY_MIN_CHARS,
+  canEnterReveal,
+  coreResultReady,
+  coreUnavailable,
+  shouldAdvance,
+} from "@/lib/challenge/processing-readiness"
 
 // Step labels carry the vertical's product vocabulary (One-Name Law): an
 // ADHD visitor watches their "ADHD Belief Score" being built, a healthcare
@@ -33,7 +40,6 @@ const processingStepsFor = (productName: string): string[] => [
   `Setting your ${productName} aside for you`,
 ]
 
-const BEAT_READY_MIN_CHARS = 40
 // Auto-navigate fallback if the pipeline hasn't completed by here.
 // 75s gives slow networks room to finish without abandoning the user
 // (testers reported sitting for ~2 min with no feedback - that wait now
@@ -44,6 +50,11 @@ const HARD_TIMEOUT_MS = 75_000
 const SLOW_HINT_AFTER_MS = 22_000
 // Surface an explicit escape hatch so the user is never truly stuck.
 const ESCAPE_HATCH_AFTER_MS = 45_000
+// Once the core result (beats + score + summary) is complete, how long to keep
+// waiting on the optional extras - the summary's TTS bytes and the beat_output
+// writes - before going to the reveal anyway. Long enough that both normally
+// win the race, short enough that neither can hold a finished assessment.
+const CORE_GRACE_MS = 8_000
 
 async function fetchClarityScoreInBackground(
   responses: ChallengeState["responses"],
@@ -366,18 +377,29 @@ export function ProcessingScreen({ audience }: { audience: Audience }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [wordEchoes.length])
 
+  // The step ticker. The updater MUST stay pure: React 19 can invoke an
+  // updater for a render it then discards, so a `clearInterval` living inside
+  // one could kill the timer while the matching state update was never
+  // committed - leaving the ring frozen mid-sequence (step 7 of 8 = 87.5%,
+  // rendered as "88%") for the rest of the session. Stopping at the terminal
+  // step is a side effect, so it belongs in an effect, not in the updater.
+  const tickerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   useEffect(() => {
-    const id = setInterval(() => {
-      setActiveStep((s) => {
-        if (s >= processingSteps.length - 1) {
-          clearInterval(id)
-          return s
-        }
-        return s + 1
-      })
+    tickerRef.current = setInterval(() => {
+      setActiveStep((s) => (s >= processingSteps.length - 1 ? s : s + 1))
     }, 2000)
-    return () => clearInterval(id)
-  }, [])
+    return () => {
+      if (tickerRef.current) clearInterval(tickerRef.current)
+      tickerRef.current = null
+    }
+  }, [processingSteps.length])
+
+  useEffect(() => {
+    if (activeStep < processingSteps.length - 1) return
+    if (!tickerRef.current) return
+    clearInterval(tickerRef.current)
+    tickerRef.current = null
+  }, [activeStep, processingSteps.length])
 
   useEffect(() => {
     if (activeStep < processingSteps.length - 1) return
@@ -395,7 +417,6 @@ export function ProcessingScreen({ audience }: { audience: Audience }) {
       state.beats.beat4.trim().length >= BEAT_READY_MIN_CHARS &&
       state.beats.beat5.trim().length >= BEAT_READY_MIN_CHARS &&
       !!state.clarityScore &&
-      !!state.reportData &&
       state.summaryText.trim().length > 0
 
     if (fullyCached) {
@@ -403,6 +424,10 @@ export function ProcessingScreen({ audience }: { audience: Audience }) {
       // is already persisted in the challenge context, so no new save
       // round-trips are needed. Mark outputs as already-saved so the
       // navigation gate doesn't wait on an empty promise set.
+      // `reportData` is deliberately NOT part of this check: re-running the
+      // entire beat pipeline just to refill it would cost the user another
+      // full generation, and the Action Plan screen already fetches the
+      // report on demand when the snapshot is absent.
       setOutputsSaved(true)
       void preloadSummaryAudio(state.summaryText).then((buf) => {
         if (buf) setAudioReady(true)
@@ -552,19 +577,37 @@ export function ProcessingScreen({ audience }: { audience: Audience }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isHydrated, setBeat, state.firstName, state.responses, audience])
 
-  const allReady =
-    state.beats.beat1.trim().length >= BEAT_READY_MIN_CHARS &&
-    state.beats.beat2.trim().length >= BEAT_READY_MIN_CHARS &&
-    state.beats.beat3.trim().length >= BEAT_READY_MIN_CHARS &&
-    state.beats.beat4.trim().length >= BEAT_READY_MIN_CHARS &&
-    state.beats.beat5.trim().length >= BEAT_READY_MIN_CHARS &&
-    !!state.clarityScore &&
-    !!state.reportData &&
-    state.summaryText.trim().length > 0 &&
-    audioReady &&
-    outputsSaved
+  // ── What the free result actually needs ──
+  // The five beats, the score and the closing summary ARE the result: every
+  // reveal screen from beat-1 through /summary renders from these three and
+  // nothing else. Report generation is a separate, heavier call whose output
+  // is only read by the Action Plan screen - which already re-fetches it on
+  // demand when the snapshot is missing (see clarity-report.tsx). Gating
+  // navigation on `reportData` therefore bought nothing and could strand a
+  // participant whose assessment had completed successfully.
+  const coreReady = coreResultReady({
+    beats: state.beats,
+    hasClarityScore: !!state.clarityScore,
+    summaryText: state.summaryText,
+  })
+
+  // Polish, not prerequisites. `audioReady` spares /summary a loading state
+  // and `outputsSaved` keeps the admin's beat_output rows ahead of the user.
+  // Both are worth a short wait and neither is worth losing a result over, so
+  // they get a bounded grace period below rather than a veto.
+  const allReady = coreReady && audioReady && outputsSaved
 
   const [timedOut, setTimedOut] = useState(false)
+  // Set once the core result has been ready for CORE_GRACE_MS, at which point
+  // we stop waiting on the optional extras and navigate.
+  const [coreGraceElapsed, setCoreGraceElapsed] = useState(false)
+
+  useEffect(() => {
+    if (!coreReady) return
+    if (allReady) return
+    const t = setTimeout(() => setCoreGraceElapsed(true), CORE_GRACE_MS)
+    return () => clearTimeout(t)
+  }, [coreReady, allReady])
   const [showSlowHint, setShowSlowHint] = useState(false)
   const [showEscapeHatch, setShowEscapeHatch] = useState(false)
   const [userForcedContinue, setUserForcedContinue] = useState(false)
@@ -583,17 +626,42 @@ export function ProcessingScreen({ audience }: { audience: Audience }) {
     }
   }, [])
 
+  // Navigate as soon as ANY of these hold, in descending order of quality:
+  //   allReady                     - everything landed, including the extras
+  //   coreReady && coreGraceElapsed - result is complete; extras had their turn
+  //   timedOut                     - 75s backstop, unchanged
+  //   userForcedContinue           - the explicit "Continue anyway" button
+  // The middle clause is the fix: a completed assessment now leaves this
+  // screen on its own data, whatever report generation is or isn't doing.
+  // The reveal sequence cannot start without beat-1: lib/funnel-guard.ts sends
+  // /beat-1 straight back to /processing when it is short, so advancing
+  // without it would bounce the participant between the two screens - each
+  // bounce remounting this component and resetting every timer on it,
+  // including the 75s backstop. That loop looks exactly like a frozen ring.
+  const advanceFlags = {
+    allReady,
+    coreReady,
+    coreGraceElapsed,
+    timedOut,
+    userForcedContinue,
+    canEnterReveal: canEnterReveal(state.beats),
+  }
+
+  const readyToAdvance = shouldAdvance(advanceFlags)
+
+  // Time is up and there is still nothing to reveal. Say so, and offer a way
+  // out - an honest dead end the participant can act on beats an endless ring.
+  const coreIsUnavailable = coreUnavailable(advanceFlags)
+
   useEffect(() => {
     if (!minElapsed) return
     if (missingPrompts) return
-    if (!allReady && !timedOut && !userForcedContinue) return
+    if (!readyToAdvance) return
     const t = setTimeout(() => router.push(`/challenge/${audience}/beat-1`), 400)
     return () => clearTimeout(t)
   }, [
     minElapsed,
-    allReady,
-    timedOut,
-    userForcedContinue,
+    readyToAdvance,
     router,
     audience,
     missingPrompts,
@@ -605,7 +673,34 @@ export function ProcessingScreen({ audience }: { audience: Audience }) {
   // the page is broken. Hold the ring at 94% until everything is actually
   // ready; the last 6% is the truth.
   const tickerPercent = ((activeStep + 1) / processingSteps.length) * 100
-  const progressPercent = allReady ? 100 : Math.min(tickerPercent, 94)
+  // Complete the ring exactly when we are about to leave, so the last 6% still
+  // means "your result is ready" rather than "the extras also finished".
+  const progressPercent = readyToAdvance ? 100 : Math.min(tickerPercent, 94)
+
+  if (coreIsUnavailable) {
+    return (
+      <div className="flex min-h-screen items-center justify-center px-5">
+        <div className="s-card-static animate-fade-in-up w-full max-w-md p-8 text-center">
+          <h2 className="mb-3 font-serif text-[24px] leading-snug text-ink">
+            We couldn&apos;t finish
+            <span className="block font-serif-italic">your reflection.</span>
+          </h2>
+          <p className="mb-7 text-[15px] leading-[1.75] text-foreground/85">
+            Your answers are saved. Something interrupted the writing step, so
+            there is nothing to show you yet - trying again picks up from your
+            existing answers, and you will not have to retype anything.
+          </p>
+          <button
+            type="button"
+            onClick={() => window.location.reload()}
+            className="s-btn"
+          >
+            Try again
+          </button>
+        </div>
+      </div>
+    )
+  }
 
   if (missingPrompts) {
     return (
