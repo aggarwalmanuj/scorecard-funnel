@@ -162,6 +162,43 @@ test("canEnterReveal tracks beat-1 only", () => {
   assert.equal(canEnterReveal(beats), false)
 })
 
+// ── Failure messaging must match the actual failure ────────────────────────
+
+test("a generation failure is not reported as unseeded prompts", async () => {
+  const { readFile } = await import("node:fs/promises")
+  const src = await readFile(
+    new URL("../../components/challenge/processing-screen.tsx", import.meta.url),
+    "utf8",
+  )
+
+  // /api/challenge/ai-ready only checks that OPENROUTER_API_KEY is set - it
+  // never inspects prompt seeding - so no dead end here may blame prompts.
+  assert.ok(
+    !/prompts haven|haven't been seeded|been seeded yet/i.test(src),
+    "the config error must not claim prompts are unseeded; ai-ready never checks that",
+  )
+
+  // The two stalled/failed-generation paths (28s with nothing streamed, and
+  // beat 1 failing) must route to the retryable error, not the contact-admin
+  // one, because retrying is what actually helps that participant.
+  const stalled = src.slice(src.indexOf("beatsLenRef.current < 40"))
+  assert.match(
+    stalled.slice(0, 200),
+    /setGenerationFailed\(true\)/,
+    "a stalled generation must set generationFailed, not missingPrompts",
+  )
+
+  const beat1Failed = src.slice(src.indexOf("!results[0]?.ok"))
+  assert.match(
+    beat1Failed.slice(0, 200),
+    /setGenerationFailed\(true\)/,
+    "a failed first beat must set generationFailed, not missingPrompts",
+  )
+
+  // Whatever the dead end, it must offer a way forward rather than spin.
+  assert.match(src, /Try again/, "the retryable error must offer a retry action")
+})
+
 // ── The progress ticker must stay pure ─────────────────────────────────────
 
 test("no timer is cleared from inside a setActiveStep updater", async () => {
