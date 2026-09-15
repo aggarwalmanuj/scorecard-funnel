@@ -1689,7 +1689,9 @@ export default function AdminPage() {
     <div data-palette="marine" className="min-h-screen bg-background font-sans">
       {/* Sticky Header */}
       <header className="sticky top-0 z-50 bg-background/95 backdrop-blur-xl border-b-2 border-foreground/10">
-        <div className="max-w-5xl mx-auto px-5 h-16 flex items-center justify-between gap-4">
+        {/* Wraps instead of overflowing: at phone width the actions drop to
+            a second row rather than drawing over the title. */}
+        <div className="max-w-5xl mx-auto px-5 min-h-16 py-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
           <div className="flex min-w-0 items-center gap-3">
             <span className="brand-mark brand-mark-sm" aria-hidden />
             <div className="flex flex-col">
@@ -1699,7 +1701,7 @@ export default function AdminPage() {
               </span>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="ml-auto flex shrink-0 items-center gap-2">
             <input
               ref={importFileRef}
               type="file"
@@ -1716,20 +1718,22 @@ export default function AdminPage() {
               onClick={() => importFileRef.current?.click()}
               disabled={loading}
               title={`Upload JSON into the ${audience} editor`}
-              className="inline-flex h-9 items-center gap-1.5 rounded-full border border-foreground/35 px-4 text-[10px] uppercase tracking-[0.22em] text-foreground transition-colors duration-300 hover:border-ink hover:text-ink disabled:opacity-50"
+              aria-label={`Import ${audience}`}
+              className="inline-flex h-9 items-center gap-1.5 rounded-full border border-foreground/35 px-3 text-[10px] uppercase tracking-[0.22em] text-foreground transition-colors duration-300 hover:border-ink hover:text-ink disabled:opacity-50 sm:px-4"
             >
               <Upload className="h-3 w-3" strokeWidth={1.6} />
-              Import {audience}
+              <span className="hidden sm:inline">Import {audience}</span>
             </button>
             <button
               type="button"
               onClick={handleDownloadConfig}
               disabled={loading}
               title={`Download the ${audience} editor state as JSON`}
-              className="inline-flex h-9 items-center gap-1.5 rounded-full border border-foreground/35 px-4 text-[10px] uppercase tracking-[0.22em] text-foreground transition-colors duration-300 hover:border-ink hover:text-ink disabled:opacity-50"
+              aria-label={`Export ${audience}`}
+              className="inline-flex h-9 items-center gap-1.5 rounded-full border border-foreground/35 px-3 text-[10px] uppercase tracking-[0.22em] text-foreground transition-colors duration-300 hover:border-ink hover:text-ink disabled:opacity-50 sm:px-4"
             >
               <Download className="h-3 w-3" strokeWidth={1.6} />
-              Export {audience}
+              <span className="hidden sm:inline">Export {audience}</span>
             </button>
             <button
               type="button"
