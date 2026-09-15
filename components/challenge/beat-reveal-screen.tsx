@@ -7,6 +7,7 @@ import { ArrowRight, ArrowLeft, Check, Volume2, Square } from "lucide-react"
 import { Textarea } from "@/components/ui/textarea"
 import { useChallenge, type Audience, type ChallengeState } from "@/context/challenge-context"
 import { submitToGoogleSheet } from "@/lib/submit-to-google-sheet"
+import { FEEDBACK_NOTE_MAX_CHARS } from "@/lib/feedback-limits"
 import { preloadBeatAudio } from "@/lib/client/beat-audio-cache"
 import { useAudioPlayback } from "@/hooks/use-audio-playback"
 import { ChallengeNavHome } from "@/components/challenge/challenge-nav-home"
@@ -613,6 +614,7 @@ export function BeatRevealScreen({
                             onChange={(e) => setPartlyReason(e.target.value)}
                             placeholder="What part didn't land?"
                             rows={2}
+                            maxLength={FEEDBACK_NOTE_MAX_CHARS}
                             className="s-input resize-none"
                             aria-label="What part of the reflection didn't land for you? (optional)"
                           />

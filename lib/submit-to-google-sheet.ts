@@ -161,8 +161,11 @@ export async function submitToGoogleSheet(
       })
       if (res.ok) return true
       // 4xx is a permanent failure (bad payload, missing field) — no point
-      // retrying, the server will reject every attempt the same way.
-      if (res.status >= 400 && res.status < 500) {
+      // retrying, the server will reject every attempt the same way. Except
+      // 408 and 429, which say "not now" rather than "never": the middleware's
+      // per-IP API rate limit answers 429, and shared mobile-carrier IPs make
+      // that reachable mid-funnel.
+      if (res.status >= 400 && res.status < 500 && res.status !== 408 && res.status !== 429) {
         console.error(`[submitToGoogleSheet] permanent ${res.status} for`, payload.action)
         return false
       }

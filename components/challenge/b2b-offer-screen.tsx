@@ -10,6 +10,7 @@ import { extractQuotedMoment } from "@/components/challenge/offer-screen"
 import posthog from "posthog-js"
 import { track } from "@/lib/fbpixel"
 import { B2B_ACTION_PLAN_PRICE, STRIPE_PAYMENT_LINKS } from "@/lib/offers"
+import { rememberFunnelOrigin } from "@/lib/client/funnel-origin"
 import { displayFor } from "@/lib/vertical-display"
 import { persistOfferView } from "@/lib/persist-outputs"
 
@@ -120,6 +121,7 @@ export function B2BOfferScreen({ audience }: { audience: Audience }) {
       if (state.serialNumber != null)
         url.searchParams.set("client_reference_id", String(state.serialNumber))
       if (state.email) url.searchParams.set("prefilled_email", state.email)
+      rememberFunnelOrigin()
       window.location.assign(url.toString())
     } catch (err) {
       console.error("[stripe] failed to open payment link", err)

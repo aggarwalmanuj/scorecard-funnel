@@ -4,6 +4,7 @@ import { isCosmosConfigured, appendSignupRow, updateQuestionCell, updateFeedback
 import { redactError } from "@/lib/security"
 import { sendLeadEvent } from "@/lib/server/meta-capi"
 import { normalizeVertical } from "@/lib/verticals"
+import { FEEDBACK_MAX_CHARS } from "@/lib/feedback-limits"
 
 /** Read a single cookie value out of the raw Cookie header. */
 function readCookie(header: string | null, name: string): string | undefined {
@@ -47,7 +48,16 @@ const bodySchema = z.object({
     z.string().max(4000).optional()
   ),
   beatNumber: z.number().int().min(1).max(5).optional(),
-  feedback: z.string().max(200).optional(),
+  // Clamped, never rejected. "Partly - close enough" opens a free-text note
+  // that is sent as "<option> | <note>"; this used to be max(200), so any note
+  // past ~176 chars failed validation, the client treated the 400 as permanent,
+  // and the participant's choice for that beat was lost without a trace - the
+  // likely cause of serial 203's blank beat 3 between saved beats 2 and 4. A
+  // long note must cost its tail, not the whole answer.
+  feedback: z.preprocess(
+    (v) => (v == null ? undefined : String(v).slice(0, FEEDBACK_MAX_CHARS)),
+    z.string().max(FEEDBACK_MAX_CHARS).optional()
+  ),
   output: z.string().max(50000).optional(),
   // Final-output payloads. Caps are generous but bounded so a single
   // document stays well under Cosmos's 2 MB item limit. Audio is NOT sent

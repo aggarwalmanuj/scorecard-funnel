@@ -10,6 +10,7 @@ import { VideoTestimonialsWall } from "@/components/video-testimonials-wall"
 import posthog from "posthog-js"
 import { track } from "@/lib/fbpixel"
 import { STRIPE_PAYMENT_LINKS } from "@/lib/offers"
+import { rememberFunnelOrigin } from "@/lib/client/funnel-origin"
 import { displayFor } from "@/lib/vertical-display"
 import { persistOfferView } from "@/lib/persist-outputs"
 import { MacWindow } from "@/components/visuals/mac-window"
@@ -140,8 +141,12 @@ export function OfferScreen({ audience }: { audience: Audience }) {
 
   // Payment handoff to the Stripe Payment Link (single source of truth in
   // lib/offers.ts). Stripe collects payment + email, then redirects to the
-  // thank-you page with ?paid=1&tier=diagnostic&session_id=… so the report
-  // unlocks (verified server-side via /api/stripe/verify-session).
+  // thank-you page configured on the link in the Stripe Dashboard, which
+  // carries a session_id ONLY if that URL includes {CHECKOUT_SESSION_ID}. The
+  // report no longer depends on it: /api/stripe/verify-session also finds the
+  // paid session by the buyer's email. The link's one redirect URL is shared
+  // by every vertical, so the origin is recorded first to bring the buyer
+  // back to their own subdomain (lib/client/funnel-origin.ts).
   const proceedToCheckout = () => {
     track("InitiateCheckout", {
       value: PRICE,
@@ -164,6 +169,7 @@ export function OfferScreen({ audience }: { audience: Audience }) {
       if (state.serialNumber != null)
         url.searchParams.set("client_reference_id", String(state.serialNumber))
       if (state.email) url.searchParams.set("prefilled_email", state.email)
+      rememberFunnelOrigin()
       window.location.assign(url.toString())
     } catch (err) {
       console.error("[stripe] failed to open payment link", err)

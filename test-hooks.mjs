@@ -7,11 +7,13 @@
 //
 // Test-only: nothing in the app or the build loads this.
 
-import { pathToFileURL } from "node:url"
+import { fileURLToPath, pathToFileURL } from "node:url"
 import { existsSync } from "node:fs"
 import path from "node:path"
 
-const ROOT = path.dirname(new URL(import.meta.url).pathname)
+// fileURLToPath, not URL#pathname: on Windows the pathname is "/D:/...", which
+// path.join turns into "\D:\..." and no "@/" import ever resolves.
+const ROOT = path.dirname(fileURLToPath(import.meta.url))
 
 export async function resolve(specifier, context, nextResolve) {
   if (specifier.startsWith("@/")) {

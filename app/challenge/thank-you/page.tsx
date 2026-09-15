@@ -13,6 +13,8 @@ import {
 } from "@/lib/client/summary-audio-cache"
 import { FB_PIXEL_ID, trackWhenReady } from "@/lib/fbpixel"
 import { persistPurchase, persistTelemetry } from "@/lib/persist-outputs"
+import { rememberPurchase } from "@/lib/client/purchase-proof"
+import { funnelOriginToReturnTo } from "@/lib/client/funnel-origin"
 
 // Thank-you page - confirms successful transactions from both
 // Stripe ($47 report) and the deeper tiers booked via Calendly.
@@ -154,10 +156,36 @@ export default function ThankYouPage() {
   // server-side (the report no longer trusts a bare ?paid=1).
   const [sessionId, setSessionId] = useState<string | null>(null)
 
+  // Stripe sends every buyer to one fixed success URL, but the assessment
+  // lives in the localStorage of the subdomain they took it on. When that is
+  // a different origin, reload there with the same query string before
+  // anything else runs - otherwise this page and the report see an empty
+  // session. Resolved once; every effect below stands down while it's set.
+  const returnOriginRef = useRef<string | null | undefined>(undefined)
+  const returningToFunnel = () => {
+    if (returnOriginRef.current === undefined) {
+      returnOriginRef.current =
+        typeof window === "undefined" ? null : funnelOriginToReturnTo()
+    }
+    return returnOriginRef.current !== null
+  }
+
   // Resolved on mount so SSR hydration doesn't mismatch.
   useEffect(() => {
+    if (returningToFunnel()) {
+      const { pathname, search, hash } = window.location
+      window.location.replace(`${returnOriginRef.current}${pathname}${search}${hash}`)
+      return
+    }
+    const params = new URLSearchParams(window.location.search)
+    const sid = params.get("session_id")
     setTier(resolveTier())
-    setSessionId(new URLSearchParams(window.location.search).get("session_id"))
+    setSessionId(sid)
+    // Remember the purchase for the report gate, so the report still opens as
+    // a buyer's report later or from a link that lost its session_id.
+    if (params.get("paid") === "1" || params.get("booked") === "1") {
+      rememberPurchase({ sessionId: sid ?? undefined, tier: resolveTier() })
+    }
   }, [])
 
   // Direct-access guard: this is a post-transaction confirmation page. When
@@ -166,6 +194,7 @@ export default function ThankYouPage() {
   // separately protected by server-side verification, so this is just order
   // hygiene, not the security boundary.)
   useEffect(() => {
+    if (returningToFunnel()) return
     if (!isFunnelEnforced()) return
     const params = new URLSearchParams(window.location.search)
     const hasSignal =
@@ -182,6 +211,7 @@ export default function ThankYouPage() {
   )[tier]
 
   useEffect(() => {
+    if (returningToFunnel()) return
     markComplete()
   }, [markComplete])
 
@@ -192,6 +222,7 @@ export default function ThankYouPage() {
   const recordedRef = useRef(false)
   useEffect(() => {
     if (recordedRef.current) return
+    if (returningToFunnel()) return
     if (!state.serialNumber || !state.email) return
     const params = new URLSearchParams(window.location.search)
     const confirmed = params.get("paid") === "1" || params.get("booked") === "1"
@@ -216,6 +247,7 @@ export default function ThankYouPage() {
   const purchaseFiredRef = useRef(false)
   useEffect(() => {
     if (purchaseFiredRef.current || !FB_PIXEL_ID) return
+    if (returningToFunnel()) return
     const params = new URLSearchParams(window.location.search)
     // Calendly bookings have no Stripe session; Stripe success always carries
     // session_id. Requiring it for the paid (Stripe) path means a forged bare
@@ -350,7 +382,7 @@ export default function ThankYouPage() {
               title={copy.reportTitle}
               titleItalic={copy.reportTitleItalic}
               description="Your full PDF action plan - your scores, the specific pattern named in plain language, three immediate behavioral shifts, and a 90-day benchmark to measure progress."
-              actionHref={`/challenge/report?autosave=1&tier=${tier}${
+              actionHref={`/challenge/report?autosave=1&paid=1&tier=${tier}${
                 sessionId ? `&session_id=${encodeURIComponent(sessionId)}` : ""
               }`}
               actionLabel={copy.reportCta}
