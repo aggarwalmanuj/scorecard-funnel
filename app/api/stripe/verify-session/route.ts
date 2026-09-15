@@ -3,7 +3,16 @@ import { z } from "zod"
 import { getStripe } from "@/lib/stripe"
 import { redactError } from "@/lib/security"
 import { isPreviewSecret } from "@/lib/server/admin-auth"
-import { isDefinitiveStripeMiss, pickPaidSession } from "@/lib/server/report-unlock"
+import { isCosmosConfigured, readUserIdentity } from "@/lib/server/cosmos-db"
+import {
+  isDefinitiveStripeMiss,
+  isPaidSessionForSerial,
+  pickPaidSession,
+  serialBelongsTo,
+} from "@/lib/server/report-unlock"
+
+// Most completed sessions the serial lookup will read before giving up.
+const SERIAL_SCAN_CAP = 500
 
 /**
  * POST /api/stripe/verify-session
@@ -14,17 +23,19 @@ import { isDefinitiveStripeMiss, pickPaidSession } from "@/lib/server/report-unl
  * route instead asks Stripe itself whether the buyer paid, so the unlock can't
  * be faked from the client.
  *
- * Two ways to prove it, tried in order:
+ * Three ways to prove it, tried in order:
  *
  *  1. `sessionId` - the Checkout Session id from the success redirect.
- *  2. `email` (+ optional `serialNumber`) - a paid Checkout Session for the
- *     buyer's email. This is the path that matters in practice: every tier is
- *     sold through Stripe Payment Links, whose success redirect is configured
- *     in the Stripe Dashboard, and a redirect saved without the
- *     `{CHECKOUT_SESSION_ID}` placeholder carries no id at all. Two buyers
- *     (serials 205 and 211, Sep 2026) paid, reached the report with no id,
- *     and were shown the paywall again. The email lookup unlocks them no
- *     matter how the redirect is configured.
+ *  2. `email` - a paid Checkout Session for the buyer's email. This matters in
+ *     practice: every tier is sold through Stripe Payment Links, whose success
+ *     redirect is configured in the Stripe Dashboard, and as of Sep 2026 none
+ *     of the six live links included the `{CHECKOUT_SESSION_ID}` placeholder,
+ *     so no buyer ever arrived with an id. Two buyers (serials 205 and 211)
+ *     paid, reached the report, and were shown the paywall again.
+ *  3. `serialNumber` + `email` - the paid session tagged with the funnel
+ *     serial (client_reference_id), for a buyer who typed a different email
+ *     at checkout. Only after the serial's row is shown to be the claimed
+ *     email's, because serials are guessable.
  *
  * Returns { ok, paid, tier, unverifiable }. `paid` is only true when Stripe
  * itself reports a paid session. `unverifiable` means Stripe could not be
@@ -114,6 +125,41 @@ export async function POST(req: Request) {
     } catch (e) {
       if (!isDefinitiveStripeMiss(e)) unverifiable = true
       console.error("[stripe/verify-session] list by email", redactError(e))
+    }
+  }
+
+  // The buyer may have typed a different email at checkout (serial 205 did:
+  // a work address at Stripe, a personal one in the assessment), so the email
+  // lookup finds nothing. The offer page tags every checkout with the funnel
+  // serial, so look for that instead - but only once the serial's own row is
+  // shown to belong to the claimed email, since serials are guessable.
+  if (email && serialNumber && isCosmosConfigured()) {
+    try {
+      const row = await readUserIdentity(serialNumber)
+      if (serialBelongsTo(row, email)) {
+        // The purchase cannot predate the signup. The hour of slack covers
+        // clock skew; the cap bounds the scan on a busy account.
+        const signupMs = Date.parse(row!.createdAt)
+        const since = Number.isFinite(signupMs) ? Math.floor(signupMs / 1000) - 3600 : undefined
+        let scanned = 0
+        for await (const s of getStripe().checkout.sessions.list({
+          status: "complete",
+          limit: 100,
+          ...(since ? { created: { gte: since } } : {}),
+        })) {
+          if (isPaidSessionForSerial(s, serialNumber)) {
+            return NextResponse.json({
+              ok: true,
+              paid: true,
+              tier: typeof s.metadata?.tier === "string" ? s.metadata.tier : null,
+            })
+          }
+          if (++scanned >= SERIAL_SCAN_CAP) break
+        }
+      }
+    } catch (e) {
+      if (!isDefinitiveStripeMiss(e)) unverifiable = true
+      console.error("[stripe/verify-session] lookup by serial", redactError(e))
     }
   }
 

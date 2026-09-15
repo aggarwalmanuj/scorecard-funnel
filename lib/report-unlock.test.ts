@@ -11,7 +11,9 @@ import assert from "node:assert/strict"
 import { readFile } from "node:fs/promises"
 import {
   isDefinitiveStripeMiss,
+  isPaidSessionForSerial,
   pickPaidSession,
+  serialBelongsTo,
   type CheckoutSessionLike,
 } from "@/lib/server/report-unlock"
 import { decideReportAccess } from "@/lib/client/purchase-proof"
@@ -47,6 +49,20 @@ test("the session carrying this browser's serial is preferred", () => {
 test("an unpaid or missing session never unlocks", () => {
   assert.equal(pickPaidSession([session("unpaid", "205")], 205), null)
   assert.equal(pickPaidSession([], 205), null)
+})
+
+test("serial 205: paid with a work email, found by the serial on its row", () => {
+  // Assessment email and checkout email differ; the row ties serial to email.
+  const row = { email: "Buyer@Hotmail.com " }
+  assert.equal(serialBelongsTo(row, "buyer@hotmail.com"), true, "case and whitespace insensitive")
+  assert.equal(isPaidSessionForSerial(session("paid", "205"), 205), true)
+})
+
+test("a guessed serial unlocks nothing without its row's email", () => {
+  assert.equal(serialBelongsTo({ email: "buyer@hotmail.com" }, "someone-else@example.com"), false)
+  assert.equal(serialBelongsTo(null, "buyer@hotmail.com"), false, "no such serial")
+  assert.equal(isPaidSessionForSerial(session("paid", "206"), 205), false, "another buyer's session")
+  assert.equal(isPaidSessionForSerial(session("unpaid", "205"), 205), false)
 })
 
 test("only Stripe saying 'no such session' is a definitive miss", () => {

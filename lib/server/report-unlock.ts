@@ -34,6 +34,30 @@ export function pickPaidSession<T extends CheckoutSessionLike>(
 }
 
 /**
+ * Whether a claimed serial may be looked up on the buyer's behalf: only when
+ * the funnel row for that serial belongs to the email the visitor also claims.
+ * Serials are small sequential numbers and trivially guessed, so a serial on
+ * its own proves nothing; tied to the row's email it is as strong as the email
+ * lookup, and it catches the buyer who typed a different email at checkout.
+ */
+export function serialBelongsTo(
+  row: { email: string } | null,
+  claimedEmail: string,
+): boolean {
+  if (!row?.email) return false
+  return row.email.trim().toLowerCase() === claimedEmail.trim().toLowerCase()
+}
+
+/** Whether this is a paid session the offer page tagged with this serial
+ *  (it sets the serial as client_reference_id on the Payment Link). */
+export function isPaidSessionForSerial(
+  session: CheckoutSessionLike,
+  serialNumber: number,
+): boolean {
+  return session.payment_status === "paid" && session.client_reference_id === String(serialNumber)
+}
+
+/**
  * True when a Stripe error is Stripe answering "no" (an unknown or malformed
  * session id, a test-mode id against a live key) rather than Stripe being
  * unreachable or our key being unable to ask. Only the latter may be treated

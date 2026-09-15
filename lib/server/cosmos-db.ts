@@ -866,6 +866,24 @@ export async function updateUserTelemetry(
   await updateUserFields(serialNumber, firstName, email, fields)
 }
 
+/** The email and signup time on a user row, or null when there is no such
+ *  serial. Read-only; used to tie a claimed serial to a claimed email before
+ *  the paid-report unlock trusts it (see /api/stripe/verify-session). */
+export async function readUserIdentity(
+  serialNumber: number
+): Promise<{ email: string; createdAt: string } | null> {
+  await ensureInitialized()
+  const { resources } = await usersContainer()
+    .items.query<{ email?: string; createdAt?: string }>({
+      query: "SELECT c.email, c.createdAt FROM c WHERE c.id = @id",
+      parameters: [{ name: "@id", value: String(serialNumber) }],
+    })
+    .fetchAll()
+  const row = resources[0]
+  if (!row?.email) return null
+  return { email: row.email, createdAt: row.createdAt ?? "" }
+}
+
 /** Record a completed purchase against the user document. */
 export async function recordPurchase(
   serialNumber: number,
