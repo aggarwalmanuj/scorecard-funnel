@@ -7,6 +7,7 @@ import { ArrowRight, ArrowLeft, Mic, MicOff, Lightbulb, Check } from "lucide-rea
 import { Textarea } from "@/components/ui/textarea"
 import { useChallenge, type Audience, type ChallengeState } from "@/context/challenge-context"
 import { submitToGoogleSheet } from "@/lib/submit-to-google-sheet"
+import { MIN_ANSWER_CHARS, answerLength } from "@/lib/answer-limits"
 import { ChallengeNavHome } from "@/components/challenge/challenge-nav-home"
 import { ChallengeMenuButton } from "@/components/challenge/challenge-funnel-header-actions"
 import { PrivacyNotice } from "@/components/privacy-notice"
@@ -357,9 +358,12 @@ export function QuestionScreen({
     else startListening()
   }
 
+  const answerChars = answerLength(answer)
+  const answerLongEnough = answerChars >= MIN_ANSWER_CHARS
+
   const handleNext = async () => {
     if (isNavigating) return
-    if (!answer.trim()) return
+    if (!answerLongEnough) return
     setIsNavigating(true)
     try {
       setResponse(responseKey, answer)
@@ -526,8 +530,28 @@ export function QuestionScreen({
                   className={`s-input min-h-36 resize-none p-4 font-sans text-[16px] leading-[1.7] transition-all duration-300 ${
                     isFocused ? "border-ink" : ""
                   }`}
+                  aria-describedby={`answer-length-${questionNumber}`}
                 />
               </div>
+
+              <p
+                id={`answer-length-${questionNumber}`}
+                className={`mt-2 flex items-center justify-end gap-1.5 text-[12px] tabular-nums ${
+                  answerLongEnough ? "text-ink" : "text-foreground/65"
+                }`}
+                aria-live="polite"
+              >
+                {answerLongEnough ? (
+                  <>
+                    <Check className="h-3 w-3" strokeWidth={2} aria-hidden />
+                    {answerChars} characters
+                  </>
+                ) : (
+                  <>
+                    {answerChars} / {MIN_ANSWER_CHARS} characters minimum
+                  </>
+                )}
+              </p>
 
               {(isListening || speechInterim) && (
                 <div
@@ -696,7 +720,7 @@ export function QuestionScreen({
             <button
               type="button"
               onClick={handleNext}
-              disabled={isNavigating || !answer.trim()}
+              disabled={isNavigating || !answerLongEnough}
               aria-label={
                 questionNumber === 5
                   ? "Complete the assessment"
