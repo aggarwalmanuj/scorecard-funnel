@@ -2813,8 +2813,10 @@ export default function AdminPage() {
                                     return (
                                       <div key={`fb${n}`}>
                                         <label className="block eyebrow text-foreground/65 mb-1">Beat {n}</label>
-                                        <span className="text-sm px-2 py-0.5 bg-secondary rounded-lg inline-block">
-                                          {val || "-"}
+                                        {/* Explicit text colour: the chip used to inherit a dark
+                                            ink on the dark marine card and was unreadable. */}
+                                        <span className="inline-block max-w-full whitespace-pre-wrap break-words rounded-lg border border-border bg-secondary/60 px-2.5 py-1 text-sm leading-snug text-foreground">
+                                          {val || <span className="text-muted-foreground">-</span>}
                                         </span>
                                       </div>
                                     )
