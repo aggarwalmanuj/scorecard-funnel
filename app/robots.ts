@@ -10,7 +10,9 @@ export default function robots(): MetadataRoute.Robots {
       {
         userAgent: "*",
         allow: "/",
-        disallow: ["/admin", "/api/", "/challenge/*/processing"],
+        // The admin console (/polaris) is deliberately NOT listed: robots.txt is
+        // public and would advertise the path. It opts out via noindex instead.
+        disallow: ["/api/", "/challenge/*/processing"],
       },
     ],
     sitemap: `${SITE_URL}/sitemap.xml`,

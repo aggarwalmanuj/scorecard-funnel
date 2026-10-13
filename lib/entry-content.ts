@@ -1,7 +1,7 @@
 /**
  * Entry-page ("your details" signup step) content pack — the static,
  * admin-authored copy that varies per vertical. Stored in Cosmos as one JSON
- * blob per vertical under `entry_content_<vertical>`, edited on /admin, and
+ * blob per vertical under `entry_content_<vertical>`, edited on /polaris, and
  * resolved server-side with the same inherit-from-main chain as prompts
  * (getEntryContent in lib/server/challenge-prompts.ts).
  *

@@ -6,7 +6,7 @@
  * `/challenge/audience`), but signup happens later — by then the query string
  * is gone. So we capture once, as early as possible at app boot (see
  * instrumentation-client.ts), and stash it in localStorage. submitSignup reads
- * it back and persists it onto the user document, where both /admin and
+ * it back and persists it onto the user document, where both /polaris and
  * /techadmin surface it on each response.
  *
  * Cross-funnel flow: external landing pages (run behind ads) store their own

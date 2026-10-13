@@ -15,7 +15,7 @@ import { normalizeLlmScoreOutput } from "@/lib/scoring"
  * Clarity Readiness scoring - LLM-backed.
  *
  * The system prompt is admin-configurable per audience via the Score tab in
- * /admin. The shared `DEFAULT_SCORE_SYSTEM_PROMPT` is used only when no Cosmos
+ * /polaris. The shared `DEFAULT_SCORE_SYSTEM_PROMPT` is used only when no Cosmos
  * override exists. No prompt is hardcoded in this route.
  *
  * The route returns the model's JSON object as-is. Clients pull out whatever

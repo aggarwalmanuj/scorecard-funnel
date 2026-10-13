@@ -132,7 +132,7 @@ async function main() {
 
   console.log("")
   console.log("Done. The server prompt cache expires within 5 minutes; saving")
-  console.log("once from /admin (or redeploying) picks the new keys up immediately.")
+  console.log("once from /polaris (or redeploying) picks the new keys up immediately.")
 }
 
 main().catch((e) => {

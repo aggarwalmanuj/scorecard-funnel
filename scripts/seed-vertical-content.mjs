@@ -180,7 +180,7 @@ async function main() {
   }
   console.log("")
   console.log(`Done. Wrote ${ok} keys. Failed: ${failed}.`)
-  console.log("The server prompt cache expires within 5 minutes; a save from /admin picks it up immediately.")
+  console.log("The server prompt cache expires within 5 minutes; a save from /polaris picks it up immediately.")
 }
 
 main().catch((e) => {

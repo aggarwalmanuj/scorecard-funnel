@@ -350,7 +350,7 @@ vertical must extend this line and needs its own Stripe Payment Link env var.
 
 ### 3.6 Nothing else needs touching
 
-`/admin` tabs, the entry page, the offer router, attribution namespacing and the
+`/polaris` tabs, the entry page, the offer router, attribution namespacing and the
 middleware are all registry-driven. Verify with:
 
 ```bash
@@ -453,7 +453,7 @@ Seeding is **additive and safe** — keys are namespaced `<base>_<id>`, nothing
 existing is touched, and nothing reads them until the code deploys. Seeding
 before deploy is fine.
 
-The alternative path is `/admin` → the vertical's tab → **Import** → the JSON →
+The alternative path is `/polaris` → the vertical's tab → **Import** → the JSON →
 **Save changes**, which also busts the 5-minute server prompt cache immediately.
 
 ---
@@ -535,7 +535,7 @@ score_json, summary_text, report_json, offer_viewed_at,
 utm_*, fbclid, ref, lp, vertical, referrer, landing_page
 ```
 
-Any `*** MISSING ***` is a failed write worth chasing. And check `/admin`:
+Any `*** MISSING ***` is a failed write worth chasing. And check `/polaris`:
 the new tab renders, its content tabs load the seeded copy, and the row is
 searchable and tagged with the vertical.
 
@@ -576,7 +576,7 @@ or not — check them against your register and raise them rather than assuming:
 | `components/challenge/offer-screen.tsx:310` | "Personalized 30-Day **Belief Action Plan**" — shown to every B2C vertical regardless of its `reportName` |
 | `components/challenge/offer-screen.tsx:457` | "Less than a single coaching session." |
 | `components/challenge/offer-screen.tsx` FAQ | "Is this therapy or a diagnosis?" — off-register for a B2B or professional audience |
-| `app/admin/page.tsx:144` | Renders the scoring engine's built-in labels ("Direction Clarity / Purpose"), not the vertical's. Internal only; the buyer-facing report and summary both override correctly |
+| `app/polaris/page.tsx:144` | Renders the scoring engine's built-in labels ("Direction Clarity / Purpose"), not the vertical's. Internal only; the buyer-facing report and summary both override correctly |
 | `lib/offers.ts` upsell ladder | Consumer narrative offers ($497 Story Session / $1,997 Deep Work) for every non-healthcare vertical |
 | The funnel's own cookie banner | Fixed to the bottom; it overlaps the entry-page CTA at desktop heights and intercepts the click until dismissed |
 

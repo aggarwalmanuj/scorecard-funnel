@@ -8,7 +8,7 @@ This guide explains the JSON config files in this folder (`belief-score-config-a
 
 ## How changes go live
 
-1. **Admin panel (recommended):** open `/admin`, pick the vertical's tab, use **Import** to load a JSON file into the editor, review, then **Save changes**. Nothing touches the live site until Save.
+1. **Admin panel (recommended):** open `/polaris`, pick the vertical's tab, use **Import** to load a JSON file into the editor, review, then **Save changes**. Nothing touches the live site until Save.
 2. **Seed script (engineering):** `node --env-file=.env.local scripts/seed-vertical-content.mjs --apply <file>` — accepts partial files and skips empty fields.
 
 **The inheritance rule (important):** any field left **empty** in a non-main vertical automatically serves the **Main** vertical's content at runtime. So a vertical file only needs to contain what is *different* about that audience. This is why the retargeting file is tiny — by design, returning visitors get the same product as main, with only the entry page re-voiced.

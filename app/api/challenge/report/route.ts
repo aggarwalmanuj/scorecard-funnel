@@ -104,7 +104,7 @@ const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 // ───────────────────────── scoring (parallel call #1) ─────────────────────────
 //
 // The system prompt for this parallel scoring call is admin-configurable via
-// the Score tab in /admin — same source of truth as /api/challenge/score so
+// the Score tab in /polaris — same source of truth as /api/challenge/score so
 // both endpoints always use the same prompt. Output is normalized via the
 // shared `normalizeLlmScoreOutput` helper, which accepts both the legacy
 // 4-subscore shape and the simpler `{ score, confidence, top3issues,
@@ -561,7 +561,7 @@ export async function POST(request: Request) {
   // an empty one, so degrade rather than deny.
   if (!result.ok) {
     console.error(
-      `[report] configured prompt failed twice (${result.why}) | audience=${audience} - falling back to built-in prompt. Check the Report tab in /admin for this vertical: its prompt must ask for headline/thread/pillars/themes/beats/takeaways/thirtyDay.`
+      `[report] configured prompt failed twice (${result.why}) | audience=${audience} - falling back to built-in prompt. Check the Report tab in /polaris for this vertical: its prompt must ask for headline/thread/pillars/themes/beats/takeaways/thirtyDay.`
     )
     result = await generate(
       DEFAULT_REPORT_SYSTEM_PROMPT,

@@ -565,7 +565,7 @@ function AnalyticsPanel() {
   )
 }
 
-/** PostHog session link (distinct/session id + replay). Shown on BOTH /admin
+/** PostHog session link (distinct/session id + replay). Shown on BOTH /polaris
  *  and /techadmin so any admin can jump to a tester's session recording. */
 function PostHogSessionBlock({
   r,
@@ -736,8 +736,7 @@ function ResponseTechDetails({
   r,
 }: {
   r: {
-    question1?: string
-    question5?: string
+    answered?: boolean[]
     beat5_output?: string
     score_json?: string
     report_json?: string
@@ -750,8 +749,8 @@ function ResponseTechDetails({
 }) {
   const journey: Array<{ label: string; done: boolean }> = [
     { label: "Signed up", done: true },
-    { label: "Q1", done: cellFilled(r.question1) },
-    { label: "Q5", done: cellFilled(r.question5) },
+    { label: "Q1", done: r.answered?.[0] === true },
+    { label: "Q5", done: r.answered?.[4] === true },
     { label: "Reflections", done: cellFilled(r.beat5_output) },
     { label: "Score", done: cellFilled(r.score_json) },
     { label: "Report", done: cellFilled(r.report_json) },
@@ -818,7 +817,7 @@ export default function AdminPage() {
   // console for day to day (the prompt editors are occasional-use). The
   // responses loader auto-fires for this tab, so data is on screen at login.
   const [tab, setTab] = useState<"system" | "entry" | "questions" | "beats" | "score" | "report" | "summary" | "responses" | "analytics">("responses")
-  // The same console powers /admin and /techadmin. On /techadmin we unlock the
+  // The same console powers /polaris and /techadmin. On /techadmin we unlock the
   // Analytics tab + per-user telemetry (PostHog session, purchase, journey).
   const pathname = usePathname()
   const isTech = (pathname ?? "").startsWith("/techadmin")
@@ -831,7 +830,7 @@ export default function AdminPage() {
   // we resume both.
   useEffect(() => {
     const onAdmin =
-      (pathname ?? "").startsWith("/admin") ||
+      (pathname ?? "").startsWith("/polaris") ||
       (pathname ?? "").startsWith("/techadmin")
     if (!onAdmin) return
     try {
@@ -868,7 +867,9 @@ export default function AdminPage() {
     /** Set once a lead re-signs up; createdAt then reflects the latest. */
     firstSignupAt?: string
     signupCount?: number
-    question1: string; question2: string; question3: string; question4: string; question5: string
+    // Raw answers are private and never sent by the API - only whether each
+    // question was answered (index 0 = Q1). See lib/server/admin-user-view.ts.
+    answered?: boolean[]
     question1_text?: string; question2_text?: string; question3_text?: string; question4_text?: string; question5_text?: string
     beat1_feedback: string; beat2_feedback: string; beat3_feedback: string; beat4_feedback: string; beat5_feedback: string
     beat1_output: string; beat2_output: string; beat3_output: string; beat4_output: string; beat5_output: string
@@ -878,7 +879,7 @@ export default function AdminPage() {
     // Tech-analytics telemetry + purchase (/techadmin only).
     ph_session_id?: string; ph_distinct_id?: string
     paid_tier?: string; paid_amount?: string; paid_at?: string
-    // First-touch acquisition attribution (shown on both /admin and /techadmin).
+    // First-touch acquisition attribution (shown on both /polaris and /techadmin).
     utm_source?: string; utm_medium?: string; utm_campaign?: string
     utm_term?: string; utm_content?: string
     fbclid?: string; gclid?: string; ttclid?: string; msclkid?: string
@@ -1102,11 +1103,12 @@ export default function AdminPage() {
       phone: r.phone ?? "",
       audience: r.audience ?? "",
       createdAt: r.createdAt,
-      question1: r.question1, question1_text: r.question1_text ?? "",
-      question2: r.question2, question2_text: r.question2_text ?? "",
-      question3: r.question3, question3_text: r.question3_text ?? "",
-      question4: r.question4, question4_text: r.question4_text ?? "",
-      question5: r.question5, question5_text: r.question5_text ?? "",
+      answered: r.answered ?? [],
+      question1_text: r.question1_text ?? "",
+      question2_text: r.question2_text ?? "",
+      question3_text: r.question3_text ?? "",
+      question4_text: r.question4_text ?? "",
+      question5_text: r.question5_text ?? "",
       beat1_feedback: r.beat1_feedback, beat2_feedback: r.beat2_feedback,
       beat3_feedback: r.beat3_feedback, beat4_feedback: r.beat4_feedback, beat5_feedback: r.beat5_feedback,
       beat1_output: r.beat1_output, beat2_output: r.beat2_output, beat3_output: r.beat3_output,
@@ -1158,7 +1160,7 @@ export default function AdminPage() {
       rows.length === 1
         ? `response #${rows[0].id} (${rows[0].email || "no email"})`
         : `${rows.length} responses`
-    const completed = rows.filter((r) => (r.question5 ?? "").trim()).length
+    const completed = rows.filter((r) => r.answered?.[4] === true).length
     if (
       !window.confirm(
         `Permanently delete ${label}?\n\n` +
@@ -1219,7 +1221,7 @@ export default function AdminPage() {
   const validatePassword = useCallback(
     async (pw: string): Promise<boolean> => {
       try {
-        // On /techadmin require the tech password (scope=tech); on /admin the
+        // On /techadmin require the tech password (scope=tech); on /polaris the
         // standard one. This is what keeps the two consoles' logins distinct -
         // the regular admin password can't unlock /techadmin.
         const scope = isTech ? "tech" : "admin"
@@ -2472,7 +2474,7 @@ export default function AdminPage() {
                       <div className="relative flex-1">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                         <Input
-                          placeholder="Search by name, email, or answer content..."
+                          placeholder="Search by name or email..."
                           value={searchQuery}
                           onChange={(e) => setSearchQuery(e.target.value)}
                           className="pl-9 h-10 s-input"
@@ -2714,8 +2716,8 @@ export default function AdminPage() {
                                     ×{r.signupCount} signups
                                   </Badge>
                                 )}
-                                <Badge variant="secondary" className={`rounded-lg text-[10px] font-bold shrink-0 mr-1 ${r.question5 ? "bg-green-500/10 text-green-600 border-green-500/20" : "bg-amber-500/10 text-amber-600 border-amber-500/20"}`}>
-                                  {r.question5 ? "Complete" : "Incomplete"}
+                                <Badge variant="secondary" className={`rounded-lg text-[10px] font-bold shrink-0 mr-1 ${r.answered?.[4] ? "bg-green-500/10 text-green-600 border-green-500/20" : "bg-amber-500/10 text-amber-600 border-amber-500/20"}`}>
+                                  {r.answered?.[4] ? "Complete" : "Incomplete"}
                                 </Badge>
                                 <span className="text-xs text-muted-foreground shrink-0 mr-2">{formatDate(r.createdAt)}</span>
                                 <ChevronDown className={`w-4 h-4 text-muted-foreground shrink-0 transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
@@ -2781,7 +2783,7 @@ export default function AdminPage() {
                                   Answers
                                 </p>
                                 {[1, 2, 3, 4, 5].map((n) => {
-                                  const val = r[`question${n}` as keyof typeof r] || ""
+                                  const answered = r.answered?.[n - 1] === true
                                   const promptText = (r[`question${n}_text` as keyof typeof r] as string | undefined) || ""
                                   return (
                                     <div key={`q${n}`}>
@@ -2796,8 +2798,9 @@ export default function AdminPage() {
                                           Prompt text not captured (answered before this feature shipped).
                                         </div>
                                       )}
-                                      <div className="text-sm text-foreground leading-relaxed whitespace-pre-wrap break-words">
-                                        {val || <span className="text-muted-foreground italic">No answer</span>}
+                                      {/* Answer text is private user data and is never sent to this console. */}
+                                      <div className="text-sm text-muted-foreground italic">
+                                        {answered ? "Answered (hidden for privacy)" : "No answer"}
                                       </div>
                                     </div>
                                   )

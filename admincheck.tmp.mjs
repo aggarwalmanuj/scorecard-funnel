@@ -15,7 +15,7 @@ page.on("console", (m) => {
   if (m.type() === "error") console.log("  console error:", m.text().slice(0, 200))
 })
 
-await page.goto("https://aimerge.live/admin", { waitUntil: "domcontentloaded" })
+await page.goto("https://aimerge.live/polaris", { waitUntil: "domcontentloaded" })
 await page.waitForTimeout(2500)
 
 // Password gate

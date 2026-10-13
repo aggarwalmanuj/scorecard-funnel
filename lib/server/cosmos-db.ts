@@ -1,4 +1,10 @@
 import { CosmosClient, type Container, type Database } from "@azure/cosmos"
+import {
+  ADMIN_USER_PROJECTION,
+  ANSWERED_PREDICATE,
+  toAdminUserView,
+  type AdminUserView,
+} from "@/lib/server/admin-user-view"
 
 /* ═══════════════════════════════════════════════
    Cosmos DB Client — replaces Google Sheets
@@ -254,7 +260,7 @@ const MAX_QUESTION_TEXT_LEN = 4000
 export async function fetchUsers(
   pageSize = 25,
   offset = 0
-): Promise<{ users: UserDocument[]; nextOffset: number; hasMore: boolean }> {
+): Promise<{ users: AdminUserView[]; nextOffset: number; hasMore: boolean }> {
   await ensureInitialized()
   const container = usersContainer()
 
@@ -268,9 +274,10 @@ export async function fetchUsers(
   // `createdAt` onto every legacy row at init (see backfillCreatedAt), so a
   // plain `ORDER BY c.createdAt` is now safe and complete. The
   // `IS_DEFINED(c.email)` filter keeps the internal serial-counter doc out.
+  // Projected, never SELECT *: raw answers are private and must not leave
+  // Cosmos for the admin list (see admin-user-view.ts).
   const querySpec = {
-    query:
-      "SELECT * FROM c WHERE IS_DEFINED(c.email) ORDER BY c.createdAt DESC OFFSET @offset LIMIT @limit",
+    query: `SELECT ${ADMIN_USER_PROJECTION} FROM c WHERE IS_DEFINED(c.email) ORDER BY c.createdAt DESC OFFSET @offset LIMIT @limit`,
     parameters: [
       { name: "@offset", value: offset },
       { name: "@limit", value: probe },
@@ -278,10 +285,10 @@ export async function fetchUsers(
   }
 
   const { resources } = await container.items
-    .query<UserDocument>(querySpec)
+    .query<Record<string, unknown>>(querySpec)
     .fetchAll()
 
-  const all = resources ?? []
+  const all = (resources ?? []).map(toAdminUserView)
   const hasMore = all.length > pageSize
   const users = hasMore ? all.slice(0, pageSize) : all
 
@@ -294,7 +301,7 @@ export async function searchUsers(opts: {
   dateTo?: string
   hasCompleted?: boolean
   hasPurchased?: boolean
-}): Promise<UserDocument[]> {
+}): Promise<AdminUserView[]> {
   await ensureInitialized()
   const container = usersContainer()
 
@@ -303,8 +310,10 @@ export async function searchUsers(opts: {
 
   if (opts.query) {
     const q = opts.query.toLowerCase()
+    // Name/email/prompt text only. Answers are deliberately NOT searchable:
+    // a match is itself an oracle on private answer content.
     conditions.push(
-      "(CONTAINS(LOWER(c.firstName), @q) OR CONTAINS(LOWER(c.email), @q) OR CONTAINS(LOWER(c.question1), @q) OR CONTAINS(LOWER(c.question2), @q) OR CONTAINS(LOWER(c.question3), @q) OR CONTAINS(LOWER(c.question4), @q) OR CONTAINS(LOWER(c.question5), @q) OR CONTAINS(LOWER(c.question1_text ?? ''), @q) OR CONTAINS(LOWER(c.question2_text ?? ''), @q) OR CONTAINS(LOWER(c.question3_text ?? ''), @q) OR CONTAINS(LOWER(c.question4_text ?? ''), @q) OR CONTAINS(LOWER(c.question5_text ?? ''), @q))"
+      "(CONTAINS(LOWER(c.firstName), @q) OR CONTAINS(LOWER(c.email), @q) OR CONTAINS(LOWER(c.question1_text ?? ''), @q) OR CONTAINS(LOWER(c.question2_text ?? ''), @q) OR CONTAINS(LOWER(c.question3_text ?? ''), @q) OR CONTAINS(LOWER(c.question4_text ?? ''), @q) OR CONTAINS(LOWER(c.question5_text ?? ''), @q))"
     )
     params.push({ name: "@q", value: q })
   }
@@ -320,9 +329,9 @@ export async function searchUsers(opts: {
   }
 
   if (opts.hasCompleted === true) {
-    conditions.push("(IS_DEFINED(c.question5) AND c.question5 != '')")
+    conditions.push(ANSWERED_PREDICATE("question5"))
   } else if (opts.hasCompleted === false) {
-    conditions.push("(NOT IS_DEFINED(c.question5) OR c.question5 = '')")
+    conditions.push(`NOT ${ANSWERED_PREDICATE("question5")}`)
   }
 
   // Purchase filter — a row counts as purchased once the Stripe webhook /
@@ -339,12 +348,14 @@ export async function searchUsers(opts: {
   // none are dropped. See the note in fetchUsers.
   const where = ` WHERE ${["IS_DEFINED(c.email)", ...conditions].join(" AND ")}`
   const querySpec = {
-    query: `SELECT * FROM c${where} ORDER BY c.createdAt DESC`,
+    query: `SELECT ${ADMIN_USER_PROJECTION} FROM c${where} ORDER BY c.createdAt DESC`,
     parameters: params,
   }
 
-  const { resources } = await container.items.query<UserDocument>(querySpec).fetchAll()
-  return resources ?? []
+  const { resources } = await container.items
+    .query<Record<string, unknown>>(querySpec)
+    .fetchAll()
+  return (resources ?? []).map(toAdminUserView)
 }
 
 /* ═══════════════════════════════════════════════
@@ -930,7 +941,8 @@ export async function fetchFunnelStats(): Promise<FunnelStats> {
   const container = usersContainer()
   const { resources } = await container.items
     .query(
-      "SELECT c.question1, c.question5, c.beat5_output, c.score_json, c.report_json, c.summary_text, c.paid_tier, c.paid_amount FROM c"
+      // Answer presence is computed in Cosmos; the answer text is never read.
+      `SELECT ${ANSWERED_PREDICATE("question1")} AS answered1, ${ANSWERED_PREDICATE("question5")} AS answered5, c.beat5_output, c.score_json, c.report_json, c.summary_text, c.paid_tier, c.paid_amount FROM c`
     )
     .fetchAll()
 
@@ -951,8 +963,8 @@ export async function fetchFunnelStats(): Promise<FunnelStats> {
   let revenue = 0
 
   for (const r of rows) {
-    if (nonEmpty(r.question1)) stages.answeredQ1++
-    if (nonEmpty(r.question5)) stages.answeredAll++
+    if (r.answered1 === true) stages.answeredQ1++
+    if (r.answered5 === true) stages.answeredAll++
     if (nonEmpty(r.beat5_output)) stages.reachedBeats++
     if (nonEmpty(r.score_json)) stages.scored++
     if (nonEmpty(r.report_json)) stages.reported++

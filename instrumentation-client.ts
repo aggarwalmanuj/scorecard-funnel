@@ -49,7 +49,7 @@ const POSTHOG_DEV_ENABLED =
 // brief window before the `loaded` callback could call stopSessionRecording().
 const BOOTED_ON_ADMIN =
   typeof window !== "undefined" &&
-  /^\/(admin|techadmin)(\/|$|\?)/.test(window.location.pathname)
+  /^\/(polaris|techadmin)(\/|$|\?)/.test(window.location.pathname)
 
 if (typeof window !== "undefined" && POSTHOG_KEY && (!IS_DEV || POSTHOG_DEV_ENABLED)) {
   posthog.init(POSTHOG_KEY, {
@@ -60,11 +60,11 @@ if (typeof window !== "undefined" && POSTHOG_KEY && (!IS_DEV || POSTHOG_DEV_ENAB
     disable_session_recording: BOOTED_ON_ADMIN,
     // Belt-and-braces: drop ANY event whose send happens while the user is on
     // an admin route. The `loaded` callback below opts out of capture, but it
-    // runs async — on a direct boot to /admin the forced initial pageview (and
+    // runs async — on a direct boot to /polaris the forced initial pageview (and
     // early autocapture) could otherwise race it and land in PostHog. Same for
     // the brief SPA-navigation window before the admin page effect runs.
     before_send: (event) => {
-      if (/^\/(admin|techadmin)(\/|$|\?)/.test(window.location.pathname)) {
+      if (/^\/(polaris|techadmin)(\/|$|\?)/.test(window.location.pathname)) {
         return null
       }
       return event
@@ -119,7 +119,7 @@ if (typeof window !== "undefined" && POSTHOG_KEY && (!IS_DEV || POSTHOG_DEV_ENAB
     },
     loaded: (ph) => {
       // Keep ALL PostHog capture off while the user is inside the admin
-      // consoles (/admin, /techadmin) — our own team's sessions, not customer
+      // consoles (/polaris, /techadmin) — our own team's sessions, not customer
       // behaviour, and recording them wastes replay quota and can capture
       // other testers' data on screen.
       //
@@ -130,7 +130,7 @@ if (typeof window !== "undefined" && POSTHOG_KEY && (!IS_DEV || POSTHOG_DEV_ENAB
       // (definitive, tears down the active rrweb recorder) AND opt out of event
       // capture. Client-side navigation into/out of admin is handled by a
       // matching effect in the admin page.
-      const onAdminRoute = /^\/(admin|techadmin)(\/|$|\?)/.test(
+      const onAdminRoute = /^\/(polaris|techadmin)(\/|$|\?)/.test(
         window.location.pathname
       )
       try {
