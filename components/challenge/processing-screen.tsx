@@ -118,6 +118,7 @@ async function streamSummaryInBackground(args: {
     const decoder = new TextDecoder()
     let carry = ""
     let full = ""
+    let complete = false
     while (true) {
       const { done, value } = await reader.read()
       if (done) break
@@ -130,8 +131,11 @@ async function streamSummaryInBackground(args: {
           if (!line.startsWith("data:")) continue
           const raw = line.slice(5).trim()
           try {
-            const j = JSON.parse(raw) as { c?: string; done?: boolean }
-            if (j.done) continue
+            const j = JSON.parse(raw) as { c?: string; done?: boolean; complete?: boolean }
+            if (j.done) {
+              complete = j.complete === true
+              continue
+            }
             if (typeof j.c === "string") full += j.c
           } catch {
             /* ignore */
@@ -139,7 +143,10 @@ async function streamSummaryInBackground(args: {
         }
       }
     }
-    return full || null
+    // A cut-off summary used to be kept as final: the participant read a
+    // message missing its closing paragraph and admin stored the same. Drop
+    // it, and /summary generates a fresh one since summaryText stays empty.
+    return complete && full.trim() ? full : null
   } catch {
     return null
   }

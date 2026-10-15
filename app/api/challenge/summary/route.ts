@@ -102,7 +102,12 @@ export async function POST(request: Request) {
         ],
         stream: true,
         temperature: 0.72,
-        max_tokens: 600,
+        // A ceiling, not a length control - the prompt sets the length. With a
+        // reasoning model the hidden reasoning tokens count against this too:
+        // at 600 they consumed 100-360 tokens per call, cutting the closing
+        // paragraph off mid-sentence, and sometimes all of it, leaving the
+        // participant with no summary at all.
+        max_tokens: 4096,
       }),
     })
   } catch (e) {
@@ -127,6 +132,29 @@ export async function POST(request: Request) {
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
       let sseBuffer = ""
+      // Only "stop" means the model finished its message. Anything else (the
+      // token ceiling, an upstream error, a dropped connection) leaves a
+      // partial summary that the client must not keep as the final one.
+      let finishReason: string | null = null
+      // A participant leaving mid-stream is expected; don't log it as a failure.
+      let aborted = false
+      const handleLine = (line: string) => {
+        const trimmed = line.trim()
+        if (!trimmed.startsWith("data:")) return
+        const data = trimmed.slice(5).trim()
+        if (data === "[DONE]") return
+        try {
+          const j = JSON.parse(data) as {
+            choices?: Array<{ delta?: { content?: string }; finish_reason?: string | null }>
+          }
+          const choice = j.choices?.[0]
+          if (choice?.finish_reason) finishReason = choice.finish_reason
+          const content = choice?.delta?.content
+          if (content) controller.enqueue(sseData({ c: content }))
+        } catch {
+          /* ignore */
+        }
+      }
       try {
         while (true) {
           const { done, value } = await reader.read()
@@ -136,46 +164,12 @@ export async function POST(request: Request) {
           while ((idx = sseBuffer.indexOf("\n\n")) !== -1) {
             const block = sseBuffer.slice(0, idx)
             sseBuffer = sseBuffer.slice(idx + 2)
-            for (const line of block.split("\n")) {
-              const trimmed = line.trim()
-              if (!trimmed.startsWith("data:")) continue
-              const data = trimmed.slice(5).trim()
-              if (data === "[DONE]") continue
-              try {
-                const j = JSON.parse(data) as {
-                  choices?: Array<{ delta?: { content?: string } }>
-                }
-                const content = j.choices?.[0]?.delta?.content
-                if (content) {
-                  controller.enqueue(sseData({ c: content }))
-                }
-              } catch {
-                /* ignore */
-              }
-            }
+            block.split("\n").forEach(handleLine)
           }
         }
         // Flush trailing buffer
         const trailing = sseBuffer.trim()
-        if (trailing) {
-          for (const line of trailing.split("\n")) {
-            const trimmed = line.trim()
-            if (!trimmed.startsWith("data:")) continue
-            const data = trimmed.slice(5).trim()
-            if (data === "[DONE]") continue
-            try {
-              const j = JSON.parse(data) as {
-                choices?: Array<{ delta?: { content?: string } }>
-              }
-              const content = j.choices?.[0]?.delta?.content
-              if (content) {
-                controller.enqueue(sseData({ c: content }))
-              }
-            } catch {
-              /* ignore */
-            }
-          }
-        }
+        if (trailing) trailing.split("\n").forEach(handleLine)
       } catch (err) {
         // Client navigating away mid-stream surfaces here as ECONNRESET /
         // "aborted". That is expected, not a bug - swallow it so it does
@@ -187,9 +181,16 @@ export async function POST(request: Request) {
           code === "ECONNRESET" ||
           code === "ABORT_ERR" ||
           /aborted|ECONNRESET|ERR_STREAM_PREMATURE_CLOSE/i.test(msg)
+        aborted = isAbort
         if (!isAbort) console.error("[summary] stream error", redactError(err))
       } finally {
-        try { controller.enqueue(sseData({ done: true })) } catch { /* already closed */ }
+        const complete = finishReason === "stop"
+        if (!complete && !aborted && !request.signal.aborted) {
+          console.error(
+            `[summary] incomplete | finish_reason=${finishReason ?? "none"} | model=${model} | audience=${audience}`
+          )
+        }
+        try { controller.enqueue(sseData({ done: true, complete })) } catch { /* already closed */ }
         try { controller.close() } catch { /* idempotent */ }
       }
     },

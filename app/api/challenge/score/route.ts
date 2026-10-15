@@ -137,7 +137,10 @@ export async function POST(request: Request) {
         ],
         stream: false,
         temperature: 0.2,
-        max_tokens: 700,
+        // Headroom for a reasoning model's hidden tokens, which count against
+        // this ceiling: at 700 they could truncate the JSON, which 502s here and
+        // silently drops the participant onto the heuristic fallback score.
+        max_tokens: 4096,
         response_format: { type: "json_object" },
       }),
     })

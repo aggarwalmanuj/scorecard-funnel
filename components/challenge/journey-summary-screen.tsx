@@ -112,6 +112,24 @@ async function streamSummary(
   const decoder = new TextDecoder()
   let carry = ""
   let full = ""
+  // Set from the server's final event; only a model-finished message counts.
+  let complete = false
+  const handle = (line: string) => {
+    if (!line.startsWith("data:")) return
+    try {
+      const j = JSON.parse(line.slice(5).trim()) as { c?: string; done?: boolean; complete?: boolean }
+      if (j.done) {
+        complete = j.complete === true
+        return
+      }
+      if (typeof j.c === "string") {
+        full += j.c
+        onDelta(full)
+      }
+    } catch {
+      /* ignore */
+    }
+  }
 
   while (true) {
     let chunk: ReadableStreamReadResult<Uint8Array>
@@ -128,41 +146,14 @@ async function streamSummary(
     while ((idx = carry.indexOf("\n\n")) !== -1) {
       const block = carry.slice(0, idx)
       carry = carry.slice(idx + 2)
-      for (const line of block.split("\n")) {
-        if (!line.startsWith("data:")) continue
-        const raw = line.slice(5).trim()
-        try {
-          const j = JSON.parse(raw) as { c?: string; done?: boolean }
-          if (j.done) continue
-          if (typeof j.c === "string") {
-            full += j.c
-            onDelta(full)
-          }
-        } catch {
-          /* ignore */
-        }
-      }
+      block.split("\n").forEach(handle)
     }
   }
 
   const trailing = carry.trim()
-  if (trailing) {
-    for (const line of trailing.split("\n")) {
-      if (!line.startsWith("data:")) continue
-      const raw = line.slice(5).trim()
-      try {
-        const j = JSON.parse(raw) as { c?: string; done?: boolean }
-        if (j.done) continue
-        if (typeof j.c === "string") {
-          full += j.c
-          onDelta(full)
-        }
-      } catch {
-        /* ignore */
-      }
-    }
-  }
+  if (trailing) trailing.split("\n").forEach(handle)
 
+  if (!complete || !full.trim()) return { ok: false, error: "incomplete" }
   return { ok: true }
 }
 
@@ -329,25 +320,34 @@ export function JourneySummaryScreen({ audience }: { audience: Audience }) {
     const abort = new AbortController()
     setIsStreaming(true)
 
-    void streamSummary(
-      {
-        firstName: state.firstName,
-        audience: state.audience ?? "main",
-        beats: {
-          beat1: state.beats.beat1,
-          beat2: state.beats.beat2,
-          beat3: state.beats.beat3,
-          beat4: state.beats.beat4,
-          beat5: state.beats.beat5,
-        },
+    const body = {
+      firstName: state.firstName,
+      audience: state.audience ?? "main",
+      beats: {
+        beat1: state.beats.beat1,
+        beat2: state.beats.beat2,
+        beat3: state.beats.beat3,
+        beat4: state.beats.beat4,
+        beat5: state.beats.beat5,
       },
-      (full) => {
-        fullTextRef.current = full
-        setSummaryText(full)
-        startReveal()
-      },
-      abort.signal,
-    ).then((result) => {
+    }
+    const onDelta = (full: string) => {
+      fullTextRef.current = full
+      setSummaryText(full)
+      startReveal()
+    }
+    void (async () => {
+      let result = await streamSummary(body, onDelta, abort.signal)
+      // One fresh attempt when the model stopped short (token ceiling, upstream
+      // drop): a cut-off closing message is worse than a second's wait.
+      if (!result.ok && result.error === "incomplete" && !abort.signal.aborted) {
+        fullTextRef.current = ""
+        setSummaryText("")
+        setVisibleChars(0)
+        result = await streamSummary(body, onDelta, abort.signal)
+      }
+      return result
+    })().then((result) => {
       setIsStreaming(false)
       if (result.ok) {
         setIsComplete(true)
@@ -518,12 +518,13 @@ export function JourneySummaryScreen({ audience }: { audience: Audience }) {
   }, [state.reportData, persistId])
 
   useEffect(() => {
-    if (summarySavedRef.current || !isComplete) return
+    // A failed/cut-off stream is not a summary; don't record it as one.
+    if (summarySavedRef.current || !isComplete || hasFailed) return
     const text = summaryText || state.summaryText
     if (!text.trim()) return
     summarySavedRef.current = true
     persistSummaryText(persistId, text)
-  }, [isComplete, summaryText, state.summaryText, persistId])
+  }, [isComplete, hasFailed, summaryText, state.summaryText, persistId])
 
   useEffect(() => {
     if (audioSavedRef.current || !audio.isReady) return

@@ -424,7 +424,8 @@ export async function POST(request: Request) {
         system: scoreSystem,
         user: applyScoreUserTemplate(scoreUserTemplate, firstName, responses),
         temperature: 0.2,
-        maxTokens: 700,
+        // Reasoning-model headroom; see the same note in /api/challenge/score.
+        maxTokens: 4096,
       })
 
   const [scoreRaw, reportRaw] = await Promise.all([scorePromise, reportPromise])
