@@ -6,6 +6,7 @@ import { Check } from "lucide-react"
 import { useChallenge, type ChallengeState, type Audience } from "@/context/challenge-context"
 import { streamBeatFromApi, isAbortErrorLike } from "@/lib/stream-beat-client"
 import { submitToGoogleSheet } from "@/lib/submit-to-google-sheet"
+import { persistReport } from "@/lib/persist-outputs"
 import { preloadSummaryAudio } from "@/lib/client/summary-audio-cache"
 import { preloadBeatAudio } from "@/lib/client/beat-audio-cache"
 import { ChallengeNavHome } from "@/components/challenge/challenge-nav-home"
@@ -589,6 +590,12 @@ export function ProcessingScreen({ audience }: { audience: Audience }) {
               scoreSource: "llm" | "fallback"
             },
           )
+          // Save it the moment it exists. The report takes ~2 minutes, so it
+          // usually lands after the participant has left /summary (the only
+          // other place it is persisted) and the admin row never got it.
+          // This promise outlives the processing screen, so the write still
+          // fires mid-journey. Idempotent with the /summary write.
+          persistReport(saveParamsRef.current, report)
         }
       })()
 
