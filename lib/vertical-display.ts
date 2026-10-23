@@ -71,6 +71,55 @@ export interface VerticalDisplay {
   }
   /** Which offer page this vertical renders. */
   offerVariant: "b2c" | "b2b"
+  /**
+   * "product" swaps the funnel's editorial serif (Fraunces, light italic
+   * emphasis) for a confident product sans (Google Sans Flex) across every
+   * screen of this vertical, matching its landing page. Unset keeps the
+   * shared editorial type. Scoped by a wrapper attribute in
+   * app/challenge/[audience]/layout.tsx - no other vertical is affected.
+   */
+  typeface?: "product"
+  /**
+   * The funnel SHELL's own words (processing screen, beat screen chrome,
+   * question hints, feedback button labels), for verticals whose audience is
+   * not doing a reflective exercise. TEXT ONLY: no behaviour reads from here.
+   * Unset renders the shared copy exactly as before. Every field is required
+   * once set, so a vertical cannot end up with half its shell re-voiced.
+   */
+  shellCopy?: {
+    /** Replaces "Reflection" in step labels ("Reflection 2 · 5"). */
+    stepNoun: string
+    processingEyebrow: string
+    processingHeadline: string
+    processingAccent: string
+    /** Exactly 8 lines, shown in order while the pipeline runs. */
+    processingSteps: string[]
+    processingClosing: string
+    /** Second line of the "We couldn't finish ..." error title. */
+    failedAccent: string
+    questionHint: string
+    questionHintLast: string
+    /**
+     * Per beat (index 0-4): [agree, partial, disagree] button labels. The
+     * partial option opens the optional correction note, exactly as
+     * "Partly - close enough" does. Stored verbatim as the beat feedback.
+     */
+    feedbackOptions: [string, string, string][]
+    /** Placeholder/label for the correction note. */
+    correctionPrompt: string
+    /** Summary page: eyebrow, the two headline lines, the summary card's
+     *  title + note, and the sticky footer line. */
+    summaryEyebrow: string
+    summaryHeadline: string
+    summaryHeadlineAccent: string
+    summaryCardTitle: string
+    summaryCardNote: string
+    summaryFooterLine: string
+    /** Action Plan PDF cover eyebrow (shared: "Your Journey, Reflected"). */
+    reportCoverEyebrow: string
+    /** Offer page "if now is not the right time" paragraphs (exactly 3). */
+    offerClosingLines: [string, string, string]
+  }
   /** Optional vertical-specific reassurance line on the B2C offer page
    *  (e.g. the ADHD anti-system line from the B2C conversion strategy). */
   offerAccent?: string
@@ -661,6 +710,189 @@ export const VERTICAL_DISPLAY: Record<Vertical, VerticalDisplay> = {
     summaryUnlock: {
       line: "You can see the loop now.",
       lineAccent: "You still have nothing ready for the moment it starts.",
+    },
+  },
+  // The MSP AI Opportunity Score (TetraNoodle, powered by AI Merge). Source
+  // docs: the MSP-Funnel handoff pack. Same funnel mechanics as every other
+  // B2C vertical (score, then the $47 Action Plan) - only the words differ.
+  // Governing rules, enforced in the content pack's prompts too:
+  //  - Business register. No psychology vocabulary, no inferred traits, no
+  //    "reflection" or "mirror" framing: an MSP owner is assessing a business
+  //    opportunity, not doing an introspection exercise.
+  //  - The score is an exploratory self-assessment, never a benchmark, never
+  //    a revenue prediction, never a reason to approve or reject a partner.
+  //  - No shaming MSPs for reselling; not every solution must be custom;
+  //    TetraNoodle is never "the only" company that could deliver.
+  // Dashes in this vertical's copy are spaced en dashes, never em dashes.
+  msp: {
+    id: "msp",
+    // MESSAGE MATCH: the landing page's CTAs read "Get My Free AI Opportunity
+    // Score" and the spec's product name is "MSP AI Opportunity Score".
+    productName: "MSP AI Opportunity Score",
+    // The paid artifact. Short enough for the PDF header and page footers.
+    reportName: "MSP Opportunity Action Plan",
+    // Same four fixed keys, re-meant per the MSP scoring spec (04-opportunity-
+    // scoring.md). Mirrors the rubric in belief-score-config-msp.json.
+    pillarLabels: {
+      directionClarity: {
+        label: "Opportunity Clarity",
+        pillar: "Dimension I · The Opportunity",
+        plain: "How concretely you described a real client problem and a useful outcome.",
+      },
+      identityAlignment: {
+        label: "Differentiation Potential",
+        pillar: "Dimension II · Differentiation",
+        plain: "How clearly you see value your MSP could add beyond reselling a product.",
+      },
+      decisionReadiness: {
+        label: "Delivery Readiness",
+        pillar: "Dimension III · Delivery",
+        plain: "How well you understand what delivering it would take, including safeguards.",
+      },
+      energyAlignment: {
+        label: "Human + AI Understanding",
+        pillar: "Dimension IV · Human + AI",
+        plain: "How much you account for the people, knowledge, trust, and oversight involved.",
+      },
+    },
+    measureNoun: "dimension",
+    measureNounPlural: "dimensions",
+    howToRead: {
+      what: "This is a working Action Plan for one client opportunity, built from the five answers you gave about your clients and your MSP. It is one informed perspective, written up – not an audit, a market study, or a recommendation to buy any product.",
+      scoreMeaning:
+        "The overall number reflects how clearly your answers describe an opportunity to build a differentiated AI-enabled managed service. It is not a benchmark against other MSPs and it does not predict revenue. A lower number means more is still undecided, not that anything is wrong.",
+      measuresMeaning:
+        "The four smaller numbers break that clarity into four parts, so you can see which one needs the most work before you build anything. Each is explained from your own answers.",
+      firstThing:
+        "Go to the action page and do Step 1. It is one conversation with one client this week – no hiring, no new software, no proposal to write.",
+      glossary: [
+        {
+          term: "Managed Intelligence Service",
+          meaning:
+            "A recurring service that combines the right people, AI, a client's own knowledge, their workflows, and safeguards around one real business need – rather than reselling a single AI product.",
+        },
+        {
+          term: "Human + AI",
+          meaning:
+            "Designing the service around who decides, who reviews, and who stays accountable, not only around what the software can do.",
+        },
+        {
+          term: "Expand, Equip, Evolve",
+          meaning:
+            "Expand: the client outcome beyond your current catalog. Equip: the people, AI, knowledge, integrations, and safeguards it needs. Evolve: how it is adopted, monitored, and grown over time.",
+        },
+        {
+          term: "Validation",
+          meaning:
+            "Checking with the client, before anything is built, that the problem is real, worth paying to solve, and solvable with data you are allowed to use.",
+        },
+      ],
+    },
+    offerVariant: "b2c",
+    // The MSP landing page is set in Google Sans Flex; the funnel must not
+    // switch to a light editorial serif one click later.
+    typeface: "product",
+    // Shell wording. Feedback labels follow the five-beat spec's per-beat
+    // buttons, mapped onto the shared agree / partial (opens the note) /
+    // disagree slots.
+    shellCopy: {
+      stepNoun: "Insight",
+      processingEyebrow: "Analysing your answers",
+      processingHeadline: "Your answers are being analysed",
+      processingAccent: "against the client problem you described.",
+      processingSteps: [
+        "Reading your five answers",
+        "Mapping the client problem",
+        "Reviewing your current approach",
+        "Calculating your MSP AI Opportunity Score",
+        "Scoring your four dimensions",
+        "Sketching a first Managed Intelligence service",
+        "Drafting your MSP Opportunity Action Plan",
+        "Preparing your results",
+      ],
+      processingClosing: "Everything you are about to see is built from your own answers.",
+      failedAccent: "your results.",
+      questionHint: "Specifics help – the client, what it cost them, and what you offered.",
+      questionHintLast: "Describe something a client or your team could actually observe.",
+      feedbackOptions: [
+        ["Yes", "Partly – let me clarify", "Not quite"],
+        ["Yes", "Sometimes", "Not quite"],
+        ["Yes", "Maybe", "No"],
+        ["Yes", "Possibly", "Not yet"],
+        ["Yes", "Partly", "Not yet"],
+      ],
+      correctionPrompt: "What should we correct? (optional)",
+      summaryEyebrow: "Your opportunity, assessed",
+      summaryHeadline: "here is the opportunity",
+      summaryHeadlineAccent: "in your client base.",
+      summaryCardTitle: "Your opportunity summary",
+      summaryCardNote: "Built from your five answers",
+      summaryFooterLine: "One client problem. One possible service. One next step.",
+      reportCoverEyebrow: "Your MSP Opportunity, Assessed",
+      offerClosingLines: [
+        "Your score and the opportunity you described stay with you.",
+        "The client problem you named is real either way – the Action Plan is the fastest route from naming it to testing it.",
+        "If you want to come back later, the option will be here.",
+      ],
+    },
+    benchmarkPeerLabel: "Among MSP leaders who take this assessment",
+    // Answers the dominant purchase fear for an MSP owner: that "AI plan"
+    // means hiring engineers, buying a platform, or being sold a project.
+    offerAccent:
+      "Nothing here asks you to hire AI engineers, buy a platform, or abandon the vendor relationships that already work for you.",
+    offerPriceAnchor: "One payment, once. Less than an hour of a consultant's time.",
+    offerPitch: {
+      headline: "You can see the opportunity now.",
+      headlineAccent: "The Action Plan shows you how to test it with a real client.",
+      gap: "Your score shows where the opening is. What it does not give you is the route: which client to start with, what to ask them, what the first service would need, and how to know – inside 30 days – whether it is worth building.",
+      stakes:
+        "Nothing breaks if you close this tab. The client problem you described simply stays where it is – solved by someone else's product, or not solved at all.",
+      freeVsPaid:
+        "Your free MSP AI Opportunity Score shows the opening. The MSP Opportunity Action Plan is how you test it with one client.",
+      // Outcome-led, mapped 1:1 to the report's four sections.
+      deliverables: [
+        {
+          title: "The opportunity, defined",
+          body: "The client problem you described, turned into one specific Managed Intelligence service idea – with what is proven and what is still a guess.",
+        },
+        {
+          title: "Your first client conversation",
+          body: "The exact questions to ask one client this week to confirm the problem is real, worth paying for, and solvable with data you are allowed to use.",
+        },
+        {
+          title: "What the service would need",
+          body: "Expand, Equip, Evolve: the outcome, the people, AI, knowledge and safeguards it needs, and how it would be adopted and grown.",
+        },
+        {
+          title: "A 30-day validation plan",
+          body: "Week by week, with a log for what clients actually say and a clear go / no-go decision on day 30. No hiring, no new software.",
+        },
+      ],
+      versus:
+        "A vendor webinar can tell you to \"add AI to your stack\". None of it knows your client. Your Action Plan is built around the client problem you described, your current approach, and the constraint you named.",
+      objections: [
+        {
+          q: "Do I need AI engineers to act on this?",
+          a: "No. The 30-day plan is client conversations and a go / no-go decision. Engineering only matters once a client has confirmed the problem is worth paying to solve.",
+        },
+        {
+          q: "Is this a pitch for a TetraNoodle project?",
+          a: "No. The plan stands on its own and every step can be done by your team. If you later want a delivery partner, that is a separate conversation you choose to have.",
+        },
+        {
+          q: "What if it misread my business?",
+          a: "It is built from your answers and treated as a hypothesis, not a verdict. If it does not read as yours, one email within 30 days gets it rebuilt or refunded.",
+        },
+        {
+          q: "Does it share my client data?",
+          a: "No. Your answers are used to build your plan only, are never shown publicly, and should not include client names or confidential details.",
+        },
+      ],
+      hideTimeline: true,
+    },
+    summaryUnlock: {
+      line: "You can see the opening now.",
+      lineAccent: "The Action Plan shows how to test it with one client.",
     },
   },
 }

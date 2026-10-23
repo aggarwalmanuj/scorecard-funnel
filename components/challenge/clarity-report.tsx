@@ -770,7 +770,7 @@ function ReportPages({
       <Sheet footer={<ReportFooter page={1} of={totalPages} name={name} />}>
         <ReportHeader name={name} today={today} rid={rid} />
 
-        <div className="eyebrow">Your Journey, Reflected</div>
+        <div className="eyebrow">{display.shellCopy?.reportCoverEyebrow ?? "Your Journey, Reflected"}</div>
         <h1 className="title">
           {name ? `${name}, ` : ""}
           {report.headline}

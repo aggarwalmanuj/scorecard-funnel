@@ -1722,3 +1722,30 @@ body::before {
     stroke-dashoffset: 0 !important;
   }
 }
+
+/* ==========================================
+   Product typeface (VerticalDisplay.typeface = "product", e.g. MSP).
+   Remaps the editorial serif to one confident sans for that vertical only:
+   semibold headlines with tight tracking, and the italic "accent" clause
+   becomes an upright two-tone clause at the same weight (its colour class is
+   untouched, so it still reads quieter than the ink line above it).
+   ========================================== */
+[data-typeface="product"] {
+  --font-sans: var(--font-product), system-ui, -apple-system, sans-serif;
+  --font-serif: var(--font-product), system-ui, -apple-system, sans-serif;
+  font-family: var(--font-sans);
+  font-optical-sizing: auto;
+}
+[data-typeface="product"] .font-serif {
+  font-weight: 600;
+  letter-spacing: -0.025em;
+}
+[data-typeface="product"] .font-serif-italic {
+  font-style: normal;
+  font-weight: 600;
+  letter-spacing: -0.025em;
+}
+[data-typeface="product"] .eyebrow {
+  font-weight: 600;
+  letter-spacing: 0.1em;
+}

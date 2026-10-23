@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation"
 import type { Metadata } from "next"
 import type { ReactNode } from "react"
+import { Google_Sans_Flex } from "next/font/google"
 import { FunnelGuard } from "@/components/challenge/funnel-guard"
 import { isVertical } from "@/lib/verticals"
 import { displayFor } from "@/lib/vertical-display"
@@ -18,6 +19,17 @@ import { displayFor } from "@/lib/vertical-display"
  * the override belongs. `productName` is the vertical's single approved public
  * name (lib/vertical-display.ts); no new copy is invented here.
  */
+// Product typeface for verticals that opt in (VerticalDisplay.typeface).
+// preload: false - this layout serves every vertical, and only opted-in ones
+// should ever download the file; the browser fetches it on first use.
+const productSans = Google_Sans_Flex({
+  variable: "--font-product",
+  subsets: ["latin"],
+  axes: ["opsz"],
+  display: "swap",
+  preload: false,
+})
+
 export async function generateMetadata({
   params,
 }: {
@@ -47,5 +59,11 @@ export default async function AudienceLayout({
   // Legacy segments ("individual" / "team") never reach here — middleware
   // 308-redirects them to /challenge/main/* before routing.
   if (!isVertical(audience)) notFound()
-  return <FunnelGuard audience={audience}>{children}</FunnelGuard>
+  const guarded = <FunnelGuard audience={audience}>{children}</FunnelGuard>
+  if (displayFor(audience).typeface !== "product") return guarded
+  return (
+    <div data-typeface="product" className={productSans.variable}>
+      {guarded}
+    </div>
+  )
 }

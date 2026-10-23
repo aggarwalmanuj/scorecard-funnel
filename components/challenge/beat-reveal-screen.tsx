@@ -13,6 +13,7 @@ import { useAudioPlayback } from "@/hooks/use-audio-playback"
 import { ChallengeNavHome } from "@/components/challenge/challenge-nav-home"
 import { ChallengeMenuButton } from "@/components/challenge/challenge-funnel-header-actions"
 import { Skeleton } from "@/components/ui/skeleton"
+import { displayFor } from "@/lib/vertical-display"
 
 interface BeatRevealScreenProps {
   audience: Audience
@@ -88,12 +89,24 @@ export function BeatRevealScreen({
     return beatContent.split(/(\s+)/).filter((t) => t.length > 0)
   }, [beatContent])
 
-  const PARTLY_ID = "Partly - close enough"
-  const feedbackOptions = [
-    { id: "Yes - that is exactly it", label: "Yes - that is exactly it", glyph: "✓" },
-    { id: PARTLY_ID, label: "Partly - close enough", glyph: "≈" },
-    { id: "Not quite, but I am curious", label: "Not quite, but I am curious", glyph: "→" },
-  ]
+  // Shell wording, per vertical (VerticalDisplay.shellCopy). Text only:
+  // the three slots keep their behaviour (the middle one opens the note).
+  const shell = displayFor(audience).shellCopy
+  const stepNoun = shell?.stepNoun ?? "Reflection"
+  const stepNounLower = stepNoun.toLowerCase()
+  const labels = shell?.feedbackOptions[beatNumber - 1]
+  const PARTLY_ID = labels?.[1] ?? "Partly - close enough"
+  const feedbackOptions = labels
+    ? [
+        { id: labels[0], label: labels[0], glyph: "✓" },
+        { id: PARTLY_ID, label: labels[1], glyph: "≈" },
+        { id: labels[2], label: labels[2], glyph: "→" },
+      ]
+    : [
+        { id: "Yes - that is exactly it", label: "Yes - that is exactly it", glyph: "✓" },
+        { id: PARTLY_ID, label: "Partly - close enough", glyph: "≈" },
+        { id: "Not quite, but I am curious", label: "Not quite, but I am curious", glyph: "→" },
+      ]
 
   useEffect(() => {
     if (skipReveal) {
@@ -310,7 +323,7 @@ export function BeatRevealScreen({
 
         <div
           className="flex items-center gap-1.5 sm:gap-2 select-none pointer-events-none"
-          aria-label={`Reflection ${beatNumber} of 5`}
+          aria-label={`${stepNoun} ${beatNumber} of 5`}
         >
           {progressDots.map((dot, idx) => (
             <div key={dot} className="flex items-center gap-1.5 sm:gap-2">
@@ -351,7 +364,7 @@ export function BeatRevealScreen({
         <div className="flex min-w-0 flex-1 flex-col items-end gap-0.5 text-right">
           <ChallengeNavHome />
           <span className="text-[10px] uppercase tracking-[0.2em] text-foreground/55">
-            Reflection {beatNumber} · 5
+            {stepNoun} {beatNumber} · 5
           </span>
         </div>
       </header>
@@ -364,7 +377,7 @@ export function BeatRevealScreen({
               <div className="img-hover-zoom relative aspect-video w-full overflow-hidden rounded-md">
                 <Image
                   src={backgroundImage}
-                  alt={imageAlt ?? `AIMerge clarity diagnostic - reflection ${beatNumber} of 5`}
+                  alt={imageAlt ?? `AIMerge clarity diagnostic - ${stepNounLower} ${beatNumber} of 5`}
                   fill
                   className="animate-ken-burns object-cover"
                   priority
@@ -374,7 +387,7 @@ export function BeatRevealScreen({
               <figcaption className="mt-3 flex items-center gap-3">
                 <span className="h-px w-8 bg-foreground/40" aria-hidden />
                 <span className="eyebrow text-foreground/65">
-                  Reflection {beatNumber} · 5
+                  {stepNoun} {beatNumber} · 5
                 </span>
               </figcaption>
             </figure>
@@ -411,7 +424,7 @@ export function BeatRevealScreen({
                   stalled ? (
                     <span className="flex flex-col gap-4">
                       <span className="font-serif-italic text-foreground/80">
-                        This reflection is taking longer than it should. Your
+                        This {stepNounLower} is taking longer than it should. Your
                         answers are safe. We can rebuild it, or you can keep
                         going and come back to it.
                       </span>
@@ -423,7 +436,7 @@ export function BeatRevealScreen({
                           }
                           className="s-btn justify-center text-[0.68rem]"
                         >
-                          Rebuild this reflection
+                          Rebuild this {stepNounLower}
                         </button>
                         <button
                           type="button"
@@ -438,7 +451,7 @@ export function BeatRevealScreen({
                     <span className="flex flex-col gap-1 font-serif-italic text-foreground/65">
                       <span className="flex items-center gap-2">
                         <span className="pulse-dot" aria-hidden />
-                        Composing your reflection…
+                        Composing your {stepNounLower}…
                       </span>
                       {showTimeHint && (
                         <span className="ml-4 text-[13px] not-italic uppercase tracking-[0.18em] text-foreground/55">
@@ -489,7 +502,7 @@ export function BeatRevealScreen({
               {isComplete && (
                 <span className="flex items-center gap-2 text-[12px] uppercase tracking-[0.22em] text-ink animate-in fade-in duration-500">
                   <Check className="h-3 w-3" strokeWidth={2} />
-                  Your reflection
+                  Your {stepNounLower}
                 </span>
               )}
             </div>
@@ -521,8 +534,8 @@ export function BeatRevealScreen({
                     disabled={isAudioLoading && !isAudioPlaying}
                     aria-label={
                       isAudioPlaying
-                        ? "Stop listening to this reflection"
-                        : "Listen to this reflection"
+                        ? `Stop listening to this ${stepNounLower}`
+                        : `Listen to this ${stepNounLower}`
                     }
                     className="group inline-flex items-center gap-2 rounded-full border border-border bg-card px-4 py-2 text-[11px] uppercase tracking-[0.22em] text-ink transition-colors duration-300 hover:border-ink disabled:opacity-60"
                   >
@@ -612,11 +625,11 @@ export function BeatRevealScreen({
                           <Textarea
                             value={partlyReason}
                             onChange={(e) => setPartlyReason(e.target.value)}
-                            placeholder="What part didn't land?"
+                            placeholder={shell?.correctionPrompt ?? "What part didn't land?"}
                             rows={2}
                             maxLength={FEEDBACK_NOTE_MAX_CHARS}
                             className="s-input resize-none"
-                            aria-label="What part of the reflection didn't land for you? (optional)"
+                            aria-label={shell?.correctionPrompt ?? "What part of the reflection didn't land for you? (optional)"}
                           />
                           <div className="mt-2 flex items-center justify-between">
                             <span className="text-[11px] uppercase tracking-[0.2em] text-foreground/55">
@@ -656,7 +669,7 @@ export function BeatRevealScreen({
           <div className="text-center animate-in fade-in slide-in-from-bottom-2 duration-700">
             <p className="eyebrow mb-5 text-foreground/70">Continuing</p>
             <p className="font-serif text-[36px] leading-tight text-ink sm:text-[44px]">
-              Reflection {beatNumber + 1}
+              {stepNoun} {beatNumber + 1}
               <span className="font-serif-italic text-foreground/55"> · 5</span>
             </p>
             <div className="mx-auto mt-7 h-px w-24 bg-gradient-to-r from-transparent via-ink to-transparent" />

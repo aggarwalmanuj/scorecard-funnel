@@ -242,6 +242,36 @@ export const BOARD_CONFIG: Record<Vertical, BoardConfig> = {
     closingLine:
       "There is no streak here to break and nothing on this page expires. A blank fortnight costs you nothing, and this page never becomes one more thing you are behind on.",
   },
+  // MSP has no paid PDF today (offerVariant "consult"), so nothing renders
+  // this yet. Written in the B2B evidence-loop register anyway so that if a
+  // printable summary is ever added it inherits the right voice, not a
+  // consumer board.
+  msp: {
+    variant: "evidence-loop",
+    eyebrow: "Your validation tracker",
+    title: "One client. One problem. Evidence first.",
+    lede:
+      "The opportunity in your results is a hypothesis built from your own answers. Before anything is built, test it against the client it came from - cheaply, and without hiring or buying software.",
+    catchesLabel: "Conversations",
+    catchesRule:
+      "Log each conversation where the client problem comes up - who raised it, what it cost them, and what they currently do instead. Counts beat impressions.",
+    catchCount: 8,
+    returnsLabel: "Checkpoints",
+    returnsRule:
+      "Three reviews: what you assumed, what the client confirmed, and whether there is a service worth scoping.",
+    returnCount: 3,
+    milestones: [
+      { at: 1, label: "First conversation", unlocks: "Confirm the problem is real in the client's own words." },
+      { at: 3, label: "Three conversations", unlocks: "Name the most expensive or time-consuming part of it." },
+      { at: 6, label: "Six conversations", unlocks: "Decide whether it is worth scoping as a service." },
+    ],
+    notesLabel: "What the client said",
+    finishLabel: "Decision point",
+    finishBody:
+      "Read your log back. Either the evidence supports scoping a first service, or it points somewhere else. Both are useful results.",
+    closingLine:
+      "Nothing here expires. A negative result is still a result - it is the cheapest way to avoid building the wrong service.",
+  },
 }
 
 export function boardConfigFor(vertical: Vertical | null | undefined): BoardConfig {

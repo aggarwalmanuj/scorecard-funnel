@@ -684,13 +684,15 @@ export function OfferScreen({ audience }: { audience: Audience }) {
           </h3>
 
           <div className="mb-7 max-w-xl space-y-5 text-[16px] leading-[1.8] text-foreground/85">
-            <p>What surfaced is not going anywhere.</p>
+            {/* Text only: shellCopy re-voices these three lines per vertical. */}
+            <p>{display.shellCopy?.offerClosingLines[0] ?? "What surfaced is not going anywhere."}</p>
             <p className="text-foreground/75">
-              The pattern you saw is now visible - and that visibility alone
-              changes how you move.
+              {display.shellCopy?.offerClosingLines[1] ??
+                "The pattern you saw is now visible - and that visibility alone changes how you move."}
             </p>
             <p className="text-foreground/75">
-              If you want to come back later, the option will be here.
+              {display.shellCopy?.offerClosingLines[2] ??
+                "If you want to come back later, the option will be here."}
             </p>
           </div>
 
