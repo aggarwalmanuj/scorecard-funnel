@@ -590,13 +590,19 @@ export function JourneySummaryScreen({ audience }: { audience: Audience }) {
           >
             <p className="eyebrow mb-5 text-foreground/70">
               <span className="pulse-dot mr-3" aria-hidden />
-              Your journey, reflected
+              {displayFor(audience).shellCopy?.summaryEyebrow ?? "Your journey, reflected"}
             </p>
 
             <h1 className="font-serif text-[1.85rem] leading-[1.1] text-ink sm:text-[2.1rem] sm:leading-[1.06] md:text-[2.6rem]">
-              {state.firstName ? `${state.firstName}, here is what` : "Here is what"}
+              {(() => {
+                // Text only: a vertical's shellCopy re-voices the headline.
+                const lead = displayFor(audience).shellCopy?.summaryHeadline ?? "here is what"
+                return state.firstName
+                  ? `${state.firstName}, ${lead}`
+                  : lead.charAt(0).toUpperCase() + lead.slice(1)
+              })()}
               <span className="block font-serif-italic text-foreground">
-                surfaced.
+                {displayFor(audience).shellCopy?.summaryHeadlineAccent ?? "surfaced."}
               </span>
             </h1>
 
@@ -782,10 +788,10 @@ export function JourneySummaryScreen({ audience }: { audience: Audience }) {
                 <div className="flex items-center justify-between gap-3 border-b border-border px-6 py-4 sm:px-8">
                   <p className="eyebrow flex items-center gap-2.5 text-foreground/70">
                     <span className="pulse-dot" aria-hidden />
-                    Your closing reflection
+                    {displayFor(audience).shellCopy?.summaryCardTitle ?? "Your closing reflection"}
                   </p>
                   <span className="hidden font-serif-italic text-[12.5px] text-foreground/55 sm:block">
-                    Written from your five beats
+                    {displayFor(audience).shellCopy?.summaryCardNote ?? "Written from your five beats"}
                   </span>
                 </div>
 
@@ -891,7 +897,8 @@ export function JourneySummaryScreen({ audience }: { audience: Audience }) {
         >
           <div className="flex w-full flex-col items-center justify-between gap-4 px-5 py-5 sm:flex-row sm:px-10">
             <p className="hidden font-serif-italic text-[14px] text-foreground/70 sm:block sm:text-left">
-              Five reflections. One thread. The signal is clear.
+              {displayFor(audience).shellCopy?.summaryFooterLine ??
+                "Five reflections. One thread. The signal is clear."}
             </p>
 
             <div className="flex w-full flex-col-reverse items-stretch gap-2.5 sm:w-auto sm:flex-row sm:items-center sm:gap-3">

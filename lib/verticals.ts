@@ -24,6 +24,7 @@ export const VERTICALS = [
   "healthcare",
   "coaches",
   "parents",
+  "msp",
 ] as const
 
 export type Vertical = (typeof VERTICALS)[number]
@@ -38,6 +39,7 @@ export const VERTICAL_LABELS: Record<Vertical, string> = {
   healthcare: "Healthcare",
   coaches: "Coaches",
   parents: "Parents",
+  msp: "MSP",
 }
 
 export function isVertical(v: unknown): v is Vertical {
@@ -85,6 +87,16 @@ const VERTICAL_ALIASES: Record<string, Vertical> = {
   parent: "parents",
   parenting: "parents",
   "parenting-belief-score": "parents",
+  // The MSP AI Opportunity Score vertical (IT service providers). The MSP
+  // landing page sends `lp=msp` (LP_SLUG in its lib/scorecard.ts), which
+  // matches the canonical id. The spellings below are defensive: plural, the
+  // product name, and the long form. If the landing page ever changes its
+  // slug, add the new one HERE first or paid MSP traffic runs main.
+  msps: "msp",
+  "msp-ai-opportunity": "msp",
+  "msp-ai-opportunity-score": "msp",
+  "managed-service-providers": "msp",
+  "managed-intelligence": "msp",
 }
 
 /**
@@ -108,6 +120,7 @@ export function normalizeVertical(v: string | null | undefined): Vertical | null
  *   business.aimerge.live  -> healthcare (the B2B lane)
  *   coaches.aimerge.live   -> coaches
  *   parents.aimerge.live   -> parents
+ *   msp.aimerge.live       -> msp
  * The first host label is normalized through the alias table, so
  * retargeting./b2b. variants also work. Unknown or missing hosts (and
  * localhost, previews, www) resolve to null - callers fall back to other

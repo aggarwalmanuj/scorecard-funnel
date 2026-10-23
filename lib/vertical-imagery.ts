@@ -161,10 +161,61 @@ const PARENTS_BEATS: Record<SlotNumber, FunnelImage> = {
   },
 }
 
+// MSP: an ocean descent, continuing the MSP landing page's surface-to-depth
+// motif (vendor agents crowd the surface; the managed service is at depth).
+// Questions go deeper one step at a time, so the visual progression tracks the
+// assessment's. No people, no robots (handoff doc: no stock AI robot imagery).
+const MSP_QUESTIONS: Record<SlotNumber, FunnelImage> = {
+  1: {
+    src: "/images/msp/q1-surface.jpg",
+    alt: "Sunlight on the water's surface seen from just below - question 1 of the MSP AI Opportunity Score asks about one real client problem.",
+  },
+  2: {
+    src: "/images/msp/q2-first-light.jpg",
+    alt: "Light rays reaching a little below the surface - question 2 of the MSP AI Opportunity Score asks how your MSP usually responds.",
+  },
+  3: {
+    src: "/images/msp/q3-filtered-light.jpg",
+    alt: "Filtered light in darker water - question 3 of the MSP AI Opportunity Score asks what the current approach may be missing.",
+  },
+  4: {
+    src: "/images/msp/q4-deeper.jpg",
+    alt: "Deep blue water with the surface far above - question 4 of the MSP AI Opportunity Score asks what the hardest part of launching would be.",
+  },
+  5: {
+    src: "/images/msp/q5-depth.jpg",
+    alt: "Light reaching deep, dark water - question 5 of the MSP AI Opportunity Score asks what would be different twelve months from now.",
+  },
+}
+
+const MSP_BEATS: Record<SlotNumber, FunnelImage> = {
+  1: {
+    src: "/images/msp/beat-1-witness.jpg",
+    alt: "The underside of a calm surface catching light - reflection 1 of the MSP AI Opportunity Score checks that we understood your client problem.",
+  },
+  2: {
+    src: "/images/msp/beat-2-pattern.jpg",
+    alt: "Fine particles suspended in teal water - reflection 2 of the MSP AI Opportunity Score describes how your MSP tends to respond.",
+  },
+  3: {
+    src: "/images/msp/beat-3-blind-spot.jpg",
+    alt: "Turbulent water with light breaking through - reflection 3 of the MSP AI Opportunity Score offers one alternative perspective.",
+  },
+  4: {
+    src: "/images/msp/beat-4-possibility.jpg",
+    alt: "Bubbles rising through deep green water - reflection 4 of the MSP AI Opportunity Score sketches one service your MSP could deliver.",
+  },
+  5: {
+    src: "/images/msp/beat-5-decision.jpg",
+    alt: "A single jellyfish in open deep water - reflection 5 of the MSP AI Opportunity Score names the one opportunity worth examining first.",
+  },
+}
+
 const OVERRIDES: Partial<
   Record<Vertical, { questions: Record<SlotNumber, FunnelImage>; beats: Record<SlotNumber, FunnelImage> }>
 > = {
   parents: { questions: PARENTS_QUESTIONS, beats: PARENTS_BEATS },
+  msp: { questions: MSP_QUESTIONS, beats: MSP_BEATS },
 }
 
 /** The hero image for a question screen. Falls back to the shared default. */

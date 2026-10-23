@@ -213,6 +213,30 @@ const EXIT_COPY: Record<Vertical, ExitCopy> = {
       "Your score is done. The plan that reads it - what may be entering your response, and the moment where more choice is still available - is one page away.",
     ctaScored: "See my Action Plan · $47",
   },
+  // No published figure exists for this audience, so no numeric facts (the
+  // retargeting/coaches precedent). No urgency: the spec forbids it.
+  msp: {
+    eyebrow: "Before you go",
+    title: "Your answers",
+    accent: "are already doing the work.",
+    facts: [
+      {
+        figure: "Saved",
+        label:
+          "Everything you've written stays where you left it. There is no deadline on any of this.",
+      },
+      {
+        figure: "One client",
+        label:
+          "The whole assessment is built around one real client problem you have already seen – not a hypothetical, and not a technical exam.",
+      },
+    ],
+    lineStarted:
+      "Your answers so far are saved. Your score and one practical opportunity are a few questions from here.",
+    lineScored:
+      "Your score is done. The Action Plan that turns it into a 30-day test with one real client is one page away.",
+    ctaScored: "See my Action Plan · $47",
+  },
 }
 
 /** Paths where the modal must never appear. */

@@ -308,7 +308,10 @@ export function ProcessingScreen({ audience }: { audience: Audience }) {
   const router = useRouter()
   const { state, setBeat, isHydrated, setClarityScore, setReportData, setSummaryText } = useChallenge()
   const display = displayFor(audience)
-  const processingSteps = processingStepsFor(display.productName)
+  // Text only: a vertical with its own shell copy (MSP) swaps the words,
+  // never the timing - the ticker still walks the same eight slots.
+  const shell = display.shellCopy
+  const processingSteps = shell?.processingSteps ?? processingStepsFor(display.productName)
   const [activeStep, setActiveStep] = useState(0)
   const [minElapsed, setMinElapsed] = useState(false)
   const [showClosingLine, setShowClosingLine] = useState(false)
@@ -728,7 +731,7 @@ export function ProcessingScreen({ audience }: { audience: Audience }) {
         <div className="s-card-static animate-fade-in-up w-full max-w-md p-8 text-center">
           <h2 className="mb-3 font-serif text-[24px] leading-snug text-ink">
             We couldn&apos;t finish
-            <span className="block font-serif-italic">your reflection.</span>
+            <span className="block font-serif-italic">{shell?.failedAccent ?? "your reflection."}</span>
           </h2>
           <p className="mb-7 text-[15px] leading-[1.75] text-foreground/85">
             Your answers are saved. Something interrupted the writing step, so
@@ -848,12 +851,12 @@ export function ProcessingScreen({ audience }: { audience: Audience }) {
 
             <div>
               <p className="eyebrow mb-2.5 text-foreground/70">
-                The mirror is being built
+                {shell?.processingEyebrow ?? "The mirror is being built"}
               </p>
               <h1 className="font-serif text-[24px] leading-tight text-ink sm:text-[30px]">
-                What you shared is being read
+                {shell?.processingHeadline ?? "What you shared is being read"}
                 <span className="block font-serif-italic text-foreground">
-                  carefully.
+                  {shell?.processingAccent ?? "carefully."}
                 </span>
               </h1>
             </div>
@@ -925,8 +928,8 @@ export function ProcessingScreen({ audience }: { audience: Audience }) {
 
           {showClosingLine && (
             <p className="animate-curtain-rise mt-6 max-w-md font-serif-italic text-[16px] leading-snug text-ink sm:text-[17px]">
-              What you are about to see could only have been built from your
-              words.
+              {shell?.processingClosing ??
+                "What you are about to see could only have been built from your words."}
             </p>
           )}
         </div>

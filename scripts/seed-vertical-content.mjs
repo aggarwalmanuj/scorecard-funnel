@@ -48,7 +48,7 @@ if (!ENDPOINT || !KEY) {
   process.exit(1)
 }
 
-const KNOWN_VERTICALS = ["main", "retargeting", "adhd", "healthcare", "coaches", "parents"]
+const KNOWN_VERTICALS = ["main", "retargeting", "adhd", "healthcare", "coaches", "parents", "msp"]
 
 if (files.length === 0) {
   console.error("Pass at least one config file path.")

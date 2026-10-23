@@ -12,6 +12,7 @@ import { ChallengeNavHome } from "@/components/challenge/challenge-nav-home"
 import { ChallengeMenuButton } from "@/components/challenge/challenge-funnel-header-actions"
 import { PrivacyNotice } from "@/components/privacy-notice"
 import { Skeleton } from "@/components/ui/skeleton"
+import { displayFor } from "@/lib/vertical-display"
 
 interface QuestionScreenProps {
   audience: Audience
@@ -638,8 +639,10 @@ export function QuestionScreen({
 
               <p className="mt-5 text-center font-serif-italic text-[15px] leading-snug text-foreground/75">
                 {questionNumber === 5
-                  ? "Take your time - honest detail here changes what surfaces at the end."
-                  : "Answer in your own words - continue when you are ready."}
+                  ? (displayFor(audience).shellCopy?.questionHintLast ??
+                    "Take your time - honest detail here changes what surfaces at the end.")
+                  : (displayFor(audience).shellCopy?.questionHint ??
+                    "Answer in your own words - continue when you are ready.")}
               </p>
 
             </div>
