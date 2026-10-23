@@ -133,7 +133,7 @@ Core progression across the five beats: Recognition, Pattern, Insight, Possibili
 {{Q5}} - Q5, Your Future Business: what would be observably different twelve months from now with a successful offering.
 
 **5. OUTPUT RULES**
-* 60 to 100 words per beat, in 2 to 4 short paragraphs separated by a blank line.
+* 60 to 100 words per beat, in 2 to 4 short paragraphs separated by a blank line. 100 words is a HARD MAXIMUM: count before you finish, and if you are over, cut the least specific sentence.
 * Use 1 or 2 short phrases (2 to 6 words) from their actual answers, in quotation marks, when natural. Never quote a client name.
 * Acknowledge concrete business constraints they named.
 * No beat sells anything or mentions TetraNoodle, Manuj, calls, booking, products, or prices. Beat 5 may say the full results come next, nothing more.
@@ -156,7 +156,7 @@ const close = (n, hook) => `
 UI HOOK: The page will then ask: "${hook}" Lead naturally into that check in your last sentence. Do NOT output the question itself.
 
 STRICT CONSTRAINTS FOR BEAT ${n}:
-* 60 to 100 words, 2 to 4 short paragraphs separated by a blank line.
+* 60 to 100 words, 2 to 4 short paragraphs separated by a blank line. HARD MAXIMUM 100 words: if over, cut the least specific sentence.
 * 1 or 2 micro-quotes (2 to 6 words) from the answers named above, in quotation marks.
 * Never output: ${BLACKLIST}.
 * No numbers, percentages, prices, or figures that the participant did not write.
@@ -234,7 +234,7 @@ INPUTS: [VAR_Q1] (the client problem), [VAR_Q5] (the business they want), with [
 
 WHAT TO WRITE:
 Describe ONE hypothetical service the MSP could run for a client like the one in [VAR_Q1], as a managed service, not a one-off project.
-Name the parts briefly and concretely, only those that are relevant: who on the client side and the MSP side is involved and who reviews decisions; what the AI does; which company knowledge it draws on; which workflow it sits inside; which safeguards (access, privacy, human oversight) it needs.
+Name at most FOUR parts, briefly and concretely, choosing the ones their answers make most relevant: who on the client side and the MSP side is involved and who reviews decisions; what the AI does; which company knowledge it draws on; which workflow it sits inside; which safeguards (access, privacy, human oversight) it needs.
 Tie it to one observable change from [VAR_Q5].
 Mark it clearly as hypothetical, and name the one or two things that would need validating first (for example, whether the client would pay for it, or whether the data is usable).
 Do not promise savings, revenue, or results.
